@@ -36,11 +36,18 @@ from apps.api.middleware import (
 )
 from apps.api.schemas import (
     BacktestResult,
+    CrisisRequest,
+    CVResponse,
     HealthResponse,
+    HyperparameterResponse,
     PortfolioValuation,
     PriceSeriesResponse,
+    RebalanceRequest,
     ScenarioSummary,
+    StressOut,
+    StressRequest,
     SymbolSchema,
+    WalkForwardResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -380,6 +387,145 @@ async def metrics_advanced(payload: dict, ws=Depends(get_workspace)):
     }
 
 
+# ---------- stress test ----------
+@app.post("/api/v1/scenario/stress", response_model=StressOut,
+          summary="Run a stress-test scenario")
+async def stress_test(payload: StressRequest):
+    """Apply a historical or hypothetical stress scenario to a portfolio.
+
+    @experimental — Returns StressTestResult format with run_id, metrics,
+    timeline, and data_hash. Sensitivity exploration, not a forecast.
+    """
+    from packages.scenarios.stress import (
+        HISTORICAL_CRISES, HYPOTHETICAL_SCENARIOS,
+        run_historical_stress, run_hypothetical_stress,
+    )
+
+    if not payload.positions:
+        raise HTTPException(400, "positions required (symbol -> weight fraction)")
+
+    if payload.scenario_type == "historical":
+        if payload.scenario not in HISTORICAL_CRISES:
+            raise HTTPException(404, f"unknown crisis: {payload.scenario}. "
+                                     f"available: {list(HISTORICAL_CRISES)}")
+        res = run_historical_stress(payload.scenario, payload.positions,
+                                     payload.seed)
+    else:
+        if payload.scenario not in HYPOTHETICAL_SCENARIOS:
+            raise HTTPException(404, f"unknown scenario: {payload.scenario}. "
+                                     f"available: {list(HYPOTHETICAL_SCENARIOS)}")
+        res = run_hypothetical_stress(payload.scenario, payload.positions,
+                                       payload.seed)
+    return StressOut(
+        run_id=res.run_id, scenario=res.scenario, seed=res.seed,
+        data_quality=res.data_quality, metrics=res.metrics,
+        timeline=res.timeline, data_hash=res.data_hash,
+        limitations=res.limitations,
+    )
+
+
+# ---------- crisis scenario ----------
+@app.post("/api/v1/scenario/crisis", summary="Run a crisis scenario analysis")
+async def crisis_scenario(payload: CrisisRequest):
+    """Analyze correlation break, liquidity crunch, or sector rotation."""
+    from packages.scenarios.crisis import correlation_break, liquidity_crunch, sector_rotation
+
+    if not payload.positions:
+        raise HTTPException(400, "positions required (symbol -> weight fraction)")
+
+    p = payload.params
+    if payload.crisis_type == "correlation_break":
+        res = correlation_break(payload.positions, **p)
+    elif payload.crisis_type == "liquidity_crunch":
+        res = liquidity_crunch(payload.positions, **p)
+    elif payload.crisis_type == "sector_rotation":
+        res = sector_rotation(payload.positions, **p)
+    else:
+        raise HTTPException(400, f"unknown crisis_type: {payload.crisis_type}")
+    return {
+        "scenario_type": res.scenario_type,
+        "portfolio_impact_pct": res.portfolio_impact_pct,
+        "details": res.details,
+        "mitigation": res.mitigation,
+        "limitations": res.limitations,
+    }
+
+
+# ---------- rebalancing assistant ----------
+@app.get("/api/v1/portfolio/{name}/rebalancing",
+         summary="Get rebalancing analysis for a portfolio")
+async def rebalancing_analysis(
+    name: str,
+    threshold: float = 0.05,
+    ws=Depends(get_workspace),
+):
+    """Analyze drift and suggest rebalancing proposals for a live portfolio.
+
+    @experimental — NEVER executes trades. Only returns RebalancingProposal
+    suggestions with cost estimates and tax-loss harvesting indicators.
+    """
+    from packages.portfolio.engine import value_portfolio
+    from packages.portfolio.rebalancing import rebalance_from_valuation
+    from packages.marketdata.fx import FxPolicy
+
+    fx = FxPolicy()
+    for k, v in os.environ.items():
+        if k.startswith("LML_FX_"):
+            fx.set_rate(k[8:], float(v))
+    valued = value_portfolio(ws, name, fx)
+    n = len(valued["positions"])
+    if n == 0:
+        return {"needs_rebalance": False, "summary": "No positions in portfolio."}
+    target = {p["symbol"]: 1.0 / n for p in valued["positions"]}
+    result = rebalance_from_valuation(valued, target, threshold)
+    return {
+        "needs_rebalance": result.needs_rebalance,
+        "drift_threshold": result.drift_threshold,
+        "drift_analysis": [d.__dict__ for d in result.drift_analysis],
+        "proposals": [p.__dict__ for p in result.proposals],
+        "total_estimated_cost": result.total_estimated_cost,
+        "tax_loss_opportunities": result.tax_loss_opportunities,
+        "summary": result.summary,
+        "disclaimer": "Suggestions only — no trades executed.",
+    }
+
+
+@app.post("/api/v1/portfolio/{name}/rebalance",
+             summary="Generate rebalancing proposals for target weights")
+async def rebalance_portfolio(name: str, payload: RebalanceRequest,
+                               ws=Depends(get_workspace)):
+    """Generate rebalancing proposals for a portfolio given target weights.
+
+    @experimental — NEVER executes trades. Only returns RebalancingProposal
+    suggestions with drift analysis and cost-benefit estimates.
+    """
+    from packages.portfolio.engine import value_portfolio
+    from packages.portfolio.rebalancing import rebalance_from_valuation
+    from packages.marketdata.fx import FxPolicy
+
+    if not payload.target_weights:
+        raise HTTPException(400, "target_weights required")
+
+    fx = FxPolicy()
+    for k, v in os.environ.items():
+        if k.startswith("LML_FX_"):
+            fx.set_rate(k[8:], float(v))
+    valued = value_portfolio(ws, name, fx)
+    result = rebalance_from_valuation(
+        valued, payload.target_weights, payload.threshold,
+        payload.transaction_cost_bps,
+    )
+    return {
+        "needs_rebalance": result.needs_rebalance,
+        "drift_threshold": result.drift_threshold,
+        "proposals": [p.__dict__ for p in result.proposals],
+        "total_estimated_cost": result.total_estimated_cost,
+        "tax_loss_opportunities": result.tax_loss_opportunities,
+        "summary": result.summary,
+        "disclaimer": "Suggestions only — no trades executed.",
+    }
+
+
 # ---------- routers ----------
 @app.post("/api/v1/scenario/forecast/{symbol}", summary="Generate ML forecast for a symbol")
 async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
@@ -401,16 +547,108 @@ async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
     return result
 
 
+# ---------- validation ----------
+def _default_strategy(train_data, test_data):
+    """Default mean-reversion strategy for validation endpoints."""
+    if len(train_data) < 2:
+        return [0.0] * len(test_data)
+    returns = [b / a - 1 for a, b in zip(train_data, train_data[1:])]
+    avg_return = sum(returns) / len(returns)
+    # simple signal: positive if recent trend is positive
+    signal = 1.0 if avg_return > 0 else -1.0
+    return [signal] * len(test_data)
+
+
+@app.post("/api/v1/validation/walk-forward", response_model=WalkForwardResponse, summary="Walk-forward backtest")
+async def validation_walk_forward(payload: dict, ws=Depends(get_workspace)):
+    """Run walk-forward validation on a price series."""
+    from packages.validation.walk_forward import walk_forward_backtest
+
+    symbol = payload.get("symbol", "IWDA")
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
+    if not rows:
+        raise HTTPException(404, f"no prices for {symbol.upper()}")
+    data = [r["close"] for r in rows]
+
+    result = walk_forward_backtest(
+        data=data,
+        strategy_fn=_default_strategy,
+        train_window=payload.get("train_window", 252),
+        test_window=payload.get("test_window", 63),
+        step=payload.get("step", 21),
+    )
+    return WalkForwardResponse(**result.summary())
+
+
+@app.post("/api/v1/validation/cv", response_model=CVResponse, summary="Time-series cross-validation")
+async def validation_cv(payload: dict, ws=Depends(get_workspace)):
+    """Run purged K-Fold cross-validation on a price series."""
+    from packages.validation.cv import time_series_cv
+
+    symbol = payload.get("symbol", "IWDA")
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
+    if not rows:
+        raise HTTPException(404, f"no prices for {symbol.upper()}")
+    data = [r["close"] for r in rows]
+
+    result = time_series_cv(
+        model_fn=_default_strategy,
+        data=data,
+        n_splits=payload.get("n_splits", 5),
+        gap=payload.get("gap", 21),
+        metric=payload.get("metric", "sharpe"),
+    )
+    return CVResponse(**result.summary())
+
+
+@app.post("/api/v1/validation/hyperparameter", response_model=HyperparameterResponse, summary="Hyperparameter tuning")
+async def validation_hyperparameter(payload: dict, ws=Depends(get_workspace)):
+    """Run hyperparameter tuning on a price series."""
+    from packages.validation.hyperparameter import hyperparameter_tune
+
+    symbol = payload.get("symbol", "IWDA")
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
+    if not rows:
+        raise HTTPException(404, f"no prices for {symbol.upper()}")
+    data = [r["close"] for r in rows]
+
+    param_grid = payload.get("param_grid")
+    if not param_grid:
+        param_grid = {"lookback": [10, 20, 50], "threshold": [0.01, 0.02, 0.05]}
+
+    result = hyperparameter_tune(
+        model_fn=_default_strategy,
+        data=data,
+        param_grid=param_grid,
+        metric=payload.get("metric", "sharpe"),
+        n_trials=payload.get("n_trials", 20),
+        seed=payload.get("seed", 42),
+        method=payload.get("method", "random"),
+    )
+    return HyperparameterResponse(**result.summary())
+
+
 # ---------- routers ----------
 from apps.api.game_routes import game_router
 from apps.api.ollama_routes import ollama_router
 from apps.api.lobby_routes import lobby_router
+from apps.api.market_data_routes import market_data_router
+from apps.api.export_routes import export_router, explain_router
 from packages.compliance.bank_ready import compliance_router
 
 app.include_router(game_router)
 app.include_router(ollama_router)
 app.include_router(lobby_router)
+app.include_router(market_data_router)
 app.include_router(compliance_router)
+app.include_router(export_router)
+app.include_router(explain_router)
 
 
 # ---------- static web UI ----------

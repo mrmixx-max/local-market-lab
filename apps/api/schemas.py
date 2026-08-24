@@ -210,6 +210,45 @@ class ChatMessage(BaseModel):
     timestamp: str
 
 
+# ---------- stress / crisis ----------
+class StressRequest(BaseModel):
+    """Request body for stress-test scenarios."""
+    scenario: str = Field(..., description="Scenario name (e.g. 2008_financial_crisis, crash_30pct)")
+    scenario_type: str = Field(default="historical",
+                                description="historical or hypothetical")
+    positions: dict[str, float] = Field(default_factory=dict,
+                                         description="symbol -> weight fraction")
+    seed: int = Field(default=42, description="Reproducibility seed")
+
+
+class StressOut(BaseModel):
+    """Stress-test result — unified format with run_id, metrics, timeline."""
+    run_id: str = ""
+    scenario: str = ""
+    seed: int = 42
+    data_quality: dict = Field(default_factory=dict)
+    metrics: dict = Field(default_factory=dict)
+    timeline: list[dict] = Field(default_factory=list)
+    data_hash: str = ""
+    limitations: list[str] = Field(default_factory=list)
+
+
+class CrisisRequest(BaseModel):
+    """Request body for crisis scenario analysis."""
+    crisis_type: str = Field(..., description="correlation_break, liquidity_crunch, sector_rotation")
+    positions: dict[str, float] = Field(default_factory=dict)
+    params: dict = Field(default_factory=dict)
+
+
+# ---------- rebalancing ----------
+class RebalanceRequest(BaseModel):
+    """Request body for rebalancing proposals — NEVER executes trades."""
+    target_weights: dict[str, float] = Field(default_factory=dict)
+    threshold: float = Field(default=0.05, ge=0.001, le=0.5)
+    transaction_cost_bps: float = Field(default=10.0, ge=0.0)
+    holding_period_days: int = Field(default=30, ge=1, le=365)
+
+
 # ---------- ollama ----------
 class OllamaModelSchema(BaseModel):
     """A model available on the local Ollama daemon."""
@@ -226,3 +265,40 @@ class OllamaModelsResponse(BaseModel):
     models: list[OllamaModelSchema]
     host: str
     error: str | None = None
+
+
+# ---------- validation ----------
+class WalkForwardResponse(BaseModel):
+    """Walk-forward backtest result."""
+
+    n_folds: int
+    train_window: int
+    test_window: int
+    step: int
+    avg_sharpe: float
+    avg_return: float
+    oos_sharpe: float
+    folds: list[dict]
+
+
+class CVResponse(BaseModel):
+    """Time-series cross-validation result."""
+
+    n_splits: int
+    gap: int
+    metric: str
+    avg: float
+    std: float
+    folds: list[dict]
+
+
+class HyperparameterResponse(BaseModel):
+    """Hyperparameter tuning result."""
+
+    method: str
+    metric: str
+    n_trials: int
+    seed: int
+    best_params: dict
+    best_metric: float
+    top_trials: list[dict]
