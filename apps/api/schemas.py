@@ -214,8 +214,8 @@ class ChatMessage(BaseModel):
 class StressRequest(BaseModel):
     """Request body for stress-test scenarios."""
     scenario: str = Field(..., description="Scenario name (e.g. 2008_financial_crisis, crash_30pct)")
-    scenario_type: str = Field(default="historical",
-                                description="historical or hypothetical")
+    scenario_type: str | None = Field(default=None,
+                                       description="historical or hypothetical — auto-detected if not set")
     positions: dict[str, float] = Field(default_factory=dict,
                                          description="symbol -> weight fraction")
     seed: int = Field(default=42, description="Reproducibility seed")

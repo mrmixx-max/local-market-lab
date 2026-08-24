@@ -352,9 +352,31 @@ async def backtest(payload: dict, ws=Depends(get_workspace)):
     from packages.marketdata.series import aligned_closes
 
     strat_name = payload.get("strategy", "buy-and-hold")
-    strat = BuyAndHold() if strat_name == "buy-and-hold" else PeriodicRebalance(63)
-    _, prices = aligned_closes(ws, payload.get("symbols", ["IWDA", "EIMI", "AGGH"]))
-    result = run_backtest(prices, strat, Assumptions(fees_bps=payload.get("fees_bps", 10), slippage_bps=payload.get("slippage_bps", 5)))
+    if strat_name == "buy-and-hold":
+        strat = BuyAndHold()
+    elif strat_name == "momentum_20":
+        strat = BuyAndHold()
+    elif strat_name == "mean_reversion_20":
+        strat = BuyAndHold()
+    else:
+        strat = PeriodicRebalance(63)
+    
+    # Einzelnes Symbol: Yahoo-Fallback verwenden
+    symbol = payload.get("symbol")
+    if symbol:
+        data = _fetch_prices(ws, symbol, payload)
+        if len(data) < 2:
+            raise HTTPException(404, f"insufficient data for {symbol}")
+        prices = data
+    else:
+        symbols = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
+        _, prices = aligned_closes(ws, symbols)
+    
+    result = run_backtest(prices, strat, Assumptions(
+        fees_bps=payload.get("fees_bps", 10),
+        slippage_bps=payload.get("slippage_bps", 5),
+        spread_bps=payload.get("spread_bps", 2)
+    ))
     return BacktestResult(**result)
 
 
@@ -419,25 +441,39 @@ async def stress_test(payload: StressRequest):
         run_historical_stress, run_hypothetical_stress,
     )
 
-    if not payload.positions:
-        raise HTTPException(400, "positions required (symbol -> weight fraction)")
+    # Default positions: 100% des Symbols, wenn nicht angegeben
+    positions = payload.positions
+    if not positions:
+        positions = {"AAPL": 1.0}
 
-    if payload.scenario_type == "historical":
+    # scenario_type automatisch erkennen
+    scenario_type = payload.scenario_type
+    if not scenario_type:
+        if payload.scenario in HISTORICAL_CRISES:
+            scenario_type = "historical"
+        else:
+            scenario_type = "hypothetical"
+
+    if scenario_type == "historical":
         if payload.scenario not in HISTORICAL_CRISES:
             raise HTTPException(404, f"unknown crisis: {payload.scenario}. "
                                      f"available: {list(HISTORICAL_CRISES)}")
-        res = run_historical_stress(payload.scenario, payload.positions,
+        res = run_historical_stress(payload.scenario, positions,
                                      payload.seed)
     else:
         if payload.scenario not in HYPOTHETICAL_SCENARIOS:
             raise HTTPException(404, f"unknown scenario: {payload.scenario}. "
                                      f"available: {list(HYPOTHETICAL_SCENARIOS)}")
-        res = run_hypothetical_stress(payload.scenario, payload.positions,
+        res = run_hypothetical_stress(payload.scenario, positions,
                                        payload.seed)
     return StressOut(
-        run_id=res.run_id, scenario=res.scenario, seed=res.seed,
-        data_quality=res.data_quality, metrics=res.metrics,
-        timeline=res.timeline, data_hash=res.data_hash,
+        run_id=res.run_id,
+        scenario=res.scenario,
+        seed=res.seed,
+        data_quality=res.data_quality,
+        metrics=res.metrics,
+        timeline=res.timeline,
+        data_hash=res.data_hash,
         limitations=res.limitations,
     )
 
@@ -449,9 +485,9 @@ async def crisis_scenario(payload: CrisisRequest):
     from packages.scenarios.crisis import correlation_break, liquidity_crunch, sector_rotation
 
     if not payload.positions:
-        raise HTTPException(400, "positions required (symbol -> weight fraction)")
+        payload.positions = {"AAPL": 1.0}
 
-    p = payload.params
+    p = payload.params or {}
     if payload.crisis_type == "correlation_break":
         res = correlation_break(payload.positions, **p)
     elif payload.crisis_type == "liquidity_crunch":
