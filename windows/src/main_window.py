@@ -26,19 +26,19 @@ FONT = "Consolas"
 
 STYLESHEET = f"""
 QMainWindow {{ background: {C_BG}; color: {C_WHITE}; }}
-QWidget {{ background: {C_BG}; color: {C_WHITE}; font-family: "{FONT}"; font-size: 14px; }}
+QWidget {{ background: {C_BG}; color: {C_WHITE}; font-family: "{FONT}"; font-size: 16px; }}
 QTabWidget::pane {{ border: 1px solid {C_DIM}; }}
-QTabBar::tab {{ background: #111; color: {C_DIM}; padding: 10px 20px; font-size: 14px;
+QTabBar::tab {{ background: #111; color: {C_DIM}; padding: 12px 24px; font-size: 16px;
                border: 1px solid {C_DIM}; border-bottom: none; margin-right: 2px; }}
 QTabBar::tab:selected {{ background: {C_BG}; color: {C_AMBER}; border-color: {C_AMBER}; }}
-QTableWidget {{ background: #0A0A0A; color: {C_WHITE}; gridline-color: #222; font-size: 13px;
+QTableWidget {{ background: #0A0A0A; color: {C_WHITE}; gridline-color: #222; font-size: 15px;
                border: none; font-family: "{FONT}"; }}
 QTableWidget::item:selected {{ background: #1a1a00; color: {C_AMBER}; }}
 QHeaderView::section {{ background: #111; color: {C_AMBER}; border: 1px solid {C_DIM};
-                       padding: 6px; font-weight: bold; font-size: 13px; }}
-QStatusBar {{ background: #080808; color: {C_DIM}; font-size: 12px; }}
+                       padding: 8px; font-weight: bold; font-size: 15px; }}
+QStatusBar {{ background: #080808; color: {C_DIM}; font-size: 14px; }}
 QPushButton {{ background: #111; color: {C_AMBER}; border: 1px solid {C_AMBER};
-              padding: 8px 18px; font-size: 14px; font-weight: bold; }}
+              padding: 10px 22px; font-size: 16px; font-weight: bold; }}
 QPushButton:hover {{ background: #221100; }}
 QPushButton:pressed {{ background: {C_AMBER}; color: {C_BG}; }}
 """
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self) -> QWidget:
         frame = QFrame()
-        frame.setFixedWidth(220)
+        frame.setFixedWidth(320)
         frame.setStyleSheet(f"QFrame {{ border-right: 1px solid {C_DIM}; }}")
         lo = QVBoxLayout(frame)
         lo.setContentsMargins(6, 6, 6, 6)
@@ -132,6 +132,16 @@ class MainWindow(QMainWindow):
         self.watchlist.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.watchlist.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         lo.addWidget(self.watchlist, 1)
+        # Add Symbol
+        add_row = QHBoxLayout()
+        self.symbol_input = QLineEdit()
+        self.symbol_input.setPlaceholderText("Symbol hinzufügen...")
+        add_row.addWidget(self.symbol_input)
+        add_btn = QPushButton("+")
+        add_btn.setFixedWidth(40)
+        add_btn.clicked.connect(self._add_symbol)
+        add_row.addWidget(add_btn)
+        lo.addLayout(add_row)
         return frame
 
     def _build_topbar(self) -> QWidget:
@@ -182,6 +192,24 @@ class MainWindow(QMainWindow):
         self._poll_timer.timeout.connect(self._poll)
         self._poll_timer.start(POLL_MS)
         QTimer.singleShot(0, self._poll)
+
+    def _add_symbol(self) -> None:
+        """Füge ein Symbol zur Watchlist hinzu."""
+        symbol = self.symbol_input.text().strip().upper()
+        if not symbol:
+            return
+        if symbol in self._symbols:
+            return
+        prices = self.api.get(f"/api/v1/market/prices/{symbol}")
+        if not prices:
+            return
+        row = self.watchlist.rowCount()
+        self.watchlist.insertRow(row)
+        self.watchlist.setItem(row, 0, QTableWidgetItem(symbol))
+        self.watchlist.setItem(row, 1, QTableWidgetItem("--"))
+        self.watchlist.setItem(row, 2, QTableWidgetItem("0.00%"))
+        self._symbols.append(symbol)
+        self.symbol_input.clear()
 
     def _update_clock(self) -> None:
         self.clock_label.setText(QTime.currentTime().toString("hh:mm:ss"))
