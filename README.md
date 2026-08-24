@@ -49,6 +49,20 @@ lml demo
 Seeds deterministic synthetic prices and a demo portfolio, then prints a valuation,
 backtest summary and scenario percentiles.
 
+## New in v0.9
+
+- **10 Windows App tabs** with PyQt6 + pyqtgraph
+- **Walk-Forward Validation, Time-Series CV, Hyperparameter-Tuning**
+- **Stress Tests & Crisis Scenarios** (2008, 2020, 2022, Crash -30%, etc.)
+- **Rebalancing-Assistant** (proposals only, never executes)
+- **PDF/Excel/CSV Export**
+- **Explainability** (Feature Importance, SHAP-like, Diebold-Mariano)
+- **Ollama Integration** (local LLM chat)
+- **Bank-Ready Compliance** (BaFin-report, GDPR export/deletion)
+- **Data Quality Layer** (missing, splits, FX, timestamps, outliers)
+- **Yahoo Finance + Alpha Vantage** adapters with local cache
+- **CI/CD**, **Docker**, **Inno Setup Installer**
+
 ## Import your own data
 
 ```bash
@@ -234,13 +248,24 @@ apps/web/               Bloomberg-style terminal UI
 5. **Methodology notes mandatory.** Every report states how ratios are annualized.
 6. **Privacy by default.** Local SQLite, no network calls, no telemetry.
 
-## Windows Screenshots
+## Windows App (PyQt6 + pyqtgraph)
 
-| Dashboard | Backtest | Scenarios |
-|:---:|:---:|:---:|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Backtest](docs/screenshots/backtest.png) | ![Scenarios](docs/screenshots/scenarios.png) |
+The Windows desktop app provides a Bloomberg-terminal-style interface with 10 tabs:
 
-*The dark-themed PyQt6 desktop interface with real-time charts powered by pyqtgraph.*
+| Tab | Features |
+|-----|----------|
+| **Markets** | Candlestick charts, SMA/EMA/RSI/MACD/Bollinger indicators, crosshair |
+| **Backtest** | Strategy comparison, equity curves, cost analysis (fees/slippage/spread) |
+| **Scenarios** | Monte-Carlo, stress tests, crisis scenarios, histograms |
+| **Validation** | Walk-forward, time-series CV, hyperparameter tuning |
+| **Explainability** | Feature importance, model comparison |
+| **Rebalancing** | Drift detection, proposals (read-only, never executes) |
+| **Export** | PDF, Excel, CSV report generation |
+| **Risk** | VaR/CVaR, drawdown, correlation matrix |
+| **Ollama** | Local LLM chat with model selection |
+| **Game** | Paper-trading challenges, leaderboard |
+
+All charts use `pyqtgraph` for hardware-accelerated rendering. Data refreshes automatically every 3 seconds.
 
 ## Build from Source (Windows)
 
