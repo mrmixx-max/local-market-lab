@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.9.1-rc.1] — 2026-08-24 (Release Candidate / Pre-Release)
+## [0.9.1] — 2026-08-24 (Stable)
 
 ### Fixed — Critical & High
 

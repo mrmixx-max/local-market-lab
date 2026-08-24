@@ -53,7 +53,7 @@ from apps.api.schemas import (
 # ---------------------------------------------------------------------------
 # App + lifecycle
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Local Market Lab", version="0.9.1-rc.1")
+app = FastAPI(title="Local Market Lab", version="0.9.1")
 _start_time = time.monotonic()
 _shutdown_done = False
 
@@ -148,7 +148,7 @@ async def health(ws=Depends(get_workspace)):
     return HealthResponse(
         status="ok" if db_ok else "degraded",
         instruments=n,
-        version="0.9.1-rc.1",
+        version="0.9.1",
         db_connected=db_ok,
         uptime_seconds=uptime_seconds,
         ollama_available=ollama_available,
@@ -170,7 +170,7 @@ async def system_info(ws=Depends(get_workspace)):
     except OSError:
         db_size = 0
     return {
-        "version": "0.9.1-rc.1",
+        "version": "0.9.1",
         "uptime_seconds": round(time.monotonic() - _start_time, 1),
         "db_path": str(Path(db_path).name),  # Only expose filename, not full path
         "db_size_bytes": db_size,

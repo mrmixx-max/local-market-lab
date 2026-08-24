@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from packages.domain.constants import EXPORT_CSV_PATH, EXPORT_EXCEL_PATH, EXPORT_PDF_PATH
 from packages.domain.entities import ExportQuality, ExportResult
 
-SYSTEM_VERSION = "0.9.1-rc.1"
+SYSTEM_VERSION = "0.9.1"
 DEFAULT_SEED = 42
 DISCLAIMER = (
     "Dieses Ergebnis dient ausschließlich der Analyse, Forschung und Bildung. "
