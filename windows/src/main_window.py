@@ -278,8 +278,11 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Modell:"))
         self.ol_model = QComboBox()
-        self.ol_model.setMinimumWidth(200)
+        self.ol_model.setMinimumWidth(300)
         top.addWidget(self.ol_model)
+        refresh_btn = QPushButton("⟳ Refresh")
+        refresh_btn.clicked.connect(self._load_ollama_models)
+        top.addWidget(refresh_btn)
         top.addStretch()
         lo.addLayout(top)
         self.ol_chat = QTextEdit()
@@ -296,6 +299,17 @@ class MainWindow(QMainWindow):
         inp.addWidget(send_btn)
         lo.addLayout(inp)
         return w
+
+    def _load_ollama_models(self) -> None:
+        """Lade Ollama-Modelle direkt."""
+        self.ol_model.clear()
+        models = self.api.get("/api/v1/ollama/models")
+        if models and isinstance(models, dict):
+            for m in models.get("models", []):
+                name = m.get("model", "")
+                if name:
+                    size = m.get("size_gb", "?")
+                    self.ol_model.addItem(f"{name} ({size}GB)", name)
 
     def _build_risk_tab(self) -> QWidget:
         w = QWidget()
@@ -430,12 +444,12 @@ class MainWindow(QMainWindow):
         text = self.ol_input.text().strip()
         if not text:
             return
-        model = self.ol_model.currentText()
+        model = self.ol_model.currentData() or self.ol_model.currentText()
         self.ol_chat.append(f"<b>Du:</b> {text}")
         self.ol_input.clear()
         result = self.api.post("/api/v1/ollama/chat", {"model": model, "message": text})
         if result:
-            self.ol_chat.append(f"<b>KI:</b> {result.get('response', 'Keine Antwort')}")
+            self.ol_chat.append(f"<b>KI:</b> {result.get('content', result.get('response', 'Keine Antwort'))}")
 
     def _poll(self) -> None:
         health = self.api.get("/api/v1/health")
@@ -477,8 +491,7 @@ class MainWindow(QMainWindow):
                     self.sc_symbol.addItem(s.get("symbol", ""))
         models = self.api.get("/api/v1/ollama/models")
         if models and self.ol_model.count() == 0:
-            for m in models:
-                self.ol_model.addItem(m.get("model", ""))
+            self._load_ollama_models()
         if self.tabs.currentIndex() == 5:
             self._refresh_risk()
 
