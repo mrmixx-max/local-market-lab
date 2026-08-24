@@ -1,4 +1,4 @@
-# Local Market Lab — Technische Dokumentation v0.8.0
+# Local Market Lab — Technische Dokumentation v0.9.0
 
 > **Fortschrittsorientierte Marktanalyse auf deinem eigenen Rechner.**
 > Keine Cloud. Keine Datenweitergabe. Keine Signale. Keine Beratung.
@@ -20,9 +20,17 @@
 11. [Bank-Ready & Compliance](#11-bank-ready--compliance)
 12. [Windows-App](#12-windows-app)
 13. [Ollama-Integration](#13-ollama-integration)
-14. [Konfiguration](#14-konfiguration)
-15. [FAQ](#15-faq)
-16. [Troubleshooting](#16-troubleshooting)
+14. [Validierung & Optimierung](#14-validierung--optimierung)
+15. [Stress-Tests & Krisenszenarien](#15-stress-tests--krisenszenarien)
+16. [Rebalancing-Assistent](#16-rebalancing-assistent)
+17. [Export & Berichte](#17-export--berichte)
+18. [Erklärbarkeit](#18-erklärbarkeit)
+19. [Datenqualitätsprüfung](#19-datenqualitätsprüfung)
+20. [Marktdaten-Adapter](#20-marktdaten-adapter)
+21. [Sicherheit & Compliance](#21-sicherheit--compliance)
+22. [Konfiguration](#22-konfiguration)
+23. [FAQ](#23-faq)
+24. [Troubleshooting](#24-troubleshooting)
 
 ---
 
@@ -381,7 +389,7 @@ Automatische Checksummen für `instruments`, `transactions`, `prices`, `corporat
 
 ```json
 {
-  "system_version": "0.8.0",
+  "system_version": "0.9.0",
   "audit_log_summary": {...},
   "data_integrity_status": "valid",
   "user_actions_count": 42,
@@ -407,14 +415,31 @@ Automatische Checksummen für `instruments`, `transactions`, `prices`, `corporat
 
 ### 12.2 Features
 
-- **6 Tabs**: Markets, Backtest, Scenarios, Game, Ollama, Risk
-- **Sidebar**: Watchlist mit Live-Updates
+- **10 Tabs**: Markets, Backtest, Scenarios, Validation, Explainability, Rebalancing, Export, Risk, Ollama, Game
+- **Sidebar**: Watchlist mit Live-Updates (320px breit)
 - **Top-Bar**: Branding, Uhr, Verbindungsstatus
 - **Statusbar**: Disclaimer
 - **Charts**: Candlestick, Line, Histogram, Drawdown (pyqtgraph)
 - **Live-Ticks**: WebSocket-Updates im Watchlist
+- **Schrift**: 16px Basisgröße für bessere Lesbarkeit
+- **Theme**: Dunkles Farbschema (Dark Theme)
 
-### 12.3 Architecture
+### 12.3 Tab-Übersicht
+
+| Tab | Inhalt |
+|-----|--------|
+| **Marktsuche** | Preise, Kurse, historische Daten |
+| **Backtest** | Strategien testen, Performance-Analyse |
+| **Szenarien** | Monte-Carlo, Bootstrap, historische Replay |
+| **Validierung** | Walk-Forward, Zeit-Kreuzvalidierung, Hyperparameter |
+| **Erklärbarkeit** | Feature-Wichtigkeit, SHAP-ähnlich, Diebold-Mariano |
+| **Rebalancing** | Ausgleichsvorschläge, keine automatische Ausführung |
+| **Export** | PDF-, Excel-, CSV-Berichte |
+| **Risiko** | Value at Risk, CVaR, Korrelation |
+| **Ollama** | Lokale LLM-Chat-Oberfläche |
+| **Spiel** | Paper-Trading mit virtuellem Kapital |
+
+### 12.4 Architektur
 
 `QMainWindow` → `QTabWidget` + `QSplitter` → Chart-/Dashboard-Widgets
 
@@ -496,6 +521,455 @@ A: Ja, die Web-UI und CLI funktionieren plattformunabhängig. Die Windows-App is
 | `Circular Import` | `state.py` verwenden, nicht direkt `workspace.py` |
 | `game_id not found` | Singleton-Problem — API-Server neu starten |
 | App startet nicht | API-Server prüfen: `curl http://127.0.0.1:8322/api/v1/health` |
+
+---
+
+## 14. Validierung & Optimierung
+
+### 14.1 Walk-Forward-Validation
+
+Die Walk-Forward-Validation simuliert die reale Anwendung: Das Modell wird auf einem Fenster trainiert und auf dem nächsten getestet. Der Fenster-Verschiebungsschritt wiederholt sich über die gesamte Datenreihe.
+
+```
+POST /api/v1/validation/walk-forward
+```
+
+```json
+{
+  "symbol": "IWDA",
+  "source": "yahoo",
+  "train_window": 252,
+  "test_window": 63,
+  "step": 21,
+  "seed": 42
+}
+```
+
+**Parameter**:
+| Parameter | Beschreibung |
+|-----------|-------------|
+| `symbol` | Börsensymbol |
+| `source` | Datenquelle (`yahoo`, `alphavantage`) |
+| `train_window` | Trainingsfenster in Handelstagen |
+| `test_window` | Testfenster in Handelstagen |
+| `step` | Verschiebungsschritt in Handelstagen |
+| `seed` | Reproduzierbarkeits-Startwert |
+
+**Ausgabe**: Liste der Fenster-Ergebnisse mit Trainings-/Test-Perioden und Metriken pro Fenster.
+
+### 14.2 Zeit-Kreuzvalidierung (Time-Series CV)
+
+Zeit-Kreuzvalidierung teilt die Zeitreihe in `n_splits` disjunkte Test-Sets auf, wobei eine Lücke (`gap`) zwischen Training und Test verhindert, dass zukünftige Daten in das Training einfließen.
+
+```
+POST /api/v1/validation/cv
+```
+
+```json
+{
+  "symbol": "IWDA",
+  "source": "yahoo",
+  "n_splits": 5,
+  "gap": 5,
+  "metric": "sharpe",
+  "seed": 42
+}
+```
+
+**Parameter**:
+| Parameter | Beschreibung |
+|-----------|-------------|
+| `n_splits` | Anzahl der Validierungsteilungen |
+| `gap` | Lücke zwischen Training und Test (Tage) |
+| `metric` | Bewertungsmetrik (`sharpe`, `sortino`, `cagr`) |
+
+### 14.3 Hyperparameter-Optimierung
+
+Automatische Suche nach optimalen Strategie-Parametern mit konfigurierbaren Suchverfahren.
+
+```
+POST /api/v1/validation/hyperparameter
+```
+
+```json
+{
+  "symbol": "IWDA",
+  "source": "yahoo",
+  "param_grid": {
+    "window": [10, 20, 50],
+    "threshold": [0.01, 0.02, 0.05]
+  },
+  "metric": "sharpe",
+  "n_trials": 50,
+  "method": "grid",
+  "seed": 42
+}
+```
+
+**Methoden**:
+| Methode | Beschreibung |
+|---------|-------------|
+| `grid` | Vollständige Rastersuche über `param_grid` |
+| `random` | Zufällige Stichprobe aus `param_grid` |
+| `bayesian` | Bayes-Optimierung mit Surrogat-Modell |
+
+---
+
+## 15. Stress-Tests & Krisenszenarien
+
+### 15.1 Stress-Tests
+
+Simuliert Portfolio-Verluste unter extremen Marktbedingungen.
+
+```
+POST /api/v1/scenario/stress
+```
+
+```json
+{
+  "scenario": "crash_30",
+  "positions": {
+    "IWDA": 0.6,
+    "AGGH": 0.4
+  },
+  "seed": 42
+}
+```
+
+**Verfügbare Szenarien**:
+| Szenario | Beschreibung |
+|----------|-------------|
+| `crash_30` | Sofortiger Kurssturz um 30% |
+| `crash_50` | Sofortiger Kurssturz um 50% |
+| `vol_spike` | Verdopplung der Volatilität |
+| `correlation_break` | Korrelation geht auf 1.0 |
+| `liquidity_crisis` | Ausgehandelte Märkte, hohe Slippage |
+
+### 15.2 Krisenszenarien
+
+Historische Krisen nachstellen und auf aktuelle Portfolios anwenden.
+
+```
+POST /api/v1/scenario/crisis
+```
+
+```json
+{
+  "crisis_type": "2008",
+  "positions": {
+    "IWDA": 0.6,
+    "EIMI": 0.4
+  },
+  "params": {},
+  "seed": 42
+}
+```
+
+**Verfügbare Krisen**:
+| Krisen-Typ | Zeitraum | Beschreibung |
+|------------|----------|-------------|
+| `2008` | 2008-2009 | Finanzkrise (Subprime) |
+| `2020` | 2020 | COVID-19-Pandemie |
+| `2022` | 2022 | Zinswende, Inflationskrise |
+| `dotcom` | 2000-2002 | Dotcom-Blase |
+
+**Ausgabe**: Verlustbetrag, prozentuale Verluste, Erholungszeit, Vergleich mit Benchmark.
+
+---
+
+## 16. Rebalancing-Assistent
+
+### 16.1 Funktionsweise
+
+Der Rebalancing-Assistent analysiert das Portfolio und schlägt Ausgleichsmaßnahmen vor. **Keine automatische Ausführung** — alle Vorschläge müssen manuell bestätigt werden.
+
+```
+GET /api/v1/portfolio/{name}/rebalancing
+```
+
+### 16.2 Vorschlags-Logik
+
+| Schritt | Beschreibung |
+|---------|-------------|
+| 1. Ist-Zustand | Aktuelle Gewichte berechnen |
+| 2. Soll-Zustand | Zielgewichte aus Strategie laden |
+| 3. Abweichung | Differenz Ist vs. Soll |
+| 4. Schwellenwert | Nur vorschlagen wenn Abweichung > Schwellenwert |
+| 5. Handelsvorschlag | Kauf-/Verkaufs-Mengen berechnen |
+
+### 16.3 Ausgabe
+
+```json
+{
+  "portfolio": "MeinPortfolio",
+  "drift_threshold": 0.05,
+  "rebalancing_needed": true,
+  "suggestions": [
+    {
+      "symbol": "IWDA",
+      "current_weight": 0.65,
+      "target_weight": 0.60,
+      "action": "Verkauf",
+      "amount": 500.00
+    }
+  ]
+}
+```
+
+---
+
+## 17. Export & Berichte
+
+### 17.1 PDF-Export
+
+Erstellt professionelle PDF-Berichte mit Charts und Tabellen.
+
+```
+POST /api/v1/export/pdf
+```
+
+```json
+{
+  "portfolio": "MeinPortfolio",
+  "include_charts": true,
+  "include_metrics": true,
+  "title": "Portfolio-Bericht Q3 2026"
+}
+```
+
+### 17.2 Excel-Export
+
+Exportiert Rohdaten und Berechnungen für eigene Analysen.
+
+```
+POST /api/v1/export/excel
+```
+
+```json
+{
+  "portfolio": "MeinPortfolio",
+  "sheets": ["positions", "transactions", "metrics", "prices"]
+}
+```
+
+**Verfügbare Blätter**: `positions`, `transactions`, `metrics`, `prices`, `allocation`, `risk`
+
+### 17.3 CSV-Export
+
+Maschinenlesbare Ausgabe für Datenpipelines.
+
+```
+POST /api/v1/export/csv
+```
+
+```json
+{
+  "portfolio": "MeinPortfolio",
+  "data_type": "prices",
+  "date_from": "2024-01-01",
+  "date_to": "2026-08-24"
+}
+```
+
+---
+
+## 18. Erklärbarkeit
+
+### 18.1 Feature-Wichtigkeit
+
+Welche Merkmale beeinflussen die Vorhersage am stärksten?
+
+```
+GET /api/v1/explainability/importance?symbol=IWDA&model=ensemble
+```
+
+**Ausgabe**:
+```json
+{
+  "symbol": "IWDA",
+  "model": "ensemble",
+  "importance": [
+    {"feature": "momentum_20", "importance": 0.35},
+    {"feature": "volatility_20", "importance": 0.25},
+    {"feature": "volume_change", "importance": 0.15}
+  ]
+}
+```
+
+### 18.2 SHAP-ähnliche Erklärung
+
+Lokale Erklärungen für einzelne Vorhersagen — ähnlich SHAP-Werten, berechnet über Permutation.
+
+```
+GET /api/v1/explainability/explain?symbol=IWDA&date=2026-08-24
+```
+
+### 18.3 Modellvergleich (Diebold-Mariano)
+
+Statistischer Test, ob ein Modell ein anderes signifikant übertrifft.
+
+```
+GET /api/v1/explainability/compare?symbol=IWDA&model_a=linear&model_b=ensemble&metric=mse
+```
+
+**Ausgabe**:
+```json
+{
+  "test": "Diebold-Mariano",
+  "statistic": -2.15,
+  "p_value": 0.032,
+  "significant": true,
+  "better_model": "ensemble"
+}
+```
+
+---
+
+## 19. Datenqualitätsprüfung
+
+### 19.1 Qualitätsbericht
+
+Automatische Prüfung der Vollständigkeit, Konsistenz und Aktualität der Daten.
+
+```
+GET /api/v1/quality/report/{symbol}
+```
+
+**Ausgabe**:
+```json
+{
+  "symbol": "IWDA",
+  "quality_score": 0.95,
+  "checks": {
+    "completeness": 0.98,
+    "consistency": 0.96,
+    "timeliness": 0.91,
+    "outliers": 0.99
+  },
+  "issues": [
+    {
+      "type": "missing_data",
+      "date": "2024-03-15",
+      "severity": "low"
+    }
+  ]
+}
+```
+
+### 19.2 Qualitätskriterien
+
+| Kriterium | Beschreibung | Schwellenwert |
+|-----------|-------------|---------------|
+| **Vollständigkeit** | Fehlende Datenpunkte | > 95% |
+| **Konsistenz** | Plötzliche Sprünge, Ausreißer | < 3 Standardabweichungen |
+| **Aktualität** | Letzter Datenpunkt nicht älter als... | < 5 Handelstage |
+| **Kontinuität** | Keine Lücken > 5 Tage | 0 Lücken |
+
+### 19.3 Automatische Reparatur
+
+- **Fehlende Werte**: Lineare Interpolation (max. 3 Tage)
+- **Ausreißer**: Winsorization auf 1./99. Perzentil
+- **Duplikate**: Automatische Entfernung, letzter Wert gewinnt
+
+---
+
+## 20. Marktdaten-Adapter
+
+### 20.1 Yahoo Finance
+
+Direkter Zugriff auf Yahoo Finance-Daten ohne API-Schlüssel.
+
+```
+GET /api/v1/market/data/{symbol}?source=yahoo
+```
+
+**Parameter**:
+| Parameter | Beschreibung |
+|-----------|-------------|
+| `symbol` | Börsensymbol (z.B. `IWDA.AS`) |
+| `source` | `yahoo` |
+| `interval` | `1d`, `1wk`, `1mo` |
+| `range` | `1mo`, `3mo`, `1y`, `5y`, `max` |
+
+### 20.2 Alpha Vantage
+
+Professionelle Datenquelle mit API-Schlüssel.
+
+```
+GET /api/v1/market/data/{symbol}?source=alphavantage&apikey=DEIN_KEY
+```
+
+**Konfiguration**:
+```bash
+export ALPHA_VANTAGE_KEY=dein_api_schluessel
+```
+
+### 20.3 Adapter-Vergleich
+
+| Merkmal | Yahoo Finance | Alpha Vantage |
+|---------|--------------|---------------|
+| API-Schlüssel | Nein | Ja |
+| Echtzeit | 15 Min. verzögert | Echtzeit |
+| Historisch | 40+ Jahre | 20+ Jahre |
+| Limits | Fair Use | 5 Anfragen/Min. |
+| Währung | USD, EUR, GBP | USD |
+
+---
+
+## 21. Sicherheit & Compliance
+
+### 21.1 CORS (Cross-Origin Resource Sharing)
+
+Standardmäßig auf `127.0.0.1` beschränkt. Produktion:
+
+```bash
+export LML_CORS_ORIGINS="https://meine-domain.de,https://app.meine-domain.de"
+```
+
+### 21.2 Ratenbegrenzung (Rate Limiting)
+
+Schutz vor Überlastung und Missbrauch:
+
+| Limit | Wert |
+|-------|------|
+| Standard | 100 Anfragen/Minute/IP |
+| Authentifizierte | 1000 Anfragen/Minute |
+| Burst | 20 Anfragen/Sekunde |
+
+**Antwort bei Überschreitung**:
+```json
+{
+  "error": "rate_limit_exceeded",
+  "retry_after": 30
+}
+```
+
+### 21.3 Pfad-Traversal-Schutz
+
+Alle Datei-Pfade werden normalisiert und validiert:
+
+- Keine `..`-Sequenzen in Pfaden
+- Keine absoluten Pfade außerhalb des Arbeitsbereichs
+- Whitelist erlaubter Dateiendungen (`.csv`, `.json`, `.db`)
+- Maximale Pfadlänge: 256 Zeichen
+
+### 21.4 Eingabevalidierung
+
+| Validierung | Umsetzung |
+|-------------|-----------|
+| SQL-Injection | Parametrisierte Queries, kein String-Concatenation |
+| XSS | HTML-Escaping aller Ausgaben |
+| JSON-Schema | Validierung aller POST-Bodies |
+| Dateigrößen | Max. 10 MB Upload |
+
+### 21.5 Audit-Logging
+
+Alle sicherheitsrelevanten Ereignisse werden protokolliert:
+
+- Authentifizierungsversuche (erfolgreich/fehlgeschlagen)
+- Rate-Limit-Treffer
+- Ungültige Pfad-Anfragen
+- API-Fehler 4xx/5xx
 
 ---
 
