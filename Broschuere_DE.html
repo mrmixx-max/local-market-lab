@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Local Market Lab — Werbebroschüre DE</title>
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #222; max-width: 800px; margin: 0 auto; padding: 20px; }
+h1 { color: #FFA028; border-bottom: 2px solid #FFA028; padding-bottom: 5px; font-size: 22pt; }
+h2 { color: #FFA028; border-bottom: 1px solid #ddd; padding-bottom: 3px; font-size: 16pt; margin-top: 25px; }
+h3 { color: #333; font-size: 13pt; }
+code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-size: 10pt; }
+pre { background: #1a1a1a; color: #FFA028; padding: 12px; border-radius: 5px; font-size: 9pt; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th { background: #FFA028; color: #000; padding: 8px; text-align: left; }
+td { border: 1px solid #ddd; padding: 6px; }
+tr:nth-child(even) { background: #f9f9f9; }
+blockquote { border-left: 4px solid #FFA028; padding-left: 15px; color: #555; font-style: italic; }
+img { max-width: 100%; height: auto; margin: 10px 0; border: 1px solid #ddd; }
+strong { color: #FFA028; }
+</style>
+</head>
+<body><h1>Local Market Lab</h1>
+
+<h2>Deine private Marktanalyse. Lokal. Sicher. Reproduzierbar.</h2>
+
+<p><strong>Version 0.8.0 — Die Open-Source-Alternative zu Bloomberg Terminal</strong></p>
+
+<hr />
+
+<h2>Executive Summary</h2>
+
+<p><strong>Local Market Lab</strong> (LML) ist eine lokal arbeitende, datenschutzorientierte Workbench für Portfolioanalyse, Backtesting, Szenariosimulation und KI-gestützte Marktvorhersage — alles auf deinem eigenen Rechner, ohne Cloud, ohne Datenweitergabe.</p>
+
+<h3>Die drei Versprechen</h3>
+
+<table>
+<thead>
+<tr>
+  <th>Verspreis</th>
+  <th>Umsetzung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Privacy First</strong></td>
+  <td>Keine Telemetrie, keine externen Services, SQLite lokal</td>
+</tr>
+<tr>
+  <td><strong>Institutionelle Methodik</strong></td>
+  <td>CAGR, Sharpe, VaR, CVaR, Monte-Carlo — professionell dokumentiert</td>
+</tr>
+<tr>
+  <td><strong>Reproduzierbarkeit</strong></td>
+  <td>Jeder Run mit Seed, Timestamp, Data-Hash</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Das Problem</h2>
+
+<p>Moderne Marktanalyse hat drei Schwachstellen:</p>
+
+<ol>
+<li><p><strong>Datenschutz</strong>: Die meisten Tools senden deine Portfolio-Daten an Cloud-Server. Deine AnlageStrategie wird zum Produkt.</p></li>
+<li><p><strong>Black-Box-Modelle</strong>: KI-gestützte Vorhersagen erklären nicht, wie sie kommen. Keine Kontrolle, keine Transparenz.</p></li>
+<li><p><strong>Komplexität</strong>: Professionelle Tools (Bloomberg, Refinitiv) kosten tausende Euro pro Monat und erfordern monatelange Schulung.</p></li>
+</ol>
+
+<p><strong>LML löst alle drei.</strong></p>
+
+<hr />
+
+<h2>Die Lösung</h2>
+
+<p>Local Market Lab vereint sechs Werkzeuge in einer einzigen Anwendung:</p>
+
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    LOCAL MARKET LAB                         │
+├─────────────┬─────────────┬─────────────┬─────────────────────┤
+│  Portfolio  │  Backtest   │  Szenarien  │  KI-Prediction      │
+│  Analytics  │  Engine     │  Engine     │  15+ Modelle        │
+├─────────────┼─────────────┼─────────────┼─────────────────────┤
+│  Trading    │  Risk       │  Ollama     │  Bank-Ready         │
+│  Game       │  Dashboard  │  Chat       │  Compliance          │
+└─────────────┴─────────────┴─────────────┴─────────────────────┘
+</code></pre>
+
+<h3>Portfolio Analytics</h3>
+
+<ul>
+<li>Bewertung in Echtzeit mit Decimal-Genauigkeit (keine Float-Fehler)</li>
+<li>FX-Policy mit <code>incomplete</code>-State (nie stille 1:1-Konvertierung)</li>
+<li>Corporate Actions: Splits, Dividenden, chronologisch korrekt</li>
+<li>Benchmark-Vergleich mit Beta, Alpha, Tracking Error</li>
+</ul>
+
+<h3>Backtest Engine</h3>
+
+<ul>
+<li>Event-Loop über alignede Preisreihen</li>
+<li>Strategien: Buy &amp; Hold, Momentum, Mean Reversion, Periodic Rebalance</li>
+<li>Gebühren und Slippage konfigurierbar</li>
+<li>Reproduzierbarkeits-Manifeste mit Seed und Data-Hash</li>
+</ul>
+
+<h3>Szenarien</h3>
+
+<ul>
+<li>Monte-Carlo, Block-Bootstrap, Historical-Replay</li>
+<li>Perzentile (P05–P95), Verlustwahrscheinlichkeit</li>
+<li>Explizit: <strong>Keine Prognose, nur Szenarien</strong></li>
+</ul>
+
+<h3>KI-Prediction (15+ Modelle)</h3>
+
+<ul>
+<li><strong>Basismodelle</strong>: Linear, Holt's ExpSmooth, ARIMA-like, Ensemble</li>
+<li><strong>Fortgeschritten</strong>: Regime-Switching, Bayesian, Online Ensemble, Cross-Asset</li>
+<li><strong>Deep Learning</strong>: LSTM, GRU mit Backpropagation Through Time</li>
+<li><strong>Reinforcement Learning</strong>: Q-Learning, DQN, REINFORCE</li>
+<li><strong>Genetische Optimierung</strong>: Feature-Selection, Differential Evolution, NSGA-II</li>
+</ul>
+
+<h3>Trading Game</h3>
+
+<ul>
+<li>Paper-Trading mit virtuellen Kapital</li>
+<li>6 Challenges (Beat Market, Low Volatility, Income Generator, ...)</li>
+<li>Leaderboard, Equity-Curves, automatischer Modus</li>
+</ul>
+
+<h3>Risk Dashboard</h3>
+
+<ul>
+<li>VaR, CVaR, Rolling Sharpe, Drawdown Series</li>
+<li>Performance Attribution, Korrelationsmatrix</li>
+<li>Korrelation-Regime-Erkennung</li>
+</ul>
+
+<hr />
+
+<h2>Technologie</h2>
+
+<table>
+<thead>
+<tr>
+  <th>Komponente</th>
+  <th>Technologie</th>
+  <th>Warum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Backend</strong></td>
+  <td>Python 3.11, FastAPI</td>
+  <td>Lesbarkeit, Ecosystem</td>
+</tr>
+<tr>
+  <td><strong>Datenbank</strong></td>
+  <td>SQLite</td>
+  <td>Zero-Config, portable</td>
+</tr>
+<tr>
+  <td><strong>Web UI</strong></td>
+  <td>HTML/Canvas (Bloomberg-Stil)</td>
+  <td>Keine Dependencies</td>
+</tr>
+<tr>
+  <td><strong>Desktop</strong></td>
+  <td>PyQt6 + pyqtgraph</td>
+  <td>Native Performance</td>
+</tr>
+<tr>
+  <td><strong>Charts</strong></td>
+  <td>Canvas 2D / pyqtgraph</td>
+  <td>Echtzeit, interaktiv</td>
+</tr>
+<tr>
+  <td><strong>KI</strong></td>
+  <td>100% numpy</td>
+  <td>Kein GPU, kein CUDA</td>
+</tr>
+<tr>
+  <td><strong>Tests</strong></td>
+  <td>pytest</td>
+  <td>90+ Tests, grün</td>
+</tr>
+<tr>
+  <td><strong>CI/CD</strong></td>
+  <td>GitHub Actions, Docker</td>
+  <td>Automatisiert</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Use Cases</h2>
+
+<h3>Privatanleger</h3>
+
+<ul>
+<li>Portfolio-Entwicklung verstehen</li>
+<li>Risiken quantifizieren (VaR, Max Drawdown)</li>
+<li>Strategien <strong>vor</strong> echten Einsatz testen</li>
+</ul>
+
+<h3>Trader</h3>
+
+<ul>
+<li>Backtests mit realistischen Kosten</li>
+<li>Szenarien für verschiedene Marktphasen</li>
+<li>Paper-Trading für Strategie-Validierung</li>
+</ul>
+
+<h3>Bildung</h3>
+
+<ul>
+<li>Finanzmathematik praktisch erleben</li>
+<li>KI/ML-Modelle verstehen (keine Black Box)</li>
+<li>Datenschutz und Reproduzierbarkeit lernen</li>
+</ul>
+
+<h3>Forschung</h3>
+
+<ul>
+<li>Methodik offen dokumentiert</li>
+<li>Alle Berechnungen reproduzierbar</li>
+<li>Lokale Daten, keine API-Abhängigkeit</li>
+</ul>
+
+<hr />
+
+<h2>Vergleich</h2>
+
+<table>
+<thead>
+<tr>
+  <th>Feature</th>
+  <th>Local Market Lab</th>
+  <th>Bloomberg Terminal</th>
+  <th>Online-Broker</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Kosten</strong></td>
+  <td>Kostenlos (Open Source)</td>
+  <td>~2.000€/Monat</td>
+  <td>0€</td>
+</tr>
+<tr>
+  <td><strong>Datenschutz</strong></td>
+  <td>100% lokal</td>
+  <td>Cloud</td>
+  <td>Cloud</td>
+</tr>
+<tr>
+  <td><strong>Methodik</strong></td>
+  <td>Offen dokumentiert</td>
+  <td>Proprietär</td>
+  <td>Proprietär</td>
+</tr>
+<tr>
+  <td><strong>KI-Modelle</strong></td>
+  <td>15+, lokal</td>
+  <td>Extern, Black-Box</td>
+  <td>Keine</td>
+</tr>
+<tr>
+  <td><strong>Backtest</strong></td>
+  <td>Kosten, Slippage, Benchmark</td>
+  <td>Ja, aber teuer</td>
+  <td>Eingeschränkt</td>
+</tr>
+<tr>
+  <td><strong>Reproduzierbarkeit</strong></td>
+  <td>Seed, Hash, Manifest</td>
+  <td>Nein</td>
+  <td>Nein</td>
+</tr>
+<tr>
+  <td><strong>Offline-fähig</strong></td>
+  <td>Ja</td>
+  <td>Nein</td>
+  <td>Nein</td>
+</tr>
+<tr>
+  <td><strong>Windows-App</strong></td>
+  <td>Ja (PyQt6)</td>
+  <td>Ja (Native)</td>
+  <td>Web</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Sicherheit &amp; Compliance</h2>
+
+<h3>Bank-Ready</h3>
+
+<ul>
+<li><strong>Audit-Logger</strong>: Append-only, SHA-256-Prüfsummen</li>
+<li><strong>Data Integrity</strong>: Automatische Checksummen für kritische Tabellen</li>
+<li><strong>GDPR-Export</strong>: JSON-Export aller Nutzerdaten</li>
+<li><strong>GDPR-Löschung</strong>: Anonymisierung mit Aggregat-Erhaltung</li>
+<li><strong>Compliance-Report</strong>: BaFin-konformes JSON</li>
+</ul>
+
+<h3>Sicherheitsprinzipien</h3>
+
+<ul>
+<li>Keine externen API-Aufrufe (außer optional: Ollama)</li>
+<li>Rate Limiting (100 Anfragen/Minute/IP)</li>
+<li>Request-ID für Traceability</li>
+<li>Graceful Shutdown mit DB-Close</li>
+</ul>
+
+<hr />
+
+<h2>Roadmap</h2>
+
+<table>
+<thead>
+<tr>
+  <th>Version</th>
+  <th>Features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>0.9</strong></td>
+  <td>Walk-Forward-Validation, Hyperparameter-Tuning</td>
+</tr>
+<tr>
+  <td><strong>1.0</strong></td>
+  <td>Echte Marktdaten (Yahoo Finance, Alpha Vantage)</td>
+</tr>
+<tr>
+  <td><strong>1.1</strong></td>
+  <td>Multiplayer-Lobby, Team-Challenges</td>
+</tr>
+<tr>
+  <td><strong>1.2</strong></td>
+  <td>Export: PDF, Excel, CSV Reports</td>
+</tr>
+<tr>
+  <td><strong>2.0</strong></td>
+  <td>Mobile App (iOS/Android)</td>
+</tr>
+</tbody>
+</table>
+
+<hr />
+
+<h2>Team</h2>
+
+<p><strong>Erik Gieske</strong> — Autor, Entwickler
+- GitHub: <a href="https://github.com/mrmixx-max">github.com/mrmixx-max</a>
+- E-Mail: erikgieske@gmail.com</p>
+
+<hr />
+
+<h2>Call-to-Action</h2>
+
+<p><strong>Starte jetzt — kostenlos, ohne Registrierung, ohne Cloud.</strong></p>
+
+<div class="codehilite">
+<pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/mrmixx-max/local-market-lab.git
+<span class="nb">cd</span><span class="w"> </span>local-market-lab
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+python<span class="w"> </span>-m<span class="w"> </span>apps.api
+</code></pre>
+</div>
+
+<p><strong>Oder</strong>: Windows-Installer von <a href="https://github.com/mrmixx-max/local-market-lab/releases">GitHub Releases</a> herunterladen.</p>
+
+<hr />
+
+<p><em>Lokale First. Keine Cloud. Keine Kompromisse.</em></p>
+
+<p><strong>LML v0.8.0 — Die Open-Source-Alternative für datenschutzorientierte Marktanalyse.</strong></p>
+</body></html>
