@@ -1,6 +1,6 @@
 [project]
 name = "local-market-lab"
-version = "1.0.0rc1"
+version = "1.0.0rc2"
 description = "Local-first portfolio analytics, backtesting, and scenario simulation — without investment signals."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,6 +27,9 @@ lml = "apps.cli.main:app"
 
 [tool.setuptools.packages.find]
 include = ["packages*", "apps*"]
+
+[tool.setuptools.package-data]
+"apps.web" = ["*.html", "*.ico", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

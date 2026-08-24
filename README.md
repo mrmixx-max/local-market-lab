@@ -13,7 +13,7 @@ provider. There is no cloud, no account, no telemetry.
 
 ## Install
 
-> **v1.0.0-rc.1 note:** The Windows Installer is **not available in this RC**
+> **v1.0.0-rc.2 note:** The Windows Installer is **not available in this RC**
 > (not reproducibly buildable — Inno Setup/ISCC missing in the release build
 > environment). Use the **portable EXE** (primary Windows artifact) or pip.
 > See `docs/v1.0-known-limitations.md`.
@@ -25,7 +25,7 @@ Download `LocalMarketLab.exe` from [Releases](https://github.com/mrmixx-max/loca
 ### pip
 
 ```bash
-pip install local-market-lab==1.0.0rc1
+pip install local-market-lab==1.0.0rc2
 ```
 
 Requires Python 3.10+.
@@ -357,7 +357,7 @@ The project uses two GitHub Actions workflows:
 ### Release Process
 
 1. Update version in `windows/src/version_info.txt` and `windows/installer/setup.iss`
-2. Push a tag: `git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1`
+2. Push a tag: `git tag v1.0.0-rc.2 && git push origin v1.0.0-rc.2`
 3. GitHub Actions automatically builds and creates a release with:
    - `LocalMarketLab-Setup-v{version}.exe` (installer)
    - `LocalMarketLab.exe` (portable)
