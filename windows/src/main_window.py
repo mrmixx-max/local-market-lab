@@ -4,11 +4,12 @@ top bar, status bar, dark theme, and live REST polling.
 """
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 
 import requests
 from PyQt6.QtCore import Qt, QTimer, QTime
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow,
     QPushButton, QStatusBar, QTabWidget, QTableWidget,
@@ -82,7 +83,6 @@ class MainWindow(QMainWindow):
         self._last_prices: dict[str, float] = {}
         self._prev_prices: dict[str, float] = {}
         # Window Icon
-        from PyQt6.QtGui import QIcon
         icon_path = str(Path(__file__).parent.parent.parent / "lml-icon.ico")
         if Path(icon_path).exists():
             self.setWindowIcon(QIcon(icon_path))
