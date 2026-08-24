@@ -247,6 +247,8 @@ class RebalanceRequest(BaseModel):
     threshold: float = Field(default=0.05, ge=0.001, le=0.5)
     transaction_cost_bps: float = Field(default=10.0, ge=0.0)
     holding_period_days: int = Field(default=30, ge=1, le=365)
+    cash: float | None = Field(default=None, ge=0.0)
+    min_order_overrides: dict[str, float] | None = Field(default=None)
 
 
 # ---------- ollama ----------

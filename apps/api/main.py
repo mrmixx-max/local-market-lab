@@ -544,10 +544,105 @@ async def rebalancing_analysis(
     }
 
 
-@app.post("/api/v1/portfolio/{name}/rebalance",
-             summary="Generate rebalancing proposals for target weights")
-async def rebalance_portfolio(name: str, payload: RebalanceRequest,
-                               ws=Depends(get_workspace)):
+@app.post("/api/v1/portfolio/{name}/rebalance/orders",
+           summary="Generate realistic order suggestions (min sizes, fees, cash)")
+async def rebalance_orders(name: str, payload: RebalanceRequest,
+                           ws=Depends(get_workspace)):
+    """Generate executable-in-principle order suggestions respecting minimum
+    order sizes, fees, and available cash.
+
+    @experimental — NEVER executes trades. Only returns suggestions with
+    per-position below_minimum flags, fees, rounding notes, cash impact, and a
+    cost-benefit verdict. Invalid params (negative min order value) -> 422.
+    """
+    from packages.portfolio.engine import value_portfolio
+    from packages.portfolio.rebalancing import (
+        rebalance_orders_from_valuation, suggest_rebalance_orders,
+    )
+    from packages.marketdata.fx import FxPolicy
+
+    if not payload.target_weights:
+        raise HTTPException(400, "target_weights required")
+
+    fx = FxPolicy()
+    for k, v in os.environ.items():
+        if k.startswith("LML_FX_"):
+            fx.set_rate(k[8:], float(v))
+    valued = value_portfolio(ws, name, fx)
+    n = len(valued["positions"])
+    if n == 0:
+        return {"needs_rebalance": False, "summary": "No positions in portfolio."}
+
+    kwargs = {}
+    min_overrides = getattr(payload, "min_order_overrides", None)
+    if min_overrides is not None:
+        kwargs["min_order_overrides"] = min_overrides
+    if getattr(payload, "cash", None) is not None:
+        kwargs["cash"] = payload.cash
+
+    try:
+        result = rebalance_orders_from_valuation(
+            valued, payload.target_weights,
+            threshold=payload.threshold,
+            fee_bps=payload.transaction_cost_bps,
+            holding_period_days=payload.holding_period_days,
+            **kwargs)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return {
+        "run_id": result.run_id,
+        "data_hash": result.data_hash,
+        "cash_before": result.cash_before,
+        "cash_after": result.cash_after,
+        "total_fees_estimate": result.total_fees_estimate,
+        "orders_skipped_below_minimum": result.orders_skipped_below_minimum,
+        "cost_benefit_status": result.cost_benefit_status,
+        "warnings": result.warnings,
+        "drift_threshold": result.drift_threshold,
+        "proposals": [p.__dict__ for p in result.proposals],
+        "disclaimer": result.disclaimer,
+    }
+
+
+@app.post("/api/v1/rebalance/orders",
+          summary="Generate order suggestions from explicit positions")
+async def rebalance_orders_explicit(payload: dict):
+    """Stateless variant: pass positions + targets + cash directly.
+
+    @experimental — suggestions only, no execution.
+    """
+    from packages.portfolio.rebalancing import suggest_rebalance_orders
+
+    positions = payload.get("positions", {})
+    targets = payload.get("target_weights", {})
+    if not positions or not targets:
+        raise HTTPException(400, "positions and target_weights required")
+    try:
+        result = suggest_rebalance_orders(
+            positions, targets,
+            cash=float(payload.get("cash", 0.0)),
+            threshold=payload.get("threshold"),
+            default_min_order_value=payload.get("default_min_order_value"),
+            allow_fractional=payload.get("allow_fractional"),
+            min_order_strategy=payload.get("min_order_strategy"),
+            fee_bps=payload.get("fee_bps"),
+            min_fee=payload.get("min_fee"),
+            spread_bps=payload.get("spread_bps"),
+            min_order_overrides=payload.get("min_order_overrides"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {
+        "run_id": result.run_id, "data_hash": result.data_hash,
+        "cash_before": result.cash_before, "cash_after": result.cash_after,
+        "total_fees_estimate": result.total_fees_estimate,
+        "orders_skipped_below_minimum": result.orders_skipped_below_minimum,
+        "cost_benefit_status": result.cost_benefit_status,
+        "warnings": result.warnings,
+        "proposals": [p.__dict__ for p in result.proposals],
+        "disclaimer": result.disclaimer,
+    }
     """Generate rebalancing proposals for a portfolio given target weights.
 
     @experimental — NEVER executes trades. Only returns RebalancingProposal

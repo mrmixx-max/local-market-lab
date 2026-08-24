@@ -104,6 +104,30 @@ Or use the web UI (F6 TRADE) for a visual trading experience with live P&L.
 
 ## API + Web UI
 
+### Rebalancing (v1.0 P1.2 — realistic order suggestions)
+
+The rebalancing assistant generates **proposals only** — it never executes
+trades or contacts a broker.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/rebalance/orders` | Stateless: pass `positions`, `target_weights`, `cash`; returns per-position `below_minimum` flags, `fees_estimate`, `rounding_note`, `cash_before/after`, `cost_benefit_status` |
+| `POST /api/v1/portfolio/{name}/rebalance/orders` | Same, from a live portfolio valuation |
+
+**Configuration (env):**
+- `LML_REBALANCE_DEFAULT_MIN_ORDER_VALUE` (default `50.0`) — minimum order
+  value per instrument; orders below are marked `below_minimum`, never
+  silently rounded.
+- `LML_REBALANCE_ALLOW_FRACTIONAL` (default `false`) — integer share rounding
+  with explicit residual note when off.
+- `LML_REBALANCE_MIN_ORDER_STRATEGY` (`skip`|`round_up`|`round_down`,
+  default `skip`).
+- `LML_REBALANCE_FEE_BPS` (default `10.0`), `LML_REBALANCE_MIN_FEE`
+  (default `0.0`), `LML_REBALANCE_SPREAD_BPS` (default `0.0`).
+
+No negative positions or negative cash can be proposed; sells are capped at
+holdings (no shorting). Invalid params (e.g. negative min order value) → 422.
+
 ```bash
 # start the API server
 python -m apps.api

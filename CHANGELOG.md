@@ -56,6 +56,26 @@ Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 
 ## [Unreleased]
 
+### Added — v1.0 P1.2 (Minimum order sizes & realistic rebalancing)
+
+- **`suggest_rebalance_orders()`** + `OrderProposal`/`RebalanceOrdersResult`:
+  per-instrument minimum order size (value based, default 50 via
+  `LML_REBALANCE_DEFAULT_MIN_ORDER_VALUE`), integer vs fractional-share
+  rounding with explicit `rounding_note` residual, fee/spread/min-fee
+  estimation, cost-benefit gate (`worthwhile`/`marginal`/`not_worthwhile`),
+  cash-before/after accounting. No execution path, no broker.
+- **Rundungsstrategie** via `LML_REBALANCE_MIN_ORDER_STRATEGY`
+  (skip|round_up|round_down; default skip — below-minimum orders are
+  flagged, never silently rounded).
+- **API**: `POST /api/v1/rebalance/orders` (stateless, explicit positions)
+  and `POST /api/v1/portfolio/{name}/rebalance/orders` (from live valuation).
+  Invalid params (negative min) → 422. Existing rebalance endpoints
+  unchanged.
+- 27 neue Unit-Tests + API-Tests; Suite 422 passed.
+- Dokumentation: README, known-limitations, v1.0-roadmap, API-Endpoint
+  aktualisiert.
+
+
 ### Added — v1.0 P1.1 + P1.3 (Job-Queue & Fortschritt)
 
 - **In-Process Job-Queue** (`packages/jobs/`): persistenter Jobstatus in

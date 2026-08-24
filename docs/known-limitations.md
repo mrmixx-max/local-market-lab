@@ -17,8 +17,11 @@
 - Alpha Vantage Free-Tier: 25 Requests/Tag, Adapter-Throttling 12 s.
 
 ## Portfolio & Rebalancing
-- Keine Mindestordergrößen, keine Stückelung; Vorschläge können unter
-  Ausführungsgranularität liegen.
+- ✅ Mindestordergrößen & Stückelung — gelöst in v1.0 P1.2:
+  `suggest_rebalance_orders()` berücksichtigt Mindestordergrößen
+  (Default 50 € via `LML_REBALANCE_DEFAULT_MIN_ORDER_VALUE`), Ganzzahl-
+  vs. Fractional-Rundung, Gebühren/Spread und verfügbares Cash; Orders unter
+  Minimum werden als `below_minimum` markiert, nie stillschweigend gerundet.
 - Steuereffekte im TLH-Hinweis sind Pauschalschätzungen (25 %), keine Steuerberatung.
 
 ## Betrieb
