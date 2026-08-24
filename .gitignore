@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local data — NEVER commit user portfolios or market data
+.env
+*.db
+*.sqlite
+data/*
+!data/.gitkeep
+examples/portfolios/*.csv
+fixtures/synthetic/prices/*.csv
+!fixtures/synthetic/prices/.gitkeep
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Web (later)
+node_modules/
+apps/web/dist/
