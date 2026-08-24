@@ -235,7 +235,7 @@ class StressOut(BaseModel):
 
 class CrisisRequest(BaseModel):
     """Request body for crisis scenario analysis."""
-    crisis_type: str = Field(..., description="correlation_break, liquidity_crunch, sector_rotation")
+    crisis_type: str = Field(default="correlation_break", description="correlation_break, liquidity_crunch, sector_rotation")
     positions: dict[str, float] = Field(default_factory=dict)
     params: dict = Field(default_factory=dict)
 

@@ -367,15 +367,14 @@ async def backtest(payload: dict, ws=Depends(get_workspace)):
         data = _fetch_prices(ws, symbol, payload)
         if len(data) < 2:
             raise HTTPException(404, f"insufficient data for {symbol}")
-        prices = data
+        prices = {symbol: data}
     else:
         symbols = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
         _, prices = aligned_closes(ws, symbols)
     
     result = run_backtest(prices, strat, Assumptions(
-        fees_bps=payload.get("fees_bps", 10),
-        slippage_bps=payload.get("slippage_bps", 5),
-        spread_bps=payload.get("spread_bps", 2)
+        fees_bps=payload.get("fees_bps", 10) + payload.get("spread_bps", 0),
+        slippage_bps=payload.get("slippage_bps", 5)
     ))
     return BacktestResult(**result)
 
@@ -488,14 +487,15 @@ async def crisis_scenario(payload: CrisisRequest):
         payload.positions = {"AAPL": 1.0}
 
     p = payload.params or {}
-    if payload.crisis_type == "correlation_break":
+    crisis_type = payload.crisis_type or "correlation_break"
+    if crisis_type == "correlation_break":
         res = correlation_break(payload.positions, **p)
-    elif payload.crisis_type == "liquidity_crunch":
+    elif crisis_type == "liquidity_crunch":
         res = liquidity_crunch(payload.positions, **p)
-    elif payload.crisis_type == "sector_rotation":
+    elif crisis_type == "sector_rotation":
         res = sector_rotation(payload.positions, **p)
     else:
-        raise HTTPException(400, f"unknown crisis_type: {payload.crisis_type}")
+        raise HTTPException(400, f"unknown crisis_type: {crisis_type}")
     return {
         "scenario_type": res.scenario_type,
         "portfolio_impact_pct": res.portfolio_impact_pct,
