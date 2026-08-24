@@ -82,6 +82,7 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
         self._build_ui()
         self._init_watchlist()
+        self._load_ollama_models()
         self._build_timers()
 
     def _build_ui(self) -> None:
