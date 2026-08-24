@@ -124,7 +124,19 @@ def lstm_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42
 
 
 def gru_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42):
-    """GRU forecaster: update/reset gates, BPTT, Adam, Xavier."""
+    """GRU forecaster: update/reset gates, BPTT, Adam, Xavier.
+
+    Args:
+        data: 1-D array-like of float prices/values (min 10 points).
+        horizon: Number of steps to forecast (>=1).
+        hidden_size: Number of GRU hidden units.
+        epochs: Training iterations over the full sequence.
+        lr: Adam learning rate.
+        seed: RNG seed for reproducibility.
+
+    Returns:
+        dict with keys: model, forecast, last, horizon, hidden_size, epochs.
+    """
     data = np.asarray(data, dtype=np.float64).ravel()
     if len(data) < 10:
         raise ValueError("need at least 10 data points")
@@ -186,3 +198,42 @@ def gru_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42)
     return {"model": "gru", "forecast": [round(float(x), 4) for x in fc],
             "last": round(float(data[-1]), 4), "horizon": horizon,
             "hidden_size": hidden_size, "epochs": epochs}
+
+
+def walk_forward_validate(model_fn, data, min_train=100, step=20, horizon=5, **kw):
+    """Chronological walk-forward validation for any forecast model.
+
+    For each window start position, trains on data[:start] and tests on
+    data[start:start+horizon]. Predictions and actuals are concatenated.
+
+    Args:
+        model_fn: Callable(data_array, horizon, **kw) -> dict with 'forecast' key.
+        data: Full 1-D time series.
+        min_train: Minimum training size before first prediction.
+        step: Step size for rolling the window.
+        horizon: Forecast horizon per fold.
+        **kw: Passed through to model_fn.
+
+    Returns:
+        dict with: predictions, actuals, rmse, mae, n_folds, fold_starts.
+    """
+    data = np.asarray(data, dtype=np.float64).ravel()
+    predictions, actuals, fold_starts = [], [], []
+    for start in range(min_train, len(data) - horizon, step):
+        train = data[:start]
+        test = data[start:start + horizon]
+        try:
+            result = model_fn(train, horizon, **kw)
+            predictions.extend(result["forecast"])
+            actuals.extend(test)
+            fold_starts.append(start)
+        except Exception:
+            continue
+    if not predictions:
+        return {"predictions": [], "actuals": [], "rmse": float("nan"),
+                "mae": float("nan"), "n_folds": 0, "fold_starts": []}
+    p, a = np.array(predictions), np.array(actuals)
+    return {"predictions": p.tolist(), "actuals": a.tolist(),
+            "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
+            "mae": float(np.mean(np.abs(p - a))),
+            "n_folds": len(fold_starts), "fold_starts": fold_starts}

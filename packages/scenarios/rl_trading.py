@@ -17,7 +17,9 @@ def _returns(data: np.ndarray) -> np.ndarray:
 
 
 def _disc(ret: float, n: int = 5, clip: float = 0.03) -> int:
-    return int((np.clip(ret, -clip, clip) + clip) / (2 * clip / n))
+    """Discretize a return into n bins in [-clip, clip]. Returns int in [0, n-1]."""
+    raw = int((np.clip(ret, -clip, clip) + clip) / (2 * clip / n))
+    return min(raw, n - 1)  # guard against edge case where ret == clip exactly
 
 
 def _svec(t: int, pos: int, rets: np.ndarray) -> np.ndarray:

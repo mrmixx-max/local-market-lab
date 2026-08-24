@@ -16,6 +16,7 @@ import atexit
 import json
 import os
 import random
+import signal
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -47,10 +48,15 @@ from apps.api.schemas import (
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Local Market Lab", version="0.1.0")
 _start_time = time.monotonic()
+_shutdown_done = False
 
 
 def _shutdown() -> None:
     """Close the SQLite connection pool on process exit."""
+    global _shutdown_done
+    if _shutdown_done:
+        return
+    _shutdown_done = True
     try:
         from packages.storage.state import _workspace
         if _workspace is not None:
@@ -59,6 +65,20 @@ def _shutdown() -> None:
     except Exception as exc:  # noqa: BLE001
         log_json("error", event="shutdown_error", msg=str(exc))
 
+
+# PyInstaller SIGTERM/SIGINT handler — needed because PyInstaller's bootloader
+# does not forward signals by default in windowed mode.
+def _signal_handler(signum, frame):
+    _shutdown()
+    raise SystemExit(0)
+
+
+try:
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
+except (ValueError, OSError):
+    # May fail on non-main threads or restricted environments.
+    pass
 
 atexit.register(_shutdown)
 
@@ -78,7 +98,7 @@ app.add_middleware(RequestIDMiddleware)
 # ---------- health ----------
 @app.get("/api/v1/health", response_model=HealthResponse, summary="Service health check")
 async def health(ws=Depends(get_workspace)):
-    """Return service status, DB connectivity, instrument count, and uptime."""
+    """Return service status, DB connectivity, instrument count, uptime, and upstream status."""
     db_ok = True
     try:
         ws.conn.execute("SELECT 1")
@@ -86,12 +106,41 @@ async def health(ws=Depends(get_workspace)):
         db_ok = False
     n = ws.conn.execute("SELECT COUNT(*) c FROM instruments").fetchone()["c"] if db_ok else 0
     uptime_seconds = round(time.monotonic() - _start_time, 1)
+
+    # Check Ollama availability
+    ollama_available = False
+    ollama_error = None
+    try:
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+        req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/0.1"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            json.load(r)
+        ollama_available = True
+    except Exception as exc:
+        ollama_error = str(exc)
+
+    # Check Yahoo Finance availability
+    yahoo_available = False
+    yahoo_error = None
+    try:
+        yahoo_url = "https://query1.finance.yahoo.com/v8/finance/chart/^GDAXI?range=1d&interval=1d"
+        req = urllib.request.Request(yahoo_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            json.load(r)
+        yahoo_available = True
+    except Exception as exc:
+        yahoo_error = str(exc)
+
     return HealthResponse(
         status="ok" if db_ok else "degraded",
         instruments=n,
         version="0.1.0",
         db_connected=db_ok,
         uptime_seconds=uptime_seconds,
+        ollama_available=ollama_available,
+        yahoo_available=yahoo_available,
+        ollama_error=ollama_error,
+        yahoo_error=yahoo_error,
     )
 
 
@@ -139,21 +188,42 @@ async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace
 
 @app.get("/api/v1/market/yahoo/{symbol}", summary="Yahoo Finance Fallback")
 async def yahoo_fallback(symbol: str):
-    """Fallback to Yahoo Finance for real-time prices (crypto, stocks not in local DB)."""
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            data = json.load(r)
-        result = data.get("chart", {}).get("result", [])
-        if not result:
-            return {"error": "no data"}
-        meta = result[0].get("meta", {})
-        price = meta.get("regularMarketPrice", 0)
-        prev = meta.get("chartPreviousClose", price)
-        return {"symbol": symbol, "price": price, "prev_close": prev, "currency": meta.get("currency", "USD")}
-    except Exception as exc:
-        return {"error": str(exc)}
+    """Fallback to Yahoo Finance for real-time prices (crypto, stocks not in local DB).
+
+    Tries query1.finance.yahoo.com first, then query2 as fallback.
+    Uses a realistic browser User-Agent to avoid Yahoo blocks.
+    Configurable timeout via LML_YAHOO_TIMEOUT env var (default: 10s).
+    """
+    timeout = int(os.environ.get("LML_YAHOO_TIMEOUT", "10"))
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    endpoints = [
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m",
+        f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m",
+    ]
+    last_err: str | None = None
+    for url in endpoints:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = json.load(r)
+            result = data.get("chart", {}).get("result", [])
+            if not result:
+                last_err = "no data in Yahoo response"
+                continue
+            meta = result[0].get("meta", {})
+            price = meta.get("regularMarketPrice", 0)
+            prev = meta.get("chartPreviousClose", price)
+            return {
+                "symbol": symbol,
+                "price": price,
+                "prev_close": prev,
+                "currency": meta.get("currency", "USD"),
+                "source": url.split("/")[2],
+            }
+        except Exception as exc:
+            last_err = str(exc)
+            continue
+    return {"error": last_err or "all Yahoo endpoints failed"}
 
 
 # ---------- technical indicators ----------

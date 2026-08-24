@@ -176,3 +176,62 @@ class TestMarketEndpoints:
         data = response.json()
         assert data["symbol"] == "IWDA"
         assert "bars" in data
+
+
+class TestYahooEndpoint:
+    def test_yahoo_returns_json(self, client):
+        """Yahoo endpoint should return a JSON response (may be error if offline)."""
+        response = client.get("/api/v1/market/yahoo/AAPL")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, dict)
+        # Either we got data, or we got an error dict
+        assert "symbol" in data or "error" in data
+
+
+class TestOllamaEndpoints:
+    """Tests for Ollama bridge routes using mocked HTTP."""
+
+    def test_ollama_chat_returns_content(self, client):
+        """Chat route should return content when Ollama responds."""
+        from unittest.mock import patch, MagicMock
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = b'{"message": {"content": "Hello there!"}}'
+
+        with patch("apps.api.ollama_routes.urllib.request.urlopen", return_value=mock_resp):
+            response = client.post("/api/v1/ollama/chat", json={
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": "Hi"}],
+            })
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == "Hello there!"
+        assert data["model"] == "llama3.1"
+
+    def test_ollama_chat_missing_model_400(self, client):
+        response = client.post("/api/v1/ollama/chat", json={
+            "messages": [{"role": "user", "content": "Hi"}],
+        })
+        assert response.status_code == 400
+
+    def test_ollama_chat_missing_messages_400(self, client):
+        response = client.post("/api/v1/ollama/chat", json={
+            "model": "llama3.1",
+        })
+        assert response.status_code == 400
+
+    def test_ollama_chat_error_response(self, client):
+        """Chat route should return error content when Ollama is unreachable."""
+        from unittest.mock import patch
+        with patch("apps.api.ollama_routes.urllib.request.urlopen", side_effect=Exception("connection refused")):
+            response = client.post("/api/v1/ollama/chat", json={
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": "Hi"}],
+            })
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data["content"].lower()
+        assert data["model"] == "llama3.1"

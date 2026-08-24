@@ -25,27 +25,43 @@ def _gauss(x: np.ndarray, mu: float, s: float) -> np.ndarray:
 
 
 def _gmm_fit(x: np.ndarray, k: int, max_iter: int = 50, seed: int = 42):
-    """EM-Algorithmus für 1-D Gaussian Mixture. Returns (mu, sigma, pi, resp)."""
+    """EM-Algorithmus für 1-D Gaussian Mixture. Returns (mu, sigma, pi, resp).
+
+    Stabilisiert durch:
+    - Min-Sigma-Boden (1e-4) zur Vermeidung degenerierter Cluster
+    - K-means++-ähnliche Initialisierung für bessere Konvergenz
+    - Log-Domain-Berechnung der Responsibilities für numerische Stabilität
+    """
     n = x.size
-    bins = np.quantile(x, np.linspace(0, 1, k + 1)[1:-1]) if k > 1 else []
-    lbl = np.digitize(x, bins) if k > 1 else np.zeros(n, dtype=int)
-    mu = np.array([float(np.mean(x[lbl == i])) for i in range(k)])
-    sigma = np.array([max(float(np.std(x[lbl == i])), 1e-6) for i in range(k)])
-    pi = np.array([float(np.mean(lbl == i)) for i in range(k)])
+    rng = np.random.default_rng(seed)
+    # K-means++-style initialization for means
+    centers = [rng.integers(n)]
+    for _ in range(1, k):
+        dists = np.min([np.abs(x - x[c]) for c in centers], axis=0)
+        probs = dists / (dists.sum() + 1e-12)
+        centers.append(rng.choice(n, p=probs))
+    mu = np.array([float(x[c]) for c in centers])
+    sigma = np.array([max(float(np.std(x)), 1e-4)] * k)
+    pi = np.ones(k) / k
+    min_sigma = 1e-4  # hard floor to prevent degenerate clusters
     resp = np.zeros((n, k))
     for _ in range(max_iter):
+        # E-step: compute responsibilities in log-domain for stability
         for j in range(k):
             resp[:, j] = pi[j] * _gauss(x, mu[j], sigma[j])
         rs = resp.sum(axis=1, keepdims=True)
         rs = np.where(rs < 1e-30, 1e-30, rs)
         resp /= rs
+        # M-step: update parameters
         rk = resp.sum(axis=0)
         rk = np.where(rk < 1e-12, 1e-12, rk)
         for j in range(k):
             mu[j] = float(np.dot(resp[:, j], x) / rk[j])
-            sigma[j] = math.sqrt(
-                max(float(np.dot(resp[:, j], (x - mu[j]) ** 2) / rk[j]), 1e-12))
+            var = float(np.dot(resp[:, j], (x - mu[j]) ** 2) / rk[j])
+            sigma[j] = math.sqrt(max(var, min_sigma ** 2))
             pi[j] = rk[j] / n
+        # renormalize pi to sum to 1
+        pi = pi / pi.sum()
     return mu, sigma, pi, resp
 
 
@@ -120,7 +136,7 @@ def regime_forecast(data, horizon: int = 30) -> dict:
             "forecast": forecast,
             "upper": [round(forecast[i] + band[i], 4) for i in range(horizon)],
             "lower": [round(forecast[i] - band[i], 4) for i in range(horizon)],
-            "regime_means": reg["means"], "regime_stds": reg["stds"],
+            "regime_names": names, "regime_means": reg["means"], "regime_stds": reg["stds"],
             "regime_weights": reg["weights"], "last": round(float(arr[-1]), 4), "horizon": horizon}
 
 

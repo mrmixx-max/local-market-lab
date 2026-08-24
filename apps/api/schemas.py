@@ -15,6 +15,12 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     instruments: int = Field(..., description="Number of instruments in the database")
     version: str = "0.1.0"
+    db_connected: bool = True
+    uptime_seconds: float = 0.0
+    ollama_available: bool = False
+    yahoo_available: bool = False
+    ollama_error: str | None = None
+    yahoo_error: str | None = None
 
 
 # ---------- market data ----------

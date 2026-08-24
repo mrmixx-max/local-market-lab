@@ -70,7 +70,23 @@ def _encoder_layer(x, n_heads=4, mask=None):
 
 
 def transformer_forecast(data, horizon=30, d_model=32, n_heads=4, n_layers=2):
-    """Encoder-only Transformer forecast for univariate time series."""
+    """Encoder-only Transformer forecast for univariate time series.
+
+    Uses sinusoidal positional encoding, causal multi-head self-attention,
+    and feed-forward layers. No training — uses fixed random projections
+    (acts as a random feature extractor suitable for short-term patterns).
+
+    Args:
+        data: 1-D array-like of float values (min 2 points).
+        horizon: Number of steps to forecast (>=1).
+        d_model: Embedding dimension (must be divisible by n_heads).
+        n_heads: Number of attention heads.
+        n_layers: Number of encoder layers.
+
+    Returns:
+        dict with: forecast, ci_68_lower/upper, ci_95_lower/upper,
+                   d_model, n_heads, n_layers.
+    """
     if len(data) < 2:
         raise ValueError("data must contain at least 2 points")
     if horizon < 1:
@@ -117,3 +133,39 @@ def transformer_forecast(data, horizon=30, d_model=32, n_heads=4, n_layers=2):
         "n_heads": n_heads,
         "n_layers": n_layers,
     }
+
+
+def walk_forward_validate(model_fn, data, min_train=60, step=20, horizon=5, **kw):
+    """Chronological walk-forward validation for Transformer forecast.
+
+    Args:
+        model_fn: Callable(data, horizon, **kw) -> dict with 'forecast' key.
+        data: Full 1-D time series.
+        min_train: Minimum training size (default 60 for Transformer).
+        step: Step size for rolling window.
+        horizon: Forecast horizon per fold.
+        **kw: Passed through to model_fn.
+
+    Returns:
+        dict with: predictions, actuals, rmse, mae, n_folds, fold_starts.
+    """
+    data = np.asarray(data, dtype=float)
+    predictions, actuals, fold_starts = [], [], []
+    for start in range(min_train, len(data) - horizon, step):
+        train = data[:start]
+        test = data[start:start + horizon]
+        try:
+            result = model_fn(train, horizon, **kw)
+            predictions.extend(result["forecast"])
+            actuals.extend(test)
+            fold_starts.append(start)
+        except Exception:
+            continue
+    if not predictions:
+        return {"predictions": [], "actuals": [], "rmse": float("nan"),
+                "mae": float("nan"), "n_folds": 0, "fold_starts": []}
+    p, a = np.array(predictions), np.array(actuals)
+    return {"predictions": p.tolist(), "actuals": a.tolist(),
+            "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
+            "mae": float(np.mean(np.abs(p - a))),
+            "n_folds": len(fold_starts), "fold_starts": fold_starts}

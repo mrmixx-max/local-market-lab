@@ -108,21 +108,58 @@ def adaptive_decay(data, horizon=30) -> dict:
 
 
 def drift_detection(data, window=63) -> dict:
-    """Detect concept drift via window comparison; signal weight reset."""
+    """Detect concept drift via window comparison; signal weight reset.
+
+    Uses a combined test: mean shift (t-test-like) AND variance shift (F-test-like).
+    Drift is signaled if either exceeds its threshold, catching both
+    level shifts and volatility regime changes.
+
+    Args:
+        data: 1-D array-like of numeric values (minimum 10 elements).
+        window: Size of the recent vs historical comparison window.
+                Automatically reduced if data < 2*window.
+
+    Returns:
+        dict with:
+            drift_detected (bool): True if significant drift detected.
+            drift_score (float): Combined score (max of mean/var component).
+            mean_score (float): Standardized mean difference.
+            var_score (float): Log-ratio of variances (standardized).
+            window (int): Effective window used.
+            reset_weights (bool): True if drift_detected.
+            mean_recent (float): Mean of recent window.
+            mean_historical (float): Mean of historical window.
+    """
     arr = _validate(data, 1)
     if arr.size < 2 * window:
         window = arr.size // 2
     if window < 5:
-        return {"drift_detected": False, "drift_score": 0.0, "window": window}
+        return {
+            "drift_detected": False, "drift_score": 0.0,
+            "mean_score": 0.0, "var_score": 0.0,
+            "window": window, "reset_weights": False,
+            "mean_recent": round(float(np.mean(arr)), 4),
+            "mean_historical": round(float(np.mean(arr)), 4),
+        }
     recent = arr[-window:]
     historical = arr[-2 * window:-window]
+    # Mean component (t-test-like)
     mean_diff = abs(np.mean(recent) - np.mean(historical))
     pooled_std = np.sqrt((np.var(recent) + np.var(historical)) / 2.0)
-    drift_score = float(mean_diff / (pooled_std + 1e-8))
+    mean_score = float(mean_diff / (pooled_std + 1e-8))
+    # Variance component (log F-test-like)
+    var_recent = np.var(recent)
+    var_hist = np.var(historical)
+    var_ratio = var_recent / (var_hist + 1e-8)
+    var_score = float(abs(np.log(var_ratio)))  # log-ratio, symmetric
+    # Combined score
+    drift_score = max(mean_score, var_score)
     drift_detected = drift_score > 0.5
     return {
         "drift_detected": drift_detected,
         "drift_score": round(drift_score, 4),
+        "mean_score": round(mean_score, 4),
+        "var_score": round(var_score, 4),
         "window": window,
         "reset_weights": drift_detected,
         "mean_recent": round(float(np.mean(recent)), 4),

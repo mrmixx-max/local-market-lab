@@ -33,7 +33,15 @@ def _ols(x: list[float], y: list[float]) -> tuple[float, float]:
 
 
 def linear_trend_forecast(data: list[float], horizon: int = 30) -> dict:
-    """OLS on the last 60 points + 95% confidence band."""
+    """OLS on the last 60 points + 95% confidence band.
+
+    Args:
+        data: List of at least 5 finite numeric values.
+        horizon: Number of steps to forecast (>=1).
+
+    Returns:
+        dict with keys: model, forecast, upper, lower, slope, last.
+    """
     _validate(data, horizon)
     win = data[-60:]
     x = list(range(len(win)))
@@ -55,7 +63,17 @@ def linear_trend_forecast(data: list[float], horizon: int = 30) -> dict:
 
 def exp_smooth_forecast(data: list[float], horizon: int = 30,
                         alpha: float = 0.3, beta: float = 0.1) -> dict:
-    """Holt's linear trend (double exponential smoothing)."""
+    """Holt's linear trend (double exponential smoothing).
+
+    Args:
+        data: List of at least 5 finite numeric values.
+        horizon: Number of steps to forecast (>=1).
+        alpha: Level smoothing factor in (0, 1].
+        beta: Trend smoothing factor in (0, 1].
+
+    Returns:
+        dict with keys: model, forecast, upper, lower, level, trend, last.
+    """
     _validate(data, horizon)
     if not (0 < alpha <= 1) or not (0 < beta <= 1):
         raise ValueError("alpha and beta must be in (0, 1]")
@@ -88,7 +106,16 @@ def exp_smooth_forecast(data: list[float], horizon: int = 30,
 
 def arima_like_forecast(data: list[float], horizon: int = 30,
                         order: tuple[int, int, int] = (5, 1, 0)) -> dict:
-    """AR(1) on differenced data — no statsmodels needed."""
+    """AR(p) on differenced data — no statsmodels needed.
+
+    Args:
+        data: List of at least 5 finite numeric values.
+        horizon: Number of steps to forecast (>=1).
+        order: (p, d, q) — AR order, differencing degree, MA order (q unused).
+
+    Returns:
+        dict with keys: model, forecast, upper, lower, phi, d, last.
+    """
     _validate(data, horizon)
     p, d, _ = order
     if d < 0 or p < 1:
@@ -126,7 +153,18 @@ def arima_like_forecast(data: list[float], horizon: int = 30,
 
 
 def ensemble_forecast(data: list[float], horizon: int = 30) -> dict:
-    """Average of all three models + combined confidence intervals."""
+    """Average of all three models + combined confidence intervals.
+
+    Combines linear_trend, exp_smooth, and arima_like forecasts with
+    equal weights. Upper/lower bands are the envelope of all three models.
+
+    Args:
+        data: List of at least 5 finite numeric values.
+        horizon: Number of steps to forecast (>=1).
+
+    Returns:
+        dict with keys: model, forecast, upper, lower, components, last, horizon.
+    """
     _validate(data, horizon)
     lin = linear_trend_forecast(data, horizon)
     exp = exp_smooth_forecast(data, horizon)

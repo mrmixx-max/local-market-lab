@@ -5,6 +5,7 @@ Prefix: /api/v1/ollama
 from __future__ import annotations
 
 import json
+import os
 import urllib.request
 
 import requests
@@ -47,7 +48,8 @@ async def list_models():
 async def chat(payload: dict):
     """Proxy a chat completion to the local Ollama daemon.
 
-    Body: {model, messages, system?, temperature?}
+    Body: {model, messages, system?, temperature?, num_ctx?}
+    Returns: {content, model, duration_ms, tokens}
     """
     model = payload.get("model")
     if not model:
@@ -55,10 +57,14 @@ async def chat(payload: dict):
     if not payload.get("messages"):
         raise HTTPException(400, "messages required")
 
+    timeout = int(os.environ.get("OLLAMA_TIMEOUT", "180"))
+    msgs = payload["messages"]
+    if payload.get("system"):
+        msgs = [{"role": "system", "content": payload["system"]}] + msgs
+
     body = {
         "model": model,
-        "messages": ([{"role": "system", "content": payload["system"]}]
-                     if payload.get("system") else []) + payload["messages"],
+        "messages": msgs,
         "stream": False,
         "options": {
             "temperature": payload.get("temperature", 0.4),
@@ -72,7 +78,7 @@ async def chat(payload: dict):
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=180) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             resp = json.load(r)
         return {
             "content": resp.get("message", {}).get("content", ""),
@@ -81,7 +87,7 @@ async def chat(payload: dict):
             "tokens": resp.get("eval_count", 0),
         }
     except Exception as exc:
-        return {"content": f"[Ollama error: {exc}]", "error": str(exc)}
+        return {"content": f"[Ollama error: {exc}]", "model": model, "error": str(exc)}
 
 
 @ollama_router.post("/optimize_prompt")

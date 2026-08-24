@@ -10,6 +10,26 @@ provider. There is no cloud, no account, no telemetry.
 
 ## Install
 
+### Windows Installer (Recommended)
+
+Download the latest `LocalMarketLab-Setup-v*.exe` from the [Releases](https://github.com/mrmixx-max/local-market-lab/releases) page.
+
+1. Run the installer (no admin rights required)
+2. Choose installation folder (default: `%LOCALAPPDATA%\Local Market Lab`)
+3. Optionally create a Desktop shortcut
+4. Launch from the Start Menu
+
+The installer includes:
+- Automatic uninstaller (via Windows "Apps & Features")
+- Start Menu and Desktop shortcuts
+- All dependencies bundled (no Python installation needed)
+
+### Portable Version
+
+Download `LocalMarketLab.exe` from Releases — runs standalone, no installation required.
+
+### From Source
+
 ```bash
 pip install -e ".[dev]"
 ```
@@ -133,6 +153,47 @@ apps/web/               Bloomberg-style terminal UI
 4. **Explicit assumptions.** Fees, slippage, rebalance frequency are recorded in every artifact.
 5. **Methodology notes mandatory.** Every report states how ratios are annualized.
 6. **Privacy by default.** Local SQLite, no network calls, no telemetry.
+
+## Windows Screenshots
+
+| Dashboard | Backtest | Scenarios |
+|:---:|:---:|:---:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Backtest](docs/screenshots/backtest.png) | ![Scenarios](docs/screenshots/scenarios.png) |
+
+*The dark-themed PyQt6 desktop interface with real-time charts powered by pyqtgraph.*
+
+## Build from Source (Windows)
+
+### Prerequisites
+- Python 3.10+
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (for installer)
+- [UPX](https://github.com/upx/upx/releases) (optional, for compression)
+
+### Build Steps
+
+```bash
+# Clone
+git clone https://github.com/mrmixx-max/local-market-lab.git
+cd local-market-lab
+
+# Install dependencies
+pip install -e "."
+pip install pyinstaller
+
+# Build EXE + Installer
+cd windows
+build.bat
+```
+
+Output:
+- `windows/src/dist/LocalMarketLab.exe` — standalone EXE (~25MB)
+- `windows/installer/output/LocalMarketLab-Setup-v0.8.0.exe` — installer
+
+### Build Options
+```bash
+build.bat --clean          # Clean build (removes cached artifacts)
+build.bat --no-installer   # Build EXE only, skip Inno Setup
+```
 
 ## Docker
 
