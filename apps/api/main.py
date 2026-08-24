@@ -17,6 +17,7 @@ import json
 import os
 import random
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -134,6 +135,25 @@ async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace
         params.append(limit)
     rows = ws.conn.execute(q, params).fetchall()
     return PriceSeriesResponse(symbol=symbol.upper(), bars=[dict(r) for r in rows])
+
+
+@app.get("/api/v1/market/yahoo/{symbol}", summary="Yahoo Finance Fallback")
+async def yahoo_fallback(symbol: str):
+    """Fallback to Yahoo Finance for real-time prices (crypto, stocks not in local DB)."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.load(r)
+        result = data.get("chart", {}).get("result", [])
+        if not result:
+            return {"error": "no data"}
+        meta = result[0].get("meta", {})
+        price = meta.get("regularMarketPrice", 0)
+        prev = meta.get("chartPreviousClose", price)
+        return {"symbol": symbol, "price": price, "prev_close": prev, "currency": meta.get("currency", "USD")}
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 # ---------- technical indicators ----------

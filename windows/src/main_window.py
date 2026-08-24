@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
         if Path(icon_path).exists():
             self.setWindowIcon(QIcon(icon_path))
         self._build_ui()
+        self._init_watchlist()
         self._build_timers()
 
     def _build_ui(self) -> None:
@@ -322,12 +323,35 @@ class MainWindow(QMainWindow):
     def _update_clock(self) -> None:
         self.clock_label.setText(QTime.currentTime().toString("hh:mm:ss"))
 
+    def _init_watchlist(self) -> None:
+        """Initialisiere Watchlist mit Standardwerten."""
+        defaults = [
+            ("AAPL", "Apple Inc."),
+            ("MSFT", "Microsoft Corp."),
+            ("GOOGL", "Alphabet Inc."),
+            ("AMZN", "Amazon.com Inc."),
+            ("TSLA", "Tesla Inc."),
+            ("NVDA", "NVIDIA Corp."),
+            ("META", "Meta Platforms Inc."),
+            ("BTC-USD", "Bitcoin"),
+            ("ETH-USD", "Ethereum"),
+            ("SPY", "S&P 500 ETF"),
+            ("QQQ", "Nasdaq 100 ETF"),
+            ("IWDA", "iShares MSCI World"),
+        ]
+        for symbol, name in defaults:
+            if symbol not in self._symbols:
+                self._symbols.append(symbol)
+                row = self.watchlist.rowCount()
+                self.watchlist.insertRow(row)
+                self.watchlist.setItem(row, 0, QTableWidgetItem(symbol))
+                self.watchlist.setItem(row, 1, QTableWidgetItem("--"))
+                self.watchlist.setItem(row, 2, QTableWidgetItem("0.00%"))
+
     def _add_symbol(self) -> None:
+        """Füge ein Symbol zur Watchlist hinzu."""
         symbol = self.symbol_input.text().strip().upper()
         if not symbol or symbol in self._symbols:
-            return
-        prices = self.api.get(f"/api/v1/market/prices/{symbol}")
-        if not prices:
             return
         row = self.watchlist.rowCount()
         self.watchlist.insertRow(row)
@@ -433,6 +457,17 @@ class MainWindow(QMainWindow):
                 self.watchlist.item(row, 2).setText(f"{chg:+.2f}%")
                 color = C_GREEN if chg >= 0 else C_RED
                 self.watchlist.item(row, 2).setForeground(QColor(color))
+            else:
+                # Fallback: Yahoo Finance direkt abfragen
+                yahoo = self.api.get(f"/api/v1/market/yahoo/{symbol}")
+                if yahoo and yahoo.get("price"):
+                    last = yahoo["price"]
+                    prev = yahoo.get("prev_close", last)
+                    chg = ((last - prev) / prev * 100) if prev else 0
+                    self.watchlist.item(row, 1).setText(f"{last:.2f}")
+                    self.watchlist.item(row, 2).setText(f"{chg:+.2f}%")
+                    color = C_GREEN if chg >= 0 else C_RED
+                    self.watchlist.item(row, 2).setForeground(QColor(color))
         if self.mk_symbol.count() == 0:
             syms = self.api.get("/api/v1/market/symbols")
             if syms:
@@ -443,7 +478,7 @@ class MainWindow(QMainWindow):
         models = self.api.get("/api/v1/ollama/models")
         if models and self.ol_model.count() == 0:
             for m in models:
-                self.ol_model.addItem(m.get("name", ""))
+                self.ol_model.addItem(m.get("model", ""))
         if self.tabs.currentIndex() == 5:
             self._refresh_risk()
 
