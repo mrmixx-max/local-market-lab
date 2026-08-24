@@ -6,6 +6,28 @@ from datetime import datetime, timezone
 from packages.domain.constants import EXPORT_CSV_PATH, EXPORT_EXCEL_PATH, EXPORT_PDF_PATH
 from packages.domain.entities import ExportQuality, ExportResult
 
+SYSTEM_VERSION = "0.9.0"
+DEFAULT_SEED = 42
+DISCLAIMER = (
+    "Dieses Ergebnis dient ausschließlich der Analyse, Forschung und Bildung. "
+    "Es stellt keine Finanzberatung und keine Kauf- oder Verkaufsempfehlung dar. "
+    "Historische oder simulierte Ergebnisse sind keine Garantie für zukünftige "
+    "Ergebnisse."
+)
+
+
+def report_metadata(run_id: str, dq: ExportQuality | None = None,
+                    seed: int | None = None) -> dict:
+    """Structured metadata block included in every export."""
+    return {
+        "system_version": SYSTEM_VERSION,
+        "run_id": run_id,
+        "created_at": _utc(),
+        "seed": seed if seed is not None else DEFAULT_SEED,
+        "data_quality": dq.to_dict() if dq else {},
+        "disclaimer": DISCLAIMER,
+    }
+
 
 def _utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -36,22 +58,25 @@ def _ensure_dir(path: str) -> str:
     return path
 
 
-def csv_trades(trades: list[dict], dq: ExportQuality | None = None) -> ExportResult:
+def csv_trades(trades: list[dict], dq: ExportQuality | None = None,
+               seed: int | None = None) -> ExportResult:
     """Export trade log as CSV with metadata."""
     run_id = _run_id()
     csv_data = _to_csv(trades)
     dq = dq or ExportQuality(len(trades), 0.0, "unknown")
     fp = os.path.join(_ensure_dir(EXPORT_CSV_PATH), f"trades_{run_id}.csv")
-    with open(fp, "w") as f:
+    with open(fp, "w", newline="", encoding="utf-8") as f:
         f.write(csv_data)
-    return ExportResult(run_id=run_id, format="csv", data_quality=dq,
+    return ExportResult(run_id=run_id, format="csv",
+                        data_quality=dq,
                         data_hash=_data_hash(csv_data), file_path=fp,
                         file_bytes=csv_data.encode(),
-                        created_at=_utc(), metadata={"kind": "trades", "rows": len(trades)})
+                        created_at=_utc(), metadata={**report_metadata(run_id, dq, seed),
+                                                     "kind": "trades", "rows": len(trades)})
 
 
 def csv_equity(curve: list[float], dates: list[str] | None = None,
-               dq: ExportQuality | None = None) -> ExportResult:
+               dq: ExportQuality | None = None, seed: int | None = None) -> ExportResult:
     """Export equity curve as CSV with metadata."""
     run_id = _run_id()
     rows = [{"step": i, "date": dates[i] if dates and i < len(dates) else "", "equity": v}
@@ -59,32 +84,47 @@ def csv_equity(curve: list[float], dates: list[str] | None = None,
     csv_data = _to_csv(rows)
     dq = dq or ExportQuality(len(curve), 0.0, "unknown")
     fp = os.path.join(_ensure_dir(EXPORT_CSV_PATH), f"equity_{run_id}.csv")
-    with open(fp, "w") as f:
+    with open(fp, "w", newline="", encoding="utf-8") as f:
+        # metadata header line (documented: '# ' prefix, UTF-8, comma-delimited)
+        meta_line = ",".join(f"# {k}: {v}" for k, v in
+                             report_metadata(run_id, dq, seed).items() if k != "data_quality")
+        f.write(meta_line + "\n")
         f.write(csv_data)
-    return ExportResult(run_id=run_id, format="csv", data_quality=dq,
+    return ExportResult(run_id=run_id, format="csv",
+                        data_quality=dq,
                         data_hash=_data_hash(csv_data), file_path=fp,
-                        file_bytes=csv_data.encode(),
-                        created_at=_utc(), metadata={"kind": "equity", "rows": len(curve)})
+                        file_bytes=(meta_line + "\n" + csv_data).encode(),
+                        created_at=_utc(),
+                        metadata={**report_metadata(run_id, dq, seed),
+                                  "kind": "equity", "rows": len(curve)})
 
 
-def csv_scenario(runs: list[dict], dq: ExportQuality | None = None) -> ExportResult:
+def csv_scenario(runs: list[dict], dq: ExportQuality | None = None,
+                 seed: int | None = None) -> ExportResult:
     """Export scenario runs as CSV with metadata."""
     run_id = _run_id()
     csv_data = _to_csv(runs)
     dq = dq or ExportQuality(len(runs), 0.0, "unknown")
     fp = os.path.join(_ensure_dir(EXPORT_CSV_PATH), f"scenario_{run_id}.csv")
-    with open(fp, "w") as f:
+    with open(fp, "w", newline="", encoding="utf-8") as f:
+        meta_line = ",".join(f"# {k}: {v}" for k, v in
+                             report_metadata(run_id, dq, seed).items() if k != "data_quality")
+        f.write(meta_line + "\n")
         f.write(csv_data)
-    return ExportResult(run_id=run_id, format="csv", data_quality=dq,
+    return ExportResult(run_id=run_id, format="csv",
+                        data_quality=dq,
                         data_hash=_data_hash(csv_data), file_path=fp,
-                        file_bytes=csv_data.encode(),
-                        created_at=_utc(), metadata={"kind": "scenario", "rows": len(runs)})
+                        file_bytes=(meta_line + "\n" + csv_data).encode(),
+                        created_at=_utc(),
+                        metadata={**report_metadata(run_id, dq, seed),
+                                  "kind": "scenario", "rows": len(runs)})
 
 
 def pdf_report(title: str, metrics: dict, trades: list[dict],
                chart_images: list | None = None,
                equity_curve: list[float] | None = None,
-               dq: ExportQuality | None = None) -> ExportResult:
+               dq: ExportQuality | None = None,
+               seed: int | None = None) -> ExportResult:
     """Build a PDF report as ExportResult. Charts are PIL Images."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -92,12 +132,20 @@ def pdf_report(title: str, metrics: dict, trades: list[dict],
     from reportlab.lib.units import mm
     from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     run_id = _run_id()
+    meta = report_metadata(run_id, dq, seed)
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=15 * mm, bottomMargin=15 * mm)
     styles = getSampleStyleSheet()
     ts = ParagraphStyle("t", parent=styles["Title"], fontSize=18)
-    elements: list = [Paragraph(title, ts), Paragraph(f"Run: {run_id} · {_utc()}", styles["Normal"]),
+    ds = ParagraphStyle("d", parent=styles["Normal"], fontSize=7,
+                        textColor=colors.HexColor("#555555"))
+    elements: list = [Paragraph(title, ts),
+                      Paragraph(f"Run: {run_id} · {meta['created_at']} · "
+                                f"Version: {meta['system_version']} · Seed: {meta['seed']}",
+                                styles["Normal"]),
+                      Spacer(1, 3 * mm),
+                      Paragraph(meta["disclaimer"], ds),
                       Spacer(1, 6 * mm)]
     if metrics:
         elements.append(Paragraph("Metrics", styles["Heading2"]))
@@ -138,17 +186,21 @@ def pdf_report(title: str, metrics: dict, trades: list[dict],
         f.write(raw)
     return ExportResult(run_id=run_id, format="pdf", data_quality=dq,
                         data_hash=_data_hash(raw), file_path=fp, file_bytes=raw,
-                        created_at=_utc(), metadata={"title": title, "n_metrics": len(metrics)})
+                        created_at=_utc(), metadata={**meta,
+                                                     "title": title,
+                                                     "n_metrics": len(metrics)})
 
 
 def excel_report(metrics: dict, trades: list[dict],
                  equity_curve: list[float] | None = None,
                  drawdown: list[float] | None = None,
-                 dq: ExportQuality | None = None) -> ExportResult:
+                 dq: ExportQuality | None = None,
+                 seed: int | None = None) -> ExportResult:
     """Build multi-sheet Excel workbook (Summary, Trades, Equity, Drawdown, Quality)."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     run_id = _run_id()
+    meta = report_metadata(run_id, dq, seed)
     wb = Workbook()
     hfont, hfill = Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="2C3E50")
     dq = dq or ExportQuality(0, 0.0, "unknown")
@@ -181,10 +233,19 @@ def excel_report(metrics: dict, trades: list[dict],
             wsn.cell(row=i, column=2, value=round(v, 6))
     ws5 = wb.create_sheet("Quality")
     _hdr(ws5, ["Field", "Value"])
-    for i, (k, v) in enumerate([("run_id", run_id), ("n_observations", dq.n_observations),
-                                 ("missing_pct", dq.missing_pct), ("source", dq.source),
-                                 ("start_date", dq.start_date), ("end_date", dq.end_date),
-                                 ("created_at", _utc())], 2):
+    quality_rows = [
+        ("system_version", meta["system_version"]),
+        ("run_id", run_id),
+        ("seed", meta["seed"]),
+        ("created_at", meta["created_at"]),
+        ("disclaimer", meta["disclaimer"]),
+        ("n_observations", dq.n_observations),
+        ("missing_pct", dq.missing_pct),
+        ("source", dq.source),
+        ("start_date", dq.start_date),
+        ("end_date", dq.end_date),
+    ]
+    for i, (k, v) in enumerate(quality_rows, 2):
         ws5.cell(row=i, column=1, value=k)
         ws5.cell(row=i, column=2, value=v)
     buf = io.BytesIO()

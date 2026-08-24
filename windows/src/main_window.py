@@ -79,9 +79,20 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(STYLESHEET)
         self._symbols: list[str] = []
         self._last_prices: dict[str, float] = {}
-        icon_path = str(Path(__file__).parent.parent.parent / "lml-icon.ico")
-        if Path(icon_path).exists():
-            self.setWindowIcon(QIcon(icon_path))
+        # Frozen (PyInstaller): icon must ship as data file next to the EXE or
+        # be extracted from _MEIPASS; in dev builds it lives at project root.
+        import sys
+        candidates = []
+        if getattr(sys, "frozen", False):
+            base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+            candidates = [base / "lml-icon.ico",
+                          Path(sys.executable).parent / "lml-icon.ico"]
+        else:
+            candidates = [Path(__file__).parent.parent.parent / "lml-icon.ico"]
+        for icon_path in candidates:
+            if icon_path.exists():
+                self.setWindowIcon(QIcon(str(icon_path)))
+                break
         self._build_ui()
         self._init_watchlist()
         self._load_ollama_models()

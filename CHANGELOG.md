@@ -1,5 +1,36 @@
 # Changelog
 
+## [Unreleased] — 2026-08-24 (v1.0 Hardening)
+
+### Fixed — Release-Blocker
+
+- **Monte Carlo Student-t (`packages/scenarios/stress.py`)**: Innovationsvarianz war
+  √2-fach verzerrt (`sum` zweier Gauss-Zufallszahlen). Jetzt korrekt standardisiert
+  (unit variance via `t/sqrt(df/(df-2))`), `df > 2` erzwungen, `p01` neu im Ergebnis.
+- **Backtest-Kosten (`packages/backtest/engine.py`)**: Handelskosten gingen nie in die
+  Equity-Curve ein (toter Code + doppelter Cash-Zweig). Kostenmodell korrigiert und
+  durch `test_backtest_costs` abgesichert.
+- **Stress-Tests**: Seed-Parameter wurde ignoriert (hardcoded 42); run_id zufällig.
+  Jetzt deterministisch: Seed durchgereicht, reproduzierbare run_id.
+- **Datenqualität (`packages/quality/checks.py`)**: Non-monotonic-Erkennung wurde nach
+  dem ersten Duplikat deaktiviert; funktioniert jetzt immer.
+
+### Changed — Reports & Explainability
+
+- Alle Exporte (CSV/PDF/Excel) enthalten jetzt Systemversion, Seed, Run-ID, Zeitstempel
+  und den Pflicht-Disclaimer. CSV-Format dokumentiert: UTF-8, Komma, `# `-Metadatenkopf.
+- Permutation Importance: ehrliches `splits_used="permutation_on_eval_set"` statt
+  irreführendem Walk-Forward-Label; Leakage-Richtlinie dokumentiert.
+- SHAP-artige Werte tragen explizite Approximations-Kennzeichnung
+  (`approximation: true`, Hinweis: deskriptiv, nicht kausal).
+
+### Review-Dokumente
+
+- `docs/quantitative-validation-review.md`, `docs/stress-rebalancing-production-review.md`,
+  `docs/integration-review.md`, `docs/test-report.md`, `docs/security-review.md`,
+  `docs/release-candidate-report.md`
+- Teststand: 366 bestanden / 0 fehlgeschlagen. Reproduzierbarkeitslauf: identisch.
+
 ## [Unreleased] — 2026-08-24
 
 ### Added — Export & Explainability

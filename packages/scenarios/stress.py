@@ -9,7 +9,6 @@ import hashlib
 import math
 import os
 import random
-import uuid
 
 from packages.domain.entities import StressTestResult
 
@@ -75,7 +74,7 @@ def _recovery_months(total: float) -> int | None:
 
 
 def _apply_shocks(scenario_name: str, shocks: dict, positions: dict,
-                  scenario_type: str) -> StressTestResult:
+                  scenario_type: str, seed: int = 42) -> StressTestResult:
     """Core: apply shock map to positions, build StressTestResult."""
     impacts: dict[str, float] = {}
     total = 0.0
@@ -99,7 +98,7 @@ def _apply_shocks(scenario_name: str, shocks: dict, positions: dict,
                                  "event": f"recovery_{m}m"})
     dd_threshold = float(os.environ.get("LML_STRESS_MAX_DD_THRESHOLD", "0.30"))
     return StressTestResult(
-        run_id=str(uuid.uuid4()), scenario=scenario_name, seed=42,
+        run_id=f"stress-{scenario_name}-{seed}", scenario=scenario_name, seed=seed,
         data_quality={"positions_count": len(positions),
                        "asset_classes": list(set(_asset_class_for(s) for s in positions))},
         metrics={"max_drawdown": round(total, 4),
@@ -120,7 +119,7 @@ def run_historical_stress(scenario_name: str, positions: dict[str, float],
     if scenario_name not in HISTORICAL_CRISES:
         raise ValueError(f"unknown crisis: {scenario_name}")
     return _apply_shocks(scenario_name, HISTORICAL_CRISES[scenario_name],
-                          positions, "historical")
+                          positions, "historical", seed)
 
 
 def run_hypothetical_stress(scenario_name: str, positions: dict[str, float],
@@ -129,24 +128,33 @@ def run_hypothetical_stress(scenario_name: str, positions: dict[str, float],
     if scenario_name not in HYPOTHETICAL_SCENARIOS:
         raise ValueError(f"unknown scenario: {scenario_name}")
     return _apply_shocks(scenario_name, HYPOTHETICAL_SCENARIOS[scenario_name],
-                          positions, "hypothetical")
+                          positions, "hypothetical", seed)
 
 
 def monte_carlo_fat_tail(positions: dict[str, float], annual_vol: float = 0.18,
                           annual_drift: float = 0.06, horizon_days: int = 252,
                           runs: int = 5000, seed: int = 42, df: int = 5) -> dict:
-    """Monte Carlo with Student-t innovations (fat tails). @experimental."""
+    """Monte Carlo with Student-t innovations (fat tails). @experimental.
+
+    Student-t innovations are standardized to unit variance so that
+    ``daily_vol`` is the true per-day standard deviation of the innovation
+    (t-distribution variance = df/(df-2) for df > 2).
+    """
+    if df <= 2:
+        raise ValueError("Student-t degrees of freedom must be > 2 for finite variance")
     rng = random.Random(seed)
     weights = list(positions.values())
     daily_drift = annual_drift / 252
     daily_vol = annual_vol / math.sqrt(252)
+    # Standardize t-innovations to unit variance: t / sqrt(df/(df-2))
+    t_norm = math.sqrt((df - 2) / df)
     finals: list[float] = []
     for _ in range(runs):
         port_ret = 0.0
         for _day in range(horizon_days):
-            z = sum(rng.gauss(0, 1) for _ in range(2))
+            z = rng.gauss(0, 1)
             chi2 = sum(rng.gauss(0, 1) ** 2 for _ in range(df))
-            t = z / math.sqrt(chi2 / df) if chi2 > 0 else z
+            t = z / math.sqrt(chi2 / df) * t_norm if chi2 > 0 else 0.0
             port_ret += sum(w * (daily_drift + daily_vol * t) for w in weights)
         finals.append(1 + port_ret)
     s = sorted(finals)
@@ -155,6 +163,7 @@ def monte_carlo_fat_tail(positions: dict[str, float], annual_vol: float = 0.18,
     return {
         "method": "monte-carlo-fat-tail", "runs": runs, "horizon_days": horizon_days,
         "df": df, "seed": seed,
+        "p01": round(s[int(0.01 * n)], 4),
         "p05": round(s[int(0.05 * n)], 4), "p25": round(s[int(0.25 * n)], 4),
         "median": round(s[int(0.50 * n)], 4), "p75": round(s[int(0.75 * n)], 4),
         "p95": round(s[int(0.95 * n)], 4),
@@ -162,7 +171,11 @@ def monte_carlo_fat_tail(positions: dict[str, float], annual_vol: float = 0.18,
         "var_95_pct": round((-s[cvar_idx] + 1) * 100, 2),
         "cvar_95_pct": round((-sum(s[:cvar_idx]) / cvar_idx + 1) * 100, 2),
         "data_hash": _data_hash(positions),
-        "limitations": ["Student-t fat tails; constant vol/drift assumed."],
+        "limitations": [
+            "Student-t fat tails; constant vol/drift assumed.",
+            "Single-factor model: all positions share one innovation stream.",
+            "Weights are treated as fixed fractions; no rebalancing modeled.",
+        ],
     }
 
 

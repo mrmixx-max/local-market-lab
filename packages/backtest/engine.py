@@ -88,10 +88,12 @@ def run_backtest(prices: dict[str, list[float]],
                 continue
             trade_value = delta_w * total
             cost = abs(trade_value) * cost_frac
+            # Buy: cost is deducted from invested value (fewer units).
+            # Sell: cost is deducted from proceeds. Costs always reduce
+            # portfolio value; cash is recomputed from holdings below.
             qty_delta = (trade_value - (cost if trade_value > 0 else -cost)) / px[s]
             units[s] += qty_delta
-            cash -= trade_value + (cost if trade_value > 0 else -cost) * 0  # costs deducted below
-            cash -= cost * (1 if trade_value > 0 else 1)  # fees always reduce cash
+            cash -= cost
             turnover += abs(trade_value)
             trades += 1
         # normalize rounding: recompute cash from holdings to avoid drift

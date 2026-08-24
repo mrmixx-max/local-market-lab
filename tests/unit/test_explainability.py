@@ -30,7 +30,9 @@ class TestPermutationImportance:
         assert result.run_id
         assert result.data_hash
         assert result.data_quality.source == "yahoo"
-        assert "walk_forward" in result.splits_used
+        # splits_used must NOT falsely claim walk-forward; importance is
+        # computed on the evaluation set passed by the caller.
+        assert result.splits_used == "permutation_on_eval_set"
 
     def test_important_feature_detected(self, dq):
         rng = np.random.default_rng(42)

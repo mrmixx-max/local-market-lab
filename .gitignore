@@ -26,3 +26,8 @@ Thumbs.db
 # Web (later)
 node_modules/
 apps/web/dist/
+
+# Build artifacts
+windows/src/build/
+windows/src/dist/
+exports/

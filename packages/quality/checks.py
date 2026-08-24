@@ -94,7 +94,7 @@ def check_timestamps(series: PriceSeries) -> tuple[list[str], int]:
         seen.add(bar.date)
         if d > today:
             issues.append(f"future date: {bar.date}")
-        if prev and d <= prev and dupes == 0:
+        if prev and d < prev:
             issues.append(f"non-monotonic: {prev.isoformat()} -> {bar.date}")
         prev = d
     return issues, dupes

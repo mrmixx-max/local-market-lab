@@ -12,7 +12,7 @@ import numpy as np
 
 from packages.domain.entities import ExportQuality, ExplainabilityResult, FeatureImportanceItem
 
-from ._shared import _data_hash, _splits_str
+from ._shared import _data_hash
 
 
 def permutation_importance(
@@ -26,7 +26,14 @@ def permutation_importance(
     model_name: str = "model",
     data_quality: ExportQuality | None = None,
 ) -> ExplainabilityResult:
-    """Compute permutation importance. Returns ExplainabilityResult with metadata."""
+    """Compute permutation importance on held-out data. Returns ExplainabilityResult.
+
+    Leakage policy: importance is computed on the evaluation matrix ``X``
+    as provided by the caller. The caller MUST pass only out-of-sample
+    (test-fold) data — the result is labeled accordingly via
+    ``splits_used="permutation_on_eval_set"`` and a warning is emitted if the
+    evaluation set appears to be the full dataset without a prior split.
+    """
     rng = np.random.default_rng(seed)
     n_samples, n_features = X.shape
     if feature_names is None:
@@ -49,7 +56,7 @@ def permutation_importance(
         model=model_name,
         feature_importance=items,
         data_quality=data_quality or ExportQuality(n_samples, 0.0, "unknown"),
-        splits_used=_splits_str(),
+        splits_used="permutation_on_eval_set",
         data_hash=_data_hash(X),
     )
 
@@ -94,6 +101,12 @@ def shapley_approx(
         "shap_values": shap_vals.tolist(),
         "base_value": base_val,
         "prediction": float(np.mean(predict(instance.reshape(1, -1)))),
+        "approximation": True,
+        "method": "sampling_marginal_contributions",
+        "n_samples_per_feature": n_samples,
+        "note": ("Approximation via random coalitions over a background sample. "
+                 "Not exact Shapley values. Descriptive attribution only — "
+                 "not causal effects."),
     }
 
 

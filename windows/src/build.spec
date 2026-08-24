@@ -52,7 +52,9 @@ QT6_EXCLUDE_DLLS = [
     'Qt6LabsAnimation.dll', 'Qt6LabsFolderListModel.dll', 'Qt6LabsPlatform.dll',
     'Qt6LabsQmlModels.dll', 'Qt6LabsSettings.dll', 'Qt6LabsSharedImage.dll',
     'Qt6LabsWavefrontMesh.dll',
-    'Qt6Network.dll', 'Qt6OpenGL.dll', 'Qt6OpenGLWidgets.dll',
+    'Qt6Network.dll',
+    # NOTE: Qt6OpenGL(.dll) + Qt6OpenGLWidgets(.dll) must NOT be excluded —
+    # pyqtgraph imports PyQt6.QtOpenGL and .QtOpenGLWidgets at startup.
     'Qt6PrintSupport.dll', 'Qt6RemoteObjects.dll', 'Qt6RemoteObjectsQml.dll',
     'Qt6SerialPort.dll', 'Qt6ShaderTools.dll', 'Qt6SpatialAudio.dll',
     'Qt6Sql.dll', 'Qt6StateMachine.dll', 'Qt6StateMachineQml.dll',
@@ -96,7 +98,8 @@ EXCLUDE_MODULES = [
     'numpy.distutils', 'numpy.distutils.cpuinfo', 'numpy.distutils.misc_util',
     'numpy.distutils.system_info', 'numpy.distutils.log',
     'numpy.tests', 'numpy.testing', 'numpy.doc',
-    'numpy.f2py', 'numpy.py', 'numpy.version',
+    'numpy.f2py',  # NOTE: 'numpy.py'/'numpy.version' must NOT be excluded —
+    # numpy imports its own version module during __init__ (circular-import crash).
     'numpy.core.tests', 'numpy.core._dotblas',
     'numpy.lib.tests', 'numpy.linalg.tests',
     'numpy.fft.tests', 'numpy.random.tests',
@@ -118,20 +121,26 @@ EXCLUDE_MODULES = [
     # Crypto (not used)
     'cryptography', 'Crypto', 'Cryptodome',
     # Other unused stdlib
+    # NOTE: 'zipfile' and 'traceback' must NOT be excluded — both are imported
+    # transitively by PyInstaller runtime hooks / logging / inspect.
     'tkinter', 'turtle', 'idlelib', 'ensurepip',
-    '_pydecimal', 'pydoc', 'doctest', 'unittest',
+    # NOTE: 'pydoc' must NOT be excluded — pyqtgraph.parametertree imports it.
+    '_pydecimal', 'doctest', 'unittest',
     'lib2to3', 'test', 'tests',
-    'xmlrpc', 'mailbox', 'mhlib', 'mimetools', 'MimeWriter',
-    'mimify', 'multifile', 'netrc', 'nturl2path',
+    'xmlrpc', 'mailbox',
+    # NOTE: 'nturl2path' and 'netrc' must NOT be excluded — urllib.request
+    # imports both at module load (requests -> http.cookiejar chain).
     'plistlib', 'pstats', 'pty', 'sched', 'smtpd',
-    'smtplib', 'sndhdr', 'sunau', 'sunaudiodev',
-    'telnetlib', 'this', 'timeit', 'toai',
-    'trace', 'traceback', 'tty', 'urllib.robotparser',
-    'wave', 'webbrowser', 'xdrlib', 'zipfile',  # zipfile is stdlib but often not needed
+    'sndhdr', 'sunau',
+    'telnetlib', 'this', 'timeit',
+    'tty', 'urllib.robotparser',
+    'wave', 'webbrowser', 'xdrlib',
     # Qt modules we don't use
+    # NOTE: 'PyQt6.QtOpenGL' and '.QtOpenGLWidgets' must NOT be excluded —
+    # pyqtgraph imports both at startup.
     'PyQt6.QtBluetooth', 'PyQt6.QtDesigner', 'PyQt6.QtHelp',
     'PyQt6.QtMultimedia', 'PyQt6.QtMultimediaWidgets', 'PyQt6.QtNetwork',
-    'PyQt6.QtNfc', 'PyQt6.QtOpenGL', 'PyQt6.QtOpenGLWidgets',
+    'PyQt6.QtNfc',
     'PyQt6.QtPdf', 'PyQt6.QtPdfQuick', 'PyQt6.QtPdfWidgets',
     'PyQt6.QtPositioning', 'PyQt6.QtPrintSupport', 'PyQt6.QtQml',
     'PyQt6.QtQuick', 'PyQt6.QtQuick3D', 'PyQt6.QtQuickControls2',
@@ -156,7 +165,7 @@ EXCLUDE_MODULES = [
     'PyQt6.QtLabsQmlModels', 'PyQt6.QtLabsSettings',
     'PyQt6.QtLabsSharedImage', 'PyQt6.QtLabsWavefrontMesh',
     'PyQt6.QtMultimediaQuick', 'PyQt6.QtShaderTools',
-    'PyQt6.sip',  # sip module — not needed when using compiled PyQt6
+    # NOTE: 'PyQt6.sip' must NOT be excluded — PyQt6 imports it at runtime.
 ]
 
 # -------------------------------------------------------------------
@@ -203,6 +212,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(PROJECT_ROOT / 'packages'), 'packages'),
+        (str(PROJECT_ROOT / 'lml-icon.ico'), '.'),
     ] + collect_certifi(),
     hiddenimports=[
         'PyQt6',
