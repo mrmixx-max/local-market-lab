@@ -1,0 +1,183 @@
+"""Pydantic response schemas for the Local Market Lab API.
+
+Every response model documents its shape for OpenAPI. All models are
+read-only (frozen) and compatible with the dict-based returns they replace.
+"""
+from __future__ import annotations
+
+from pydantic import BaseModel, Field
+
+
+# ---------- health ----------
+class HealthResponse(BaseModel):
+    """Service health and basic instrumentation count."""
+
+    status: str = "ok"
+    instruments: int = Field(..., description="Number of instruments in the database")
+    version: str = "0.1.0"
+
+
+# ---------- market data ----------
+class SymbolSchema(BaseModel):
+    """A tradeable instrument."""
+
+    symbol: str
+    name: str = ""
+    asset_class: str = "etf"
+    currency: str = "EUR"
+
+
+class PriceBarSchema(BaseModel):
+    """A single OHLC-style price bar (close-only in this version)."""
+
+    date: str
+    close: float
+    volume: float | None = None
+
+
+class PriceSeriesResponse(BaseModel):
+    """Price history for a single symbol."""
+
+    symbol: str
+    bars: list[PriceBarSchema]
+
+
+# ---------- portfolio ----------
+class PositionSchema(BaseModel):
+    """A single valued position within a portfolio."""
+
+    symbol: str
+    quantity: float
+    avg_cost: float
+    last_price: float
+    currency: str
+    value: float
+    cost: float
+    pl: float
+    pl_pct: float | None = None
+
+
+class PortfolioValuation(BaseModel):
+    """Full portfolio valuation at the latest available close."""
+
+    portfolio: str
+    as_of: str | None = None
+    reporting_currency: str
+    positions: list[PositionSchema]
+    total_value: float
+    total_cost: float
+    unrealized_pl: float
+    realized_pl: float
+    dividends_received: float
+    incomplete_fx: list[dict] = Field(default_factory=list)
+    missing_prices: list[str] = Field(default_factory=list)
+
+
+# ---------- backtest ----------
+class BacktestMetrics(BaseModel):
+    """Risk/return metrics for a backtest curve."""
+
+    total_return_pct: float
+    cagr_pct: float
+    volatility_pct: float
+    max_drawdown_pct: float
+    sharpe: float
+    sortino: float
+    calmar: float
+    annualization: str = "252 trading days, daily returns"
+
+
+class BacktestAssumptions(BaseModel):
+    """Assumptions used in a backtest run."""
+
+    fees_bps: float
+    slippage_bps: float
+    rebalance_frequency: str
+    start_value: float
+
+
+class BacktestResult(BaseModel):
+    """Full backtest result including curves, metrics, and benchmark."""
+
+    curve: list[float]
+    metrics: BacktestMetrics
+    benchmark_curve: list[float]
+    benchmark_metrics: BacktestMetrics
+    assumptions: BacktestAssumptions
+    strategy: str
+    turnover: float
+    trades: int
+
+
+# ---------- scenario ----------
+class ScenarioSummary(BaseModel):
+    """Summary statistics from a Monte Carlo or bootstrap scenario."""
+
+    method: str
+    runs: int
+    horizon_days: int
+    seed: int
+    p05: float
+    p25: float
+    median: float
+    p75: float
+    p95: float
+    prob_loss_pct: float
+    limitations: list[str] = Field(default_factory=list)
+
+
+# ---------- game ----------
+class PositionOut(BaseModel):
+    """Position snapshot within a game state response."""
+
+    quantity: float
+    avg_cost: float
+    last_price: float
+    market_value: float
+    unrealized_pl: float
+
+
+class GameState(BaseModel):
+    """Current state of a paper-trading game session."""
+
+    game_id: str
+    player: str
+    status: str
+    day: str
+    date: str | None = None
+    cash: float
+    positions_value: float
+    total_value: float
+    return_pct: float
+    positions: dict[str, PositionOut]
+    pending_orders: int
+    filled_orders: int
+    challenge: str
+
+
+class LeaderboardEntry(BaseModel):
+    """A single row in the game leaderboard."""
+
+    player: str
+    challenge: str
+    score: float
+    status: str
+    days: int
+
+
+# ---------- ollama ----------
+class OllamaModelSchema(BaseModel):
+    """A model available on the local Ollama daemon."""
+
+    model: str
+    size_gb: float
+    parameter_size: str
+    quantization: str
+
+
+class OllamaModelsResponse(BaseModel):
+    """Response from the Ollama model listing endpoint."""
+
+    models: list[OllamaModelSchema]
+    host: str
+    error: str | None = None

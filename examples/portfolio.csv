@@ -1,0 +1,7 @@
+date,symbol,type,quantity,price,fees
+2024-01-15,IWDA,buy,50,70.00,9.95
+2024-01-15,EIMI,buy,120,24.50,9.95
+2024-01-15,AGGH,buy,80,48.00,9.95
+2024-06-10,IWDA,buy,25,73.50,9.95
+2024-09-20,EIMI,sell,40,26.10,9.95
+2025-02-01,CASH,deposit,1,5000,0
