@@ -14,6 +14,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
+import re
+
 from apps.api.deps import get_workspace
 from packages.reports.export import csv_equity, csv_scenario, csv_trades, excel_report, pdf_report
 from packages.explainability.importance import permutation_importance, shapley_approx
@@ -21,6 +23,19 @@ from packages.explainability.comparison import (
     WalkForwardResult, compare_models, diebold_mariano, walkforward_table,
 )
 from packages.domain.entities import ExportQuality
+
+# Allowed CSV export kinds — prevents path traversal via filename construction
+_EXPORT_KIND_ALLOWED = frozenset({"trades", "equity", "scenario"})
+
+# Symbol validation: only allow safe ticker characters
+_SYMBOL_RE = re.compile(r"^[A-Za-z0-9.\-^=]{1,20}$")
+
+
+def _validate_symbol(symbol: str) -> str:
+    """Validate and normalize a ticker symbol. Raises HTTPException if invalid."""
+    if not symbol or not _SYMBOL_RE.match(symbol):
+        raise HTTPException(400, f"invalid symbol format: {symbol!r}")
+    return symbol.upper()
 
 export_router = APIRouter(prefix="/api/v1/export", tags=["export"])
 explain_router = APIRouter(prefix="/api/v1/explainability", tags=["explainability"])
@@ -85,6 +100,8 @@ async def export_excel(payload: dict):
 async def export_csv(payload: dict):
     """Export trades, equity curve, or scenario results as CSV."""
     kind = payload.get("kind", "trades")
+    if kind not in _EXPORT_KIND_ALLOWED:
+        raise HTTPException(400, f"unknown CSV kind: {kind}. allowed: {sorted(_EXPORT_KIND_ALLOWED)}")
     dq = _make_dq(payload)
     if kind == "trades":
         result = csv_trades(payload.get("trades", []), dq)

@@ -18,6 +18,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 analytics = ["numpy>=1.26", "pandas>=2.2"]
+export = ["reportlab>=4.0", "openpyxl>=3.1"]
+marketdata = ["yfinance>=0.2.36"]
 
 [project.scripts]
 lml = "apps.cli.main:app"

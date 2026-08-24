@@ -5,27 +5,14 @@ to align with walk-forward validation (packages/domain/constants.py).
 """
 from __future__ import annotations
 
-import hashlib
 import uuid
 from typing import Callable
 
 import numpy as np
 
-from packages.domain.constants import (
-    WALK_FORWARD_STEP,
-    WALK_FORWARD_TEST_WINDOW,
-    WALK_FORWARD_TRAIN_WINDOW,
-)
 from packages.domain.entities import ExportQuality, ExplainabilityResult, FeatureImportanceItem
 
-
-def _data_hash(arr: np.ndarray) -> str:
-    return hashlib.sha256(arr.tobytes()).hexdigest()[:16]
-
-
-def _splits_str() -> str:
-    return (f"walk_forward_{WALK_FORWARD_TRAIN_WINDOW}_"
-            f"{WALK_FORWARD_TEST_WINDOW}_{WALK_FORWARD_STEP}")
+from ._shared import _data_hash, _splits_str
 
 
 def permutation_importance(

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from math import sqrt
 from typing import Any
 
+from packages.domain.decorators import experimental
 from packages.metrics.risk import sharpe_ratio
 
 
@@ -20,15 +21,6 @@ from packages.metrics.risk import sharpe_ratio
 # Configuration constants (override via .env)
 # ---------------------------------------------------------------------------
 DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
-
-
-# ---------------------------------------------------------------------------
-# Decorators
-# ---------------------------------------------------------------------------
-def experimental(func):
-    """Mark a function as experimental — API may change without notice."""
-    func._experimental = True
-    return func
 
 
 # ---------------------------------------------------------------------------

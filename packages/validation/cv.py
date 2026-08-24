@@ -9,18 +9,13 @@ import os
 from dataclasses import dataclass, field
 from math import sqrt
 
+from packages.domain.decorators import experimental
 from packages.metrics.risk import sharpe_ratio
 
 # Configuration constants (override via .env)
 DEFAULT_N_SPLITS = int(os.environ.get("LML_CV_SPLITS", "5"))
 DEFAULT_GAP = int(os.environ.get("LML_CV_GAP", "21"))
 DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
-
-
-def experimental(func):
-    """Mark a function as experimental — API may change without notice."""
-    func._experimental = True
-    return func
 
 
 @dataclass
@@ -135,6 +130,9 @@ def time_series_cv(
 
     Returns:
         CVResult with per-fold metrics and aggregate statistics.
+
+    Raises:
+        ValueError: If data is too short or windows are invalid.
     """
     n = len(data)
     if n < n_splits * (gap + 2):

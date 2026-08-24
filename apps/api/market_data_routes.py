@@ -8,6 +8,7 @@ GET /api/v1/quality/report/{symbol}
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,16 @@ from packages.quality.checks import run_quality_check
 market_data_router = APIRouter(prefix="/api/v1/market", tags=["market-data"])
 
 DEFAULT_CACHE = Path.home() / ".local-market-lab" / "cache" / "market.db"
+
+# Symbol validation: only allow safe ticker characters (prevents path/URL injection)
+_SYMBOL_RE = re.compile(r"^[A-Za-z0-9.\-^=]{1,20}$")
+
+
+def _validate_symbol(symbol: str) -> str:
+    """Validate and normalize a ticker symbol. Raises HTTPException if invalid."""
+    if not symbol or not _SYMBOL_RE.match(symbol):
+        raise HTTPException(400, f"invalid symbol format: {symbol!r}")
+    return symbol.upper()
 
 
 def _build_response(series: PriceSeries, source: str, interval: str, run_id: str) -> dict:
@@ -63,6 +74,9 @@ async def market_data(
 
     Returns unified OHLCV format with embedded data_quality report.
     """
+    # Validate symbol to prevent URL/path injection
+    symbol = _validate_symbol(symbol)
+    
     run_id = str(uuid.uuid4())[:8]
     cache = MarketDataCache(DEFAULT_CACHE)
     try:
@@ -97,6 +111,9 @@ async def quality_report(
     Fetches data if not already cached, then runs the full quality suite.
     Returns unified QualityReport with status, issues, and score.
     """
+    # Validate symbol to prevent URL/path injection
+    symbol = _validate_symbol(symbol)
+    
     run_id = str(uuid.uuid4())[:8]
     cache = MarketDataCache(DEFAULT_CACHE)
     try:
@@ -127,6 +144,9 @@ async def cache_stats():
 @market_data_router.delete("/cache", summary="Invalidate cache entries")
 async def cache_invalidate(symbol: str | None = None):
     """Invalidate cache for a symbol or all entries."""
+    if symbol:
+        # Validate symbol to prevent URL/path injection
+        symbol = _validate_symbol(symbol)
     cache = MarketDataCache(DEFAULT_CACHE)
     n = cache.invalidate(symbol)
     return {"invalidated": n}

@@ -8,8 +8,8 @@ from __future__ import annotations
 import os
 
 # ---------- validation windows (Agent 1 alignment) ----------
-WALK_FORWARD_TRAIN_WINDOW = int(os.environ.get("LML_WF_TRAIN", "252"))
-WALK_FORWARD_TEST_WINDOW = int(os.environ.get("LML_WF_TEST", "63"))
+WALK_FORWARD_TRAIN_WINDOW = int(os.environ.get("LML_WF_TRAIN_WINDOW", "252"))
+WALK_FORWARD_TEST_WINDOW = int(os.environ.get("LML_WF_TEST_WINDOW", "63"))
 WALK_FORWARD_STEP = int(os.environ.get("LML_WF_STEP", "21"))
 
 # ---------- export paths (Agent 2 alignment) ----------

@@ -17,12 +17,16 @@
 8. [Trading Game](#8-trading-game)
 9. [AI Prediction](#9-ai-prediction)
 10. [Risk Analytics](#10-risk-analytics)
-11. [Bank-Ready & Compliance](#11-bank-ready--compliance)
-12. [Windows App](#12-windows-app)
-13. [Ollama Integration](#13-ollama-integration)
-14. [Configuration](#14-configuration)
-15. [FAQ](#15-faq)
-16. [Troubleshooting](#16-troubleshooting)
+11. [Data Quality](#11-data-quality)
+12. [Validation](#12-validation)
+13. [Stress Testing & Crisis Scenarios](#13-stress-testing--crisis-scenarios)
+14. [Export & Explainability](#14-export--explainability)
+15. [Bank-Ready & Compliance](#15-bank-ready--compliance)
+16. [Windows App](#16-windows-app)
+17. [Ollama Integration](#17-ollama-integration)
+18. [Configuration](#18-configuration)
+19. [FAQ](#19-faq)
+20. [Troubleshooting](#20-troubleshooting)
 
 ---
 
@@ -363,21 +367,167 @@ All models return 68% and 95% credible/confidence intervals.
 - **Performance Attribution**: Per-position return contribution
 - **Correlation Matrix**: Pearson correlation between positions
 
+### 10.2 Advanced Metrics Endpoint
+
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/metrics/advanced \
+  -H "Content-Type: application/json" \
+  -d '{"symbols":["IWDA","EIMI"],"confidence":0.95,"window":63}'
+```
+
 ---
 
-## 11. Bank-Ready & Compliance
+## 11. Data Quality
 
-### 11.1 Audit Logger
+### 11.1 Quality Checks
+
+The quality module (`packages/quality/checks.py`) detects:
+- **Missing data**: Business-day gaps exceeding threshold
+- **Splits**: Potential splits/reverse splits via return jumps
+- **FX consistency**: Currency mismatches
+- **Timestamps**: Invalid dates, duplicates, future dates, non-monotonic ordering
+- **Stale data**: Most recent bar older than threshold
+- **Outliers**: Price outliers using z-score of log returns
+
+### 11.2 Quality Report
+
+```bash
+curl "http://127.0.0.1:8322/api/v1/quality/report/IWDA?source=yahoo"
+```
+
+Returns a `QualityReport` with status (`valid`, `warning`, `invalid`), score (0-1),
+issues list, and data hash.
+
+### 11.3 Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LML_QUALITY_MISSING_THRESHOLD` | `0.05` | Missing data warning threshold |
+| `LML_QUALITY_STALE_HOURS` | `24` | Stale data age threshold |
+
+---
+
+## 12. Validation
+
+### 12.1 Walk-Forward Validation
+
+Rolling train/test splits with expanding window. Prevents look-ahead bias.
+
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/validation/walk-forward \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","train_window":252,"test_window":63,"step":21}'
+```
+
+### 12.2 Time-Series Cross-Validation
+
+Purged K-Fold with gap between train and test to prevent information leakage.
+
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/validation/cv \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","n_splits":5,"gap":21}'
+```
+
+### 12.3 Hyperparameter Tuning
+
+Random or grid search with reproducible results.
+
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/validation/hyperparameter \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","param_grid":{"lookback":[10,20,50]},"n_trials":10}'
+```
+
+### 12.4 Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LML_WF_TRAIN_WINDOW` | `252` | Walk-forward train window |
+| `LML_WF_TEST_WINDOW` | `63` | Walk-forward test window |
+| `LML_WF_STEP` | `21` | Walk-forward step size |
+| `LML_CV_SPLITS` | `5` | CV number of splits |
+| `LML_CV_GAP` | `21` | CV purge gap |
+
+---
+
+## 13. Stress Testing & Crisis Scenarios
+
+### 13.1 Historical Stress Tests
+
+Apply historical crisis shocks to a portfolio:
+
+| Scenario | Description |
+|----------|-------------|
+| `2008_financial_crisis` | Global Financial Credit Crisis (Lehman collapse) |
+| `2020_covid_crash` | COVID-19 Pandemic Crash (Feb-Mar 2020) |
+| `2022_inflation_shock` | 2022 Inflation / Rate Shock |
+
+### 13.2 Hypothetical Scenarios
+
+| Scenario | Description |
+|----------|-------------|
+| `crash_30pct` | Sudden equity crash -30%, flight to quality |
+| `volatility_spike` | Volatility spike: equity -15%, correlation breakdown |
+| `rates_300bp` | Sudden +300bp rate shock across the curve |
+
+### 13.3 Crisis Analysis
+
+- **Correlation break**: Models diversification loss when correlations spike
+- **Liquidity crunch**: Almgren-Chriss square-root market impact model
+- **Sector rotation**: Sector-specific shock impacts
+
+### 13.4 Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LML_STRESS_MAX_DD_THRESHOLD` | `0.30` | Max drawdown alert threshold |
+
+---
+
+## 14. Export & Explainability
+
+### 14.1 Export Formats
+
+- **PDF**: ReportLab-based with metrics tables, charts, trade logs
+- **Excel**: Multi-sheet workbook (Summary, Trades, Equity, Drawdown, Quality)
+- **CSV**: Trades, equity curves, or scenario results
+
+All exports include `run_id`, `data_hash`, and `data_quality` for traceability.
+
+### 14.2 Explainability (@experimental)
+
+- **Permutation importance**: Feature importance via permutation
+- **SHAP-like values**: Approximate SHAP via marginal contributions
+- **Model comparison**: Walk-forward results + Diebold-Mariano test
+
+### 14.3 Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LML_EXPORT_PDF_PATH` | `./exports` | PDF export directory |
+| `LML_EXPORT_EXCEL_PATH` | `./exports` | Excel export directory |
+| `LML_EXPORT_CSV_PATH` | `./exports` | CSV export directory |
+
+---
+
+## 15. Bank-Ready & Compliance
+
+> **Note:** "Bank-Ready" refers to audit trail and data integrity capabilities.
+> LML is a research tool, not a regulated banking system. It does not provide
+> encryption at access control, or digital signatures.
+
+### 15.1 Audit Logger
 
 Append-only log of all API actions:
 - User, Timestamp, Action, Params, Result-Hash
 - SHA-256 checksums per table snapshot
 
-### 11.2 Data Integrity
+### 15.2 Data Integrity
 
 Automatic checksums for `instruments`, `transactions`, `prices`, `corporate_actions`.
 
-### 11.3 Compliance Report (BaFin-Style)
+### 15.3 Compliance Report (BaFin-Style)
 
 ```json
 {
@@ -389,23 +539,23 @@ Automatic checksums for `instruments`, `transactions`, `prices`, `corporate_acti
 }
 ```
 
-### 11.4 GDPR Export & Deletion
+### 15.4 GDPR Export & Deletion
 
 - `GET /api/v1/compliance/export/{user}` — JSON export
 - `POST /api/v1/compliance/delete-account` — Anonymization
 
 ---
 
-## 12. Windows App
+## 16. Windows App
 
-### 12.1 Installation
+### 16.1 Installation
 
 1. Download `LocalMarketLab-Setup-v0.8.0.exe`
 2. Run installer
 - Desktop shortcut optional
 3. Start app
 
-### 12.2 Features
+### 16.2 Features
 
 - **6 Tabs**: Markets, Backtest, Scenarios, Game, Ollama, Risk
 - **Sidebar**: Watchlist with live updates
@@ -414,7 +564,7 @@ Automatic checksums for `instruments`, `transactions`, `prices`, `corporate_acti
 - **Charts**: Candlestick, Line, Histogram, Drawdown (pyqtgraph)
 - **Live Ticks**: WebSocket updates in watchlist
 
-### 12.3 Architecture
+### 16.3 Architecture
 
 `QMainWindow` → `QTabWidget` + `QSplitter` → Chart/Dashboard widgets
 
@@ -422,9 +572,9 @@ Splash screen → Health check API → Fallback to local SQLite
 
 ---
 
-## 13. Ollama Integration
+## 17. Ollama Integration
 
-### 13.1 Preparation
+### 17.1 Preparation
 
 Install and start Ollama:
 ```bash
@@ -432,7 +582,7 @@ ollama serve
 ollama pull gemma4:latest
 ```
 
-### 13.2 API
+### 17.2 API
 
 ```
 GET /api/v1/ollama/models
@@ -440,15 +590,15 @@ POST /api/v1/ollama/chat
 POST /api/v1/ollama/generate
 ```
 
-### 13.3 Prompt Optimizer
+### 17.3 Prompt Optimizer
 
 The chat tab includes a built-in prompt optimizer with 5 tips for better trading prompts.
 
 ---
 
-## 14. Configuration
+## 18. Configuration
 
-### 14.1 Environment Variables
+### 18.1 Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -457,8 +607,21 @@ The chat tab includes a built-in prompt optimizer with 5 tips for better trading
 | `LML_DB` | `./data/marketlab.db` | SQLite path |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server |
 | `LML_CORS_ORIGINS` | `*` | CORS origins (comma-separated) |
+| `LML_CACHE_TTL_HOURS` | `24` | Market data cache TTL |
+| `LML_QUALITY_MISSING_THRESHOLD` | `0.05` | Missing data warning threshold |
+| `LML_QUALITY_STALE_HOURS` | `24` | Stale data age threshold |
+| `LML_WF_TRAIN_WINDOW` | `252` | Walk-forward train window |
+| `LML_WF_TEST_WINDOW` | `63` | Walk-forward test window |
+| `LML_WF_STEP` | `21` | Walk-forward step size |
+| `LML_CV_SPLITS` | `5` | CV number of splits |
+| `LML_CV_GAP` | `21` | CV purge gap |
+| `LML_STRESS_MAX_DD_THRESHOLD` | `0.30` | Stress max drawdown alert |
+| `LML_EXPORT_PDF_PATH` | `./exports` | PDF export directory |
+| `LML_EXPORT_EXCEL_PATH` | `./exports` | Excel export directory |
+| `LML_EXPORT_CSV_PATH` | `./exports` | CSV export directory |
+| `ALPHAVANTAGE_KEY` | — | Alpha Vantage API key |
 
-### 14.2 Demo Data
+### 18.2 Demo Data
 
 ```bash
 lml demo
@@ -468,7 +631,7 @@ Loads synthetic prices (IWDA, EIMI, AGGH, BTC) and a demo portfolio.
 
 ---
 
-## 15. FAQ
+## 19. FAQ
 
 **Q: Why no real market data?**
 A: Privacy. Real data requires API keys and sends queries to external servers. LML works completely offline.
@@ -487,7 +650,7 @@ A: Yes, the web UI and CLI are platform-independent. The Windows app is Windows-
 
 ---
 
-## 16. Troubleshooting
+## 20. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|

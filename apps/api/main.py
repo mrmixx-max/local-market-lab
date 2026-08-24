@@ -93,10 +93,13 @@ atexit.register(_shutdown)
 # ---------------------------------------------------------------------------
 # Middleware  (order: outermost → innermost)
 # ---------------------------------------------------------------------------
-cors_origins = os.environ.get("LML_CORS_ORIGINS", "*")
+# CORS: default to localhost only. Set LML_CORS_ORIGINS env var to allow
+# additional origins (comma-separated). "*" allows all — use with caution.
+cors_origins = os.environ.get("LML_CORS_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000")
 app.add_middleware(CORSMiddleware,
-    allow_origins=[o.strip() for o in cors_origins.split(",") if o.strip()] or ["*"],
-    allow_methods=["*"], allow_headers=["*"])
+    allow_origins=[o.strip() for o in cors_origins.split(",") if o.strip()] or ["http://localhost:3000"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"])
 app.add_middleware(ExceptionHandlerMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
@@ -169,7 +172,7 @@ async def system_info(ws=Depends(get_workspace)):
     return {
         "version": "0.1.0",
         "uptime_seconds": round(time.monotonic() - _start_time, 1),
-        "db_path": db_path,
+        "db_path": str(Path(db_path).name),  # Only expose filename, not full path
         "db_size_bytes": db_size,
         "python_version": os.sys.version.split()[0],
     }
@@ -188,6 +191,11 @@ async def symbols(ws=Depends(get_workspace)):
 @app.get("/api/v1/market/prices/{symbol}", response_model=PriceSeriesResponse, summary="Get price history for a symbol")
 async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace)):
     """Return historical close prices for a given instrument."""
+    # Validate symbol to prevent injection
+    import re
+    if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
+        raise HTTPException(400, f"invalid symbol format: {symbol!r}")
+    
     q = "SELECT date, close, volume FROM prices WHERE symbol=? ORDER BY date"
     params: list = [symbol.upper()]
     if limit:
@@ -205,6 +213,11 @@ async def yahoo_fallback(symbol: str):
     Uses a realistic browser User-Agent to avoid Yahoo blocks.
     Configurable timeout via LML_YAHOO_TIMEOUT env var (default: 10s).
     """
+    # Validate symbol to prevent URL injection
+    import re
+    if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
+        raise HTTPException(400, f"invalid symbol format: {symbol!r}")
+    
     timeout = int(os.environ.get("LML_YAHOO_TIMEOUT", "10"))
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     endpoints = [
@@ -241,6 +254,11 @@ async def yahoo_fallback(symbol: str):
 @app.post("/api/v1/market/indicators/{symbol}", summary="Compute technical indicators for a symbol")
 async def indicators(symbol: str, payload: dict, ws=Depends(get_workspace)):
     """Compute SMA, EMA, RSI, MACD, or Bollinger indicators for a symbol."""
+    # Validate symbol to prevent injection
+    import re
+    if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
+        raise HTTPException(400, f"invalid symbol format: {symbol!r}")
+    
     from packages.marketdata.indicators import bollinger, ema, macd, rsi, sma
 
     ind = payload.get("indicator", "sma").lower()

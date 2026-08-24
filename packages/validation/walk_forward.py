@@ -10,6 +10,7 @@ import os
 from dataclasses import dataclass, field
 from math import sqrt
 
+from packages.domain.decorators import experimental
 from packages.metrics.risk import sharpe_ratio
 
 
@@ -20,15 +21,6 @@ DEFAULT_TRAIN_WINDOW = int(os.environ.get("LML_WF_TRAIN_WINDOW", "252"))
 DEFAULT_TEST_WINDOW = int(os.environ.get("LML_WF_TEST_WINDOW", "63"))
 DEFAULT_STEP = int(os.environ.get("LML_WF_STEP", "21"))
 DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
-
-
-# ---------------------------------------------------------------------------
-# Decorators
-# ---------------------------------------------------------------------------
-def experimental(func):
-    """Mark a function as experimental — API may change without notice."""
-    func._experimental = True
-    return func
 
 
 # ---------------------------------------------------------------------------

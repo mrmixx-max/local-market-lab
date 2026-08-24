@@ -1,0 +1,3 @@
+symbol,side,qty,price,date
+AAPL,buy,10,150.0,2026-01-01
+AAPL,sell,5,155.0,2026-01-02

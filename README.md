@@ -114,10 +114,82 @@ The web UI features:
 | `lml import prices FILE SYMBOL` | import price series CSV |
 | `lml import market SYMBOL --adapter A` | import from external source |
 | `lml portfolio P` | valuation of portfolio `P` |
-| `lml backtest P` | run buy-and-hold + rebalance backtests |
+| `lml backtest P [--strategy S] [--fees N] [--slippage N]` | run backtest |
 | `lml scenario mc/bootstrap/replay` | run scenarios |
 | `lml game create/order/tick/state/leaderboard` | paper-trading game |
 | `lml doctor` | workspace health check |
+
+## New in this release
+
+### Data Quality Checks
+```bash
+# Check quality of a price series
+curl "http://127.0.0.1:8322/api/v1/quality/report/IWDA?source=yahoo"
+```
+Detects missing data, splits, FX mismatches, stale data, and price outliers.
+
+### Walk-Forward & Cross-Validation
+```bash
+# Walk-forward validation
+curl -X POST http://127.0.0.1:8322/api/v1/validation/walk-forward \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","train_window":252,"test_window":63,"step":21}'
+
+# Time-series cross-validation
+curl -X POST http://127.0.0.1:8322/api/v1/validation/cv \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","n_splits":5,"gap":21}'
+
+# Hyperparameter tuning
+curl -X POST http://127.0.0.1:8322/api/v1/validation/hyperparameter \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"IWDA","param_grid":{"lookback":[10,20,50]},"n_trials":10}'
+```
+
+### Stress Testing & Crisis Scenarios
+```bash
+# Historical stress test
+curl -X POST http://127.0.0.1:8322/api/v1/scenario/stress \
+  -H "Content-Type: application/json" \
+  -d '{"scenario":"2008_financial_crisis","positions":{"IWDA":0.6,"AGGH":0.4}}'
+
+# Crisis analysis (correlation break, liquidity crunch, sector rotation)
+curl -X POST http://127.0.0.1:8322/api/v1/scenario/crisis \
+  -H "Content-Type: application/json" \
+  -d '{"crisis_type":"correlation_break","positions":{"IWDA":0.5,"EIMI":0.3}}'
+```
+
+### Export (PDF, Excel, CSV)
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/export/pdf \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Report","metrics":{"cagr":10.5}}' --output report.pdf
+
+curl -X POST http://127.0.0.1:8322/api/v1/export/excel \
+  -H "Content-Type: application/json" \
+  -d '{"metrics":{"cagr":10.5}}' --output report.xlsx
+```
+
+### Technical Indicators
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/market/indicators/IWDA \
+  -H "Content-Type: application/json" \
+  -d '{"indicator":"rsi","period":14}'
+```
+Supported: `sma`, `ema`, `rsi`, `macd`, `bollinger`.
+
+### Advanced Risk Metrics
+```bash
+curl -X POST http://127.0.0.1:8322/api/v1/metrics/advanced \
+  -H "Content-Type: application/json" \
+  -d '{"symbols":["IWDA","EIMI"],"confidence":0.95}'
+```
+
+### Compliance & Audit
+```bash
+curl http://127.0.0.1:8322/api/v1/compliance/report
+curl -X POST http://127.0.0.1:8322/api/v1/compliance/integrity-check
+```
 
 ## Architecture
 
@@ -136,6 +208,10 @@ packages/compliance/    disclaimers + language guard
 packages/reports/       markdown report builders (methodology + limitations)
 packages/game/          paper-trading engine + multiplayer lobby
 packages/ollama/        local LLM client
+packages/validation/    walk-forward, cross-validation, hyperparameter tuning
+packages/quality/       data quality checks (missing, splits, outliers, stale)
+packages/explainability/ feature importance (permutation, SHAP-like), model comparison
+packages/scenarios/     stress tests, crisis scenarios, regime switching
 apps/cli/               Typer CLI
 apps/api/               FastAPI backend (REST + WebSocket)
 apps/web/               Bloomberg-style terminal UI

@@ -124,11 +124,12 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
                 exc_type=type(exc).__name__,
                 exc_msg=str(exc),
             )
+            # Never expose internal exception details to the client
             return JSONResponse(
                 status_code=500,
                 content={
                     "error": "internal_server_error",
                     "request_id": rid,
-                    "detail": str(exc),
+                    "detail": "An unexpected error occurred. Check server logs.",
                 },
             )
