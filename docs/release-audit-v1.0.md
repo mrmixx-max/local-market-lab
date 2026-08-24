@@ -8,8 +8,8 @@ externen RC-Testzyklus.
 
 | # | Kriterium | Status |
 |---|---|---|
-| 1 | Externer RC-Testzyklus abgeschlossen | ⬜ OFFEN — gestartet, Rückmeldungen ausstehend |
-| 2 | Keine offenen Critical-/High-Probleme | ✅ derzeit keine bekannt (revidieren bei Feedback) |
+| 1 | Externer RC-Testzyklus abgeschlossen | ⬜ OFFEN — läuft; 1 reproduzierter High-Bug gefunden und behoben (CASH-Backtest-Crash) |
+| 2 | Keine offenen Critical-/High-Probleme | ✅ High-Bug (CASH) behoben + Regressionstest; keine weiteren bekannt |
 | 3 | Reproduzierte relevante Bugs behoben oder bewusst akzeptiert | ✅/⬜ siehe external-feedback.md |
 | 4 | Relevante Tests grün (462 Tests) | ✅ PASS bei rc.1 |
 | 5 | Clean-Venv funktioniert | ✅ bei rc.1 verifiziert; vor stable erneut |
