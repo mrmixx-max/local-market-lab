@@ -168,6 +168,10 @@ def import_market(symbol: str, adapter: str = "synthetic", db: str = DB_OPT,
 from apps.cli.jobs_cli import jobs_app
 app.add_typer(jobs_app, name="jobs")
 
+# ---------- manifest inspection + rerun ----------
+from apps.cli.manifest_cli import manifests_app
+app.add_typer(manifests_app, name="manifests")
+
 
 # ---------- trading game ----------
 game_app = typer.Typer(help="Paper-trading training game.")

@@ -57,6 +57,15 @@ DELETE /jobs/{id} → Abbruch
   (CLI, Desktop, Web nutzen dasselbe). API-Requests nie blockierend;
   `wait` hat hartes Timeout. Keine neuen Job-Typen, keine Cloud-Queue.
 
+## Manifest & Reproducibility (P1.4)
+
+- `packages/artifacts/canonical.py`: einzige kanonische Serialisierung (sort_keys,
+  allow_nan=False, NaN/Inf als String-Token, Decimal/Date/Enum/Set, Secret-Redaction).
+- `registry.py`: `integrity_payload()` poppt `manifest_digest`, `manifest_digest_of()`
+  ist einzige Hash-Basis für Save+Load. Manifeste immutable (atomar, kein Overwrite).
+- `rerun.py`: Drift-Erkennung (system/parameter=abort, data/model=abort,
+  environment=warn), Status byte_identical|rerun_with_drift|failed.
+
 ## Teststrategie gesamt
 - Unit je Package (Bestand: 385 Tests)
 - Contract-Tests für Adapter & Plugins (v1.0: Plugin-Contract vorbereiten)

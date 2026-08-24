@@ -56,6 +56,32 @@ Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 
 ## [Unreleased]
 
+### Added — v1.0 P1.4 (Manifest & Reproducibility)
+
+- **Manifest-Engine** `packages/artifacts/`: kanonische Serialisierung
+  (`canonical.py`, sort_keys/allow_nan=False/Decimal/Date/Enum/Set/NaN-Inf),
+  immutable Speicherung (`registry.py`, atomar, Path-Traversal-Schutz,
+  SHA256-Integrität), versioniertes Schema v1 (`run_manifest.py`).
+- **Hashes**: manifest_digest (Integrität), parameters/data/model/environment/
+  result_hash — alle zentral über `integrity_payload()` + `stable_hash()`.
+  `created_at`/`run_id`/`manifest_id` aus dem fachlichen result_hash ausgeschlossen.
+- **Rerun** `packages/artifacts/rerun.py`: Load→Integrität→Drift-Check
+  (system/parameter=abort, data/model=abort, environment=warn)→Re-Exec→
+  Vergleich. Status: byte_identical | rerun_with_drift | failed.
+- **CLI** `lml manifests list|show|compare` + `lml rerun <id> [--async|--json|
+  --allow-data-drift|--allow-environment-drift]`.
+- **API** `GET /api/v1/manifests`, `/{id}`, `/{id}/compare`,
+  `POST /api/v1/manifests/{id}/rerun` (sync + async via Job-Queue); 404/422/409.
+- **Job-Queue**: `@register("rerun")` für Async-Pfad (neue run_id, Original
+  immutable, Vergleich als neuer Record).
+- 27 neue Tests (24 Manifest-P1.4 + 2 Async/CLI, 1 Legacy); Suite 462 passed /
+  6 skipped. Keine neuen Dependencies. Kein Breaking Change.
+
+### Added — v1.0 P1.3 (Job-Queue Client Binding) — bereits implementiert
+### Added — v1.0 P1.2 (Minimum order sizes) — bereits implementiert
+### Added — v1.0 P1.1 (Job-Queue Backend) — bereits implementiert
+
+
 ### Added — v1.0 P1.3 (Job-Queue Client Binding)
 
 - **CLI `lml jobs`**: list / status / cancel / wait / artifact (additiv).

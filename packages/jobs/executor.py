@@ -133,3 +133,32 @@ def run_demo_sleep(params: dict, progress: ProgressFn) -> dict:
         acc += rng.random()
         progress((i + 1) / steps)
     return {"sum": round(acc, 6), "steps": steps}
+
+
+@register("rerun")
+def run_rerun(params: dict, progress: ProgressFn) -> dict:
+    """Re-execute a stored manifest via the rerun engine (P1.4).
+
+    params: {manifest_id, allow_data_drift, allow_environment_drift}
+    New run_id; original manifest untouched; comparison stored immutably.
+    """
+    from packages.artifacts.rerun import rerun_manifest, DriftError
+    from packages.artifacts.run_manifest import _env_hash, _system_version
+    from apps.cli.rerun_cli_helpers import get_executor
+
+    progress(0.05)
+    manifest_id = params["manifest_id"]
+    executor = get_executor()
+    cur_ver = _system_version()
+    cur_env, _ = _env_hash()
+    try:
+        report = rerun_manifest(
+            manifest_id, executor, cur_ver, cur_env,
+            allow_data_drift=params.get("allow_data_drift", False),
+            allow_environment_drift=params.get("allow_environment_drift", False))
+    except FileNotFoundError:
+        raise ValueError(f"manifest {manifest_id} not found")
+    except DriftError as exc:
+        raise ValueError(f"drift abort: {exc}")
+    progress(1.0)
+    return report.to_dict()

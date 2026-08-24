@@ -155,6 +155,14 @@ lml jobs wait   <job_id> [--timeout 300]
 lml jobs artifact <job_id>
 ```
 
+Reproducibility:
+
+```bash
+lml manifests list
+lml manifests show <manifest_id>
+lml rerun <manifest_id> [--async] [--json] [--allow-data-drift] [--allow-environment-drift]
+```
+
 
 | Command | Purpose |
 |---|---|
