@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.9.1-rc.1] — 2026-08-24 (Release Candidate / Pre-Release)
+
+### Fixed — Critical & High
+
+- **Monte Carlo Student-t**: Innovationsvarianz war √2-fach verzerrt; jetzt
+  unit-variance-standardisiert, `df > 2` erzwungen, `p01` ausgewiesen.
+- **Backtest-Kosten**: Handelskosten flossen nie in die Equity-Curve; Kostenmodell
+  korrigiert, Regressionstest ergänzt.
+- **Stress-Tests**: Seed wurde ignoriert, run_id zufällig → deterministisch.
+- **Datenqualität**: Non-monotonic-Erkennung nach erstem Duplikat deaktiviert → behoben.
+
+### Changed — Datenadapter (Medium-Fixes)
+
+- **Neu: gemeinsame Basisklasse** `packages/marketdata/base_adapter.py`
+  (versionierter Cache-Schlüssel, Retry mit Exponential Backoff,
+  Currency-Erkennung). Yahoo/AV erben davon; Provider-spezifische Logik bleibt getrennt.
+- **Währungen**: Ticker-Currency-Erkennung (Suffix/Börsenplatz-Mapping, LSE in
+  Pence = GBp). Unbekannte Währung bleibt explizit `unknown` — FxPolicy meldet
+  fehlende Kurse als INCOMPLETE, kein stiller 1:1-Fallback.
+- **Cache-Versionierung**: Schlüssel enthält Provider, Symbol, Intervall, Zeitraum,
+  Währung, Adjusted-Status und Schema-Version (`schema=2`). Schemawechsel → Cache-Miss;
+  korrupte Einträge werden gelöscht statt Crash; `purge_old_schema()` zum Aufräumen.
+- **Alpha-Vantage-Key im Header**: Key wird nur als HTTP-Header gesendet — nie in der
+  URL, nie in Logs oder Fehlermeldungen. Security-Tests ergänzt.
+
+### Changed — Exporte & Explainability
+
+- Alle Exporte tragen Systemversion, Seed, Run-ID, Zeitstempel und Pflicht-Disclaimer.
+- CSV-Format dokumentiert: UTF-8, Komma, `# `-Metadatenkopf.
+- Permutation Importance: ehrliches `splits_used`, Leakage-Richtlinie im Docstring.
+- SHAP-artige Werte mit `approximation: true` und Nicht-Kausalitätshinweis.
+
+### Known Limitations
+
+- Rebalancing ohne Mindestordergrößen-Modellierung.
+- Lange Berechnungen laufen synchron im Request (keine Job-Queue).
+- WebSocket-Marktdaten sind simuliert.
+- AV-Free-Tier: 25 Requests/Tag; Adapter wartet bis 12 s zwischen Requests.
+
+### Installationshinweise
+
+```bash
+pip install local-market-lab          # aus PyPI (0.9.0)
+# oder aus Source:
+pip install -e ".[dev,analytics,export]"
+```
+
+Windows: Installer `LocalMarketLab-Setup-v0.9.1.exe` (enthält keine Python-Abhängigkeit).
+
+### Breaking Changes
+
+Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
+`*_versioned`-Methoden; alte Cache-Einträge werden bei Schema-Mismatch nicht genutzt.
+
 ## [Unreleased] — 2026-08-24 (v1.0 Hardening)
 
 ### Fixed — Release-Blocker

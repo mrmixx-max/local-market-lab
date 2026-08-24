@@ -3,7 +3,7 @@
 [![CI](https://github.com/mrmixx-max/local-market-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/mrmixx-max/local-market-lab/actions/workflows/ci.yml)
 [![Windows Build](https://github.com/mrmixx-max/local-market-lab/actions/workflows/windows-build.yml/badge.svg)](https://github.com/mrmixx-max/local-market-lab/actions/workflows/windows-build.yml)
 
-**Privacy-first portfolio analytics, backtesting, and scenario simulation — without investment signals.**
+**Portfolio-Analytics, Backtesting und Szenario-Simulation — standardmäßig lokal, ohne Investment-Signale. Optionale Datenadapter (Yahoo Finance, Alpha Vantage) benötigen Netzwerkzugriff.**
 
 > Research tool. Not financial advice. No buy/sell signals. No forecasts disguised as math.
 
@@ -56,7 +56,7 @@ backtest summary and scenario percentiles.
 - **Stress Tests & Crisis Scenarios** (2008, 2020, 2022, Crash -30%, etc.)
 - **Rebalancing-Assistant** (proposals only, never executes)
 - **PDF/Excel/CSV Export**
-- **Explainability** (Feature Importance, SHAP-like, Diebold-Mariano)
+- **Explainability** (Feature Importance, SHAP-like Approximation, Diebold-Mariano)
 - **Ollama Integration** (local LLM chat)
 - **Bank-Ready Compliance** (BaFin-report, GDPR export/deletion)
 - **Data Quality Layer** (missing, splits, FX, timestamps, outliers)
@@ -224,7 +224,7 @@ packages/game/          paper-trading engine + multiplayer lobby
 packages/ollama/        local LLM client
 packages/validation/    walk-forward, cross-validation, hyperparameter tuning
 packages/quality/       data quality checks (missing, splits, outliers, stale)
-packages/explainability/ feature importance (permutation, SHAP-like), model comparison
+packages/explainability/ feature importance (permutation, SHAP-like Approximation), model comparison
 packages/scenarios/     stress tests, crisis scenarios, regime switching
 apps/cli/               Typer CLI
 apps/api/               FastAPI backend (REST + WebSocket)
@@ -292,7 +292,7 @@ build.bat
 
 Output:
 - `windows/src/dist/LocalMarketLab.exe` — standalone EXE (target: <30MB with UPX)
-- `windows/installer/output/LocalMarketLab-Setup-v0.8.0.exe` — installer
+- `windows/installer/output/LocalMarketLab-Setup-v{version}.exe` — installer
 
 ### Build Options
 ```bash
@@ -324,9 +324,9 @@ The project uses two GitHub Actions workflows:
 ### Release Process
 
 1. Update version in `windows/src/version_info.txt` and `windows/installer/setup.iss`
-2. Push a tag: `git tag v0.8.0 && git push origin v0.8.0`
+2. Push a tag: `git tag v0.9.1 && git push origin v0.9.1`
 3. GitHub Actions automatically builds and creates a release with:
-   - `LocalMarketLab-Setup-v0.8.0.exe` (installer)
+   - `LocalMarketLab-Setup-v{version}.exe` (installer)
    - `LocalMarketLab.exe` (portable)
    - SHA256 checksums
 

@@ -63,7 +63,7 @@ class TestHealthEndpoint:
         assert "yahoo_available" in data
         assert "ollama_error" in data or data["ollama_available"]
         assert "yahoo_error" in data or data["yahoo_available"]
-        assert data["version"] == "0.1.0"
+        assert data["version"] == "0.9.1-rc.1"
 
     def test_health_ollama_status(self, client):
         """Health endpoint should correctly report Ollama availability."""

@@ -1,0 +1,3 @@
+61d017ecaf6c2180971b11e71c16ce189ab8ec3b34326e40afacee137f53b70c *dist/local_market_lab-0.9.1-py3-none-any.whl
+f290b3ef17cda85e9e8875426e350b0e624223287d333eb9acb3f457a72e792b *windows/src/dist/LocalMarketLab.exe
+be2da8a4a36216e067d7fa067872f9dd0419135c99497c4b8176b15fdfd9ab36 *windows/output/LocalMarketLab-Setup-v0.9.1.exe

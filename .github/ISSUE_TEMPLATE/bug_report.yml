@@ -1,0 +1,46 @@
+name: "Bug Report"
+description: "Fehlermeldung zu Local Market Lab"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Datenschutz-Hinweis:** Bitte keine API-Keys, Tokens oder privaten
+        Portfolio-Daten (Positionen, Transaktionen, Beträge) posten. Symbole
+        und Logs anonymisieren.
+  - type: input
+    id: version
+    attributes: { label: "Version", placeholder: "0.9.1-rc.1" }
+    validations: { required: true }
+  - type: dropdown
+    id: os
+    attributes: { label: "Betriebssystem", options: ["Windows 11", "Windows 10", "Windows Server", "Sonstiges"] }
+    validations: { required: true }
+  - type: dropdown
+    id: install
+    attributes: { label: "Installationsmethode", options: ["Installer EXE", "Portable EXE", "pip (Source)", "Docker"] }
+    validations: { required: true }
+  - type: input
+    id: python
+    attributes: { label: "Python-Version (falls aus Source)", placeholder: "3.11.15 oder leer" }
+  - type: dropdown
+    id: source
+    attributes: { label: "Datenquelle", options: ["Synthetic/Demo", "CSV-Import", "Yahoo Finance", "Alpha Vantage"] }
+  - type: input
+    id: symbol
+    attributes: { label: "Verwendetes Symbol (anonymisiert ok)", placeholder: "z.B. IWDA" }
+  - type: textarea
+    id: steps
+    attributes: { label: "Reproduzierbare Schritte", placeholder: "1. ...\n2. ..." }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: "Erwartetes Verhalten" }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: "Tatsächliches Verhalten" }
+    validations: { required: true }
+  - type: textarea
+    id: log
+    attributes: { label: "Logauszug (API-Keys/Portfolio-Daten entfernen!)" }

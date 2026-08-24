@@ -1,0 +1,14 @@
+{
+  "version": "0.9.1-rc.1",
+  "commit": "c06eabc1d3e36da10c646c672d42910f1b119034",
+  "build_time_utc": "2026-08-24T14:50:05.109548+00:00",
+  "platform": "Windows 10 (AMD64)",
+  "python": "3.11.15",
+  "artifacts": {
+    "wheel": "dist/local_market_lab-0.9.1-py3-none-any.whl",
+    "sdist": "dist/local_market_lab-0.9.1.tar.gz",
+    "windows_exe": "windows/src/dist/LocalMarketLab.exe",
+    "windows_installer": "windows/output/LocalMarketLab-Setup-v0.9.1.exe",
+    "checksums": "SHA256SUMS.txt"
+  }
+}
