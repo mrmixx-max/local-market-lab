@@ -1,4 +1,4 @@
-# Bekannte Einschränkungen — v0.9.1-rc.1
+# Bekannte Einschränkungen — v0.9.1
 
 ## Methodik
 - Permutation Importance wird auf dem vom Aufrufer übergebenen Auswertungsset

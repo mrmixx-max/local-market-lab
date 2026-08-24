@@ -1,4 +1,4 @@
-# Release Audit v0.9.1-rc.1
+# Release Audit v0.9.1 (stable)
 
 **Datum:** 2026-08-24 · **Git-Stand:** c06eabc + Release-Prep-Commits · **Systemversion:** 0.9.1-rc.1
 

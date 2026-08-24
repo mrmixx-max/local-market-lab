@@ -1,6 +1,6 @@
 # Beta-Test-Report — v0.9.1-rc.1
 
-**Datum:** 2026-08-24 · **Umgebung:** Windows 10 (AMD64), Python 3.11.15 · **Commit:** e9575c5 (Tag v0.9.1-rc.1)
+**Datum:** 2026-08-24 · **Status:** ABGESCHLOSSEN — 12/12 PASS, Stable-Release v0.9.1 freigegeben · **Umgebung:** Windows 10 (AMD64), Python 3.11.15 · **Commit:** e9575c5 (Tag v0.9.1-rc.1)
 
 ## Release-Validierung
 
