@@ -566,15 +566,43 @@ async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
 
 
 # ---------- validation ----------
-def _default_strategy(train_data, test_data):
-    """Default mean-reversion strategy for validation endpoints."""
+def _default_strategy(train_data, test_data, **kwargs):
+    """Default mean-reversion strategy for validation endpoints.
+    
+    Optional kwargs:
+        lookback: int — window for mean calculation (default: len(train_data))
+        threshold: float — signal threshold (default: 0.0)
+    """
+    lookback = kwargs.get("lookback", len(train_data))
+    threshold = kwargs.get("threshold", 0.0)
     if len(train_data) < 2:
         return [0.0] * len(test_data)
-    returns = [b / a - 1 for a, b in zip(train_data, train_data[1:])]
+    window = train_data[-lookback:] if lookback <= len(train_data) else train_data
+    returns = [b / a - 1 for a, b in zip(window, window[1:])]
     avg_return = sum(returns) / len(returns)
-    # simple signal: positive if recent trend is positive
-    signal = 1.0 if avg_return > 0 else -1.0
+    signal = 1.0 if avg_return > threshold else (-1.0 if avg_return < -threshold else 0.0)
     return [signal] * len(test_data)
+
+
+def _fetch_prices(ws, symbol: str, payload: dict) -> list[float]:
+    """Fetch prices from DB or via Yahoo adapter."""
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
+    if rows:
+        return [r["close"] for r in rows]
+    # Fallback: fetch from Yahoo
+    source = payload.get("source", "yahoo")
+    if source == "yahoo":
+        try:
+            from packages.marketdata.yahoo_adapter import YahooAdapter
+            adapter = YahooAdapter()
+            series = adapter.fetch(symbol, years=2)
+            if series and series.bars:
+                return [b.close for b in series.bars]
+        except Exception:
+            pass
+    raise HTTPException(404, f"no prices for {symbol.upper()}")
 
 
 @app.post("/api/v1/validation/walk-forward", response_model=WalkForwardResponse, summary="Walk-forward backtest")
@@ -583,12 +611,7 @@ async def validation_walk_forward(payload: dict, ws=Depends(get_workspace)):
     from packages.validation.walk_forward import walk_forward_backtest
 
     symbol = payload.get("symbol", "IWDA")
-    rows = ws.conn.execute(
-        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
-    ).fetchall()
-    if not rows:
-        raise HTTPException(404, f"no prices for {symbol.upper()}")
-    data = [r["close"] for r in rows]
+    data = _fetch_prices(ws, symbol, payload)
 
     result = walk_forward_backtest(
         data=data,
@@ -606,12 +629,7 @@ async def validation_cv(payload: dict, ws=Depends(get_workspace)):
     from packages.validation.cv import time_series_cv
 
     symbol = payload.get("symbol", "IWDA")
-    rows = ws.conn.execute(
-        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
-    ).fetchall()
-    if not rows:
-        raise HTTPException(404, f"no prices for {symbol.upper()}")
-    data = [r["close"] for r in rows]
+    data = _fetch_prices(ws, symbol, payload)
 
     result = time_series_cv(
         model_fn=_default_strategy,
@@ -629,12 +647,7 @@ async def validation_hyperparameter(payload: dict, ws=Depends(get_workspace)):
     from packages.validation.hyperparameter import hyperparameter_tune
 
     symbol = payload.get("symbol", "IWDA")
-    rows = ws.conn.execute(
-        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
-    ).fetchall()
-    if not rows:
-        raise HTTPException(404, f"no prices for {symbol.upper()}")
-    data = [r["close"] for r in rows]
+    data = _fetch_prices(ws, symbol, payload)
 
     param_grid = payload.get("param_grid")
     if not param_grid:
