@@ -143,7 +143,7 @@ python -m windows.src.app
 
 ### 3.4 Installation Windows-Installer
 
-`LocalMarketLab-Setup-v0.8.0.exe` aus dem Release herunterladen, ausführen, folgen.
+`LocalMarketLab-Setup-v0.9.0.exe` aus dem Release herunterladen, ausführen, folgen.
 
 ---
 
@@ -160,7 +160,7 @@ Antwort:
 {
   "status": "ok",
   "instruments": 4,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "db_connected": true,
   "uptime_seconds": 42.5
 }
@@ -243,6 +243,55 @@ GET /api/v1/game/leaderboard
 GET /api/v1/compliance/audit-log
 POST /api/v1/compliance/integrity-check
 GET /api/v1/compliance/report
+```
+
+### 4.9 Validierung
+
+```
+POST /api/v1/validation/walk-forward
+POST /api/v1/validation/cv
+POST /api/v1/validation/hyperparameter
+```
+
+### 4.10 Stress-Tests & Krisenszenarien
+
+```
+POST /api/v1/scenario/stress
+POST /api/v1/scenario/crisis
+```
+
+### 4.11 Rebalancing
+
+```
+GET /api/v1/portfolio/{name}/rebalancing
+```
+
+### 4.12 Export
+
+```
+POST /api/v1/export/pdf
+POST /api/v1/export/excel
+POST /api/v1/export/csv
+```
+
+### 4.13 Erklärbarkeit
+
+```
+GET /api/v1/explainability/importance
+GET /api/v1/explainability/explain
+GET /api/v1/explainability/compare
+```
+
+### 4.14 Datenqualität
+
+```
+GET /api/v1/quality/report/{symbol}
+```
+
+### 4.15 Marktdaten
+
+```
+GET /api/v1/market/data/{symbol}?source=yahoo|alphavantage
 ```
 
 ---
@@ -408,7 +457,7 @@ Automatische Checksummen für `instruments`, `transactions`, `prices`, `corporat
 
 ### 12.1 Installation
 
-1. `LocalMarketLab-Setup-v0.8.0.exe` herunterladen
+1. `LocalMarketLab-Setup-v0.9.0.exe` herunterladen
 2. Installer ausführen
 - Desktop-Verknüpfung optional
 3. App starten
