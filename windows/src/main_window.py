@@ -25,19 +25,19 @@ FONT = "Consolas"
 
 STYLESHEET = f"""
 QMainWindow {{ background: {C_BG}; color: {C_WHITE}; }}
-QWidget {{ background: {C_BG}; color: {C_WHITE}; font-family: "{FONT}"; font-size: 11px; }}
+QWidget {{ background: {C_BG}; color: {C_WHITE}; font-family: "{FONT}"; font-size: 14px; }}
 QTabWidget::pane {{ border: 1px solid {C_DIM}; }}
-QTabBar::tab {{ background: #111; color: {C_DIM}; padding: 8px 16px;
+QTabBar::tab {{ background: #111; color: {C_DIM}; padding: 10px 20px; font-size: 14px;
                border: 1px solid {C_DIM}; border-bottom: none; margin-right: 2px; }}
 QTabBar::tab:selected {{ background: {C_BG}; color: {C_AMBER}; border-color: {C_AMBER}; }}
-QTableWidget {{ background: #0A0A0A; color: {C_WHITE}; gridline-color: #222;
+QTableWidget {{ background: #0A0A0A; color: {C_WHITE}; gridline-color: #222; font-size: 13px;
                border: none; font-family: "{FONT}"; }}
 QTableWidget::item:selected {{ background: #1a1a00; color: {C_AMBER}; }}
 QHeaderView::section {{ background: #111; color: {C_AMBER}; border: 1px solid {C_DIM};
-                       padding: 4px; font-weight: bold; }}
-QStatusBar {{ background: #080808; color: {C_DIM}; font-size: 10px; }}
+                       padding: 6px; font-weight: bold; font-size: 13px; }}
+QStatusBar {{ background: #080808; color: {C_DIM}; font-size: 12px; }}
 QPushButton {{ background: #111; color: {C_AMBER}; border: 1px solid {C_AMBER};
-              padding: 6px 14px; }}
+              padding: 8px 18px; font-size: 14px; font-weight: bold; }}
 QPushButton:hover {{ background: #221100; }}
 QPushButton:pressed {{ background: {C_AMBER}; color: {C_BG}; }}
 """
@@ -81,6 +81,11 @@ class MainWindow(QMainWindow):
         self._symbols: list[str] = []
         self._last_prices: dict[str, float] = {}
         self._prev_prices: dict[str, float] = {}
+        # Window Icon
+        from PyQt6.QtGui import QIcon
+        icon_path = str(Path(__file__).parent.parent.parent / "lml-icon.ico")
+        if Path(icon_path).exists():
+            self.setWindowIcon(QIcon(icon_path))
         self._build_ui()
         self._build_timers()
 
@@ -133,7 +138,7 @@ class MainWindow(QMainWindow):
         bar = QHBoxLayout()
         bar.setContentsMargins(10, 6, 10, 6)
         brand = QLabel("◆ LOCAL MARKET LAB")
-        brand.setStyleSheet(f"color: {C_AMBER}; font-size: 14px; font-weight: bold;")
+        brand.setStyleSheet(f"color: {C_AMBER}; font-size: 18px; font-weight: bold;")
         bar.addWidget(brand, 1)
         self.clock_label = QLabel("--:--:--")
         bar.addWidget(self.clock_label)
