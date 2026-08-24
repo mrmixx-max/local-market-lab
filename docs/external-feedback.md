@@ -32,3 +32,11 @@ Externe RC-Rückmeldungen: keine eingegangen
 Aussagekraft: begrenzt
 Freigabegrundlage: interne Tests und dokumentierte RC-Prüfung
 ```
+
+## Installationsprüfung rc.2
+
+```text
+Saubere Windows-VM: nicht verfügbar.
+Installationsprüfung: lokaler Host.
+Aussagekraft: begrenzt.
+```

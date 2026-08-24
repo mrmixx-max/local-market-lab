@@ -18,6 +18,10 @@ provider. There is no cloud, no account, no telemetry.
 > environment). Use the **portable EXE** (primary Windows artifact) or pip.
 > See `docs/v1.0-known-limitations.md`.
 
+### Windows Installer
+
+`LocalMarketLab-Setup-v1.0.0.2.exe` from Releases — per-user install, no admin rights. **Not byte-reproducible** (Inno Setup embeds build timestamps); the published SHA256 applies to exactly this artifact.
+
 ### Portable Version (Recommended for RC)
 
 Download `LocalMarketLab.exe` from [Releases](https://github.com/mrmixx-max/local-market-lab/releases) — runs standalone, no installation and no Python required.
