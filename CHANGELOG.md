@@ -56,7 +56,18 @@ Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 
 ## [Unreleased]
 
-v1.0-Planung siehe docs/v1.0-roadmap.md (noch nicht implementiert).
+### Added — v1.0 P1.1 + P1.3 (Job-Queue & Fortschritt)
+
+- **In-Process Job-Queue** (`packages/jobs/`): persistenter Jobstatus in
+  SQLite (WAL-Modus), Worker-Pool, kooperative Abbruch-Flag-Prüfung im
+  Progress-Callback, Artifact-Ergebnisreferenzen (`results/<job_id>.json`).
+  Zustandsautomat: queued → running → succeeded/failed/cancelled (+ cancelling).
+- **Additive API**: `POST /api/v1/jobs`, `GET /jobs/{id}` (inkl. Result-Payload),
+  `GET /jobs`, `DELETE /jobs/{id}`. Bestehende synchrone Endpunkte unverändert.
+- **Built-in Job-Kinds**: monte_carlo, walk_forward, tuning, stress,
+  demo_sleep (Test/UI). Nur Analyse — keine Orderausführung.
+- 19 neue Tests (State-Machine, WAL, Submit→Progress→Result, Cancel-Races,
+  API-Zyklus, Responsiveness-Garantie). Suite: 404 passed.
 
 ### Fixed — Release-Blocker
 

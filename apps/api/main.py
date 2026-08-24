@@ -707,6 +707,7 @@ from apps.api.ollama_routes import ollama_router
 from apps.api.lobby_routes import lobby_router
 from apps.api.market_data_routes import market_data_router
 from apps.api.export_routes import export_router, explain_router
+from apps.api.job_routes import router as job_router
 from packages.compliance.bank_ready import compliance_router
 
 app.include_router(game_router)
@@ -716,6 +717,7 @@ app.include_router(market_data_router)
 app.include_router(compliance_router)
 app.include_router(export_router)
 app.include_router(explain_router)
+app.include_router(job_router)
 
 
 # ---------- static web UI ----------
