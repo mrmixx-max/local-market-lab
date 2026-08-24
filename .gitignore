@@ -31,3 +31,5 @@ apps/web/dist/
 windows/src/build/
 windows/src/dist/
 exports/
+build/
+*.egg-info/
