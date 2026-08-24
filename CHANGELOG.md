@@ -54,7 +54,9 @@ Windows: Installer `LocalMarketLab-Setup-v0.9.1.exe` (enthält keine Python-Abh�
 Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 `*_versioned`-Methoden; alte Cache-Einträge werden bei Schema-Mismatch nicht genutzt.
 
-## [Unreleased] — 2026-08-24 (v1.0 Hardening)
+## [Unreleased]
+
+v1.0-Planung siehe docs/v1.0-roadmap.md (noch nicht implementiert).
 
 ### Fixed — Release-Blocker
 
