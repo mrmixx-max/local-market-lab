@@ -144,6 +144,11 @@ from apps.api.ollama_routes import ollama_router
 app.include_router(ollama_router)
 
 
+# ---------- multiplayer lobby ----------
+from apps.api.lobby_routes import lobby_router
+app.include_router(lobby_router)
+
+
 # ---------- static web UI ----------
 WEB_DIR = Path(__file__).parent.parent / "web"
 

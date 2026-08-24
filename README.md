@@ -34,19 +34,52 @@ lml import txn examples/my-trades.csv --portfolio mybook
 # price series (one CSV per instrument)
 lml import prices examples/prices-iwda.csv IWDA
 lml import prices examples/prices-btc.csv BTC-EUR
+
+# external market data (synthetic, yahoo, alphavantage)
+lml import market AAPL --adapter yahoo
+lml import market MSFT --adapter alphavantage
 ```
 
 CSV formats are tolerant about headers (EN/DE) and delimiters (`;` or `,`).
 
-Once imported:
+## Trading Game (paper-training)
 
 ```bash
-lml portfolio mybook                   # valuation at last available close
-lml backtest mybook --strategy rebalance-quarterly
-lml scenario bootstrap IWDA --runs 5000 --seed 7
-lml scenario replay mybook             # historical replay of equal-weight index
-lml doctor                             # workspace health
+# create a game
+lml game create --symbols IWDA,EIMI,AGGH --days 63 --seed 42
+
+# place orders
+lml game order game_abc123 IWDA buy 100
+lml game order game_abc123 EIMI sell 50
+
+# advance time
+lml game tick game_abc123 5
+
+# check state
+lml game state game_abc123
+
+# leaderboard
+lml game leaderboard
 ```
+
+Or use the web UI (F6 TRADE) for a visual trading experience with live P&L.
+
+## API + Web UI
+
+```bash
+# start the API server
+python -m apps.api
+
+# open the web UI
+start http://127.0.0.1:8322/
+```
+
+The web UI features:
+- **Markets tab**: price charts, watchlist, portfolio positions
+- **Backtest tab**: equity curves, strategy comparison
+- **Scenarios tab**: Monte-Carlo distributions, percentiles
+- **Trade! tab**: paper-trading game with order entry and leaderboard
+- **Ollama tab**: local LLM chat with trading prompt optimizer
 
 ## CLI commands
 
@@ -55,11 +88,11 @@ lml doctor                             # workspace health
 | `lml demo` | end-to-end synthetic demo |
 | `lml import txn FILE --portfolio P` | import transactions CSV |
 | `lml import prices FILE SYMBOL` | import price series CSV |
+| `lml import market SYMBOL --adapter A` | import from external source |
 | `lml portfolio P` | valuation of portfolio `P` |
 | `lml backtest P` | run buy-and-hold + rebalance backtests |
-| `lml scenario mc SYMBOL` | iid Monte-Carlo simulation |
-| `lml scenario bootstrap SYMBOL` | block-bootstrap simulation |
-| `lml scenario replay P` | historical replay of an imported portfolio |
+| `lml scenario mc/bootstrap/replay` | run scenarios |
+| `lml game create/order/tick/state/leaderboard` | paper-trading game |
 | `lml doctor` | workspace health check |
 
 ## Architecture
@@ -69,16 +102,19 @@ packages/core/          Money (Decimal-only), dates, hashing
 packages/domain/        Instrument, Transaction, CorporateAction, PriceSeries
 packages/storage/       SQLite workspace (instruments, txns, prices, artifacts)
 packages/ingest/        CSV importers (tolerant, per-row error reports)
-packages/marketdata/    price access, quality checks, FX policy (no silent 1:1)
+packages/marketdata/    price access, quality checks, FX policy, adapters
 packages/portfolio/     position engine, FIFO cost basis, valuation
 packages/metrics/       CAGR, MaxDD, Sharpe, Sortino, Calmar (pure functions)
 packages/backtest/      event-loop engine + strategies (Buy&Hold, PeriodicRebalance)
 packages/scenarios/     Monte-Carlo (iid + block-bootstrap), historical replay
 packages/artifacts/     reproducibility manifests (seed + data hash + params)
 packages/compliance/    disclaimers + language guard
-packages/reports/       markdown report builders (methodology + limitations mandatory)
-apps/cli/               Typer CLI (see above)
-apps/web/               Bloomberg-style terminal UI (single HTML, seeded demo)
+packages/reports/       markdown report builders (methodology + limitations)
+packages/game/          paper-trading engine + multiplayer lobby
+packages/ollama/        local LLM client
+apps/cli/               Typer CLI
+apps/api/               FastAPI backend (REST + WebSocket)
+apps/web/               Bloomberg-style terminal UI
 ```
 
 ## What this tool does NOT do
@@ -98,12 +134,16 @@ apps/web/               Bloomberg-style terminal UI (single HTML, seeded demo)
 5. **Methodology notes mandatory.** Every report states how ratios are annualized.
 6. **Privacy by default.** Local SQLite, no network calls, no telemetry.
 
+## Docker
+
+```bash
+# build and run
+docker compose up --build
+
+# with Ollama support
+docker compose --profile full up --build
+```
+
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).
-
-## Acknowledgements
-
-This tool synthesizes ideas from the local-first, reproducible-research and
-privacy-preserving computation communities. It is intentionally a local workbench,
-not a SaaS platform.

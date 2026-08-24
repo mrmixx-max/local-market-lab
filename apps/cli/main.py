@@ -3,9 +3,15 @@
   lml demo                       seed synthetic data + run full pipeline
   lml import txn FILE --portfolio P
   lml import prices FILE SYMBOL
+  lml import market SYMBOL --adapter synthetic|yahoo|alphavantage
   lml portfolio NAME             valuation report
   lml backtest NAME [--strategy buy-and-hold|rebalance-quarterly]
   lml scenario mc SYMBOL | bootstrap SYMBOL | replay NAME
+  lml game create                create a paper-trading game
+  lml game order GID SYM SIDE QTY place an order
+  lml game tick GID [N]          advance N days (default 1)
+  lml game state GID             show current state
+  lml game leaderboard           show all finished games
   lml report ...                 markdown export
 """
 from __future__ import annotations
@@ -143,6 +149,80 @@ def doctor(db: str = DB_OPT):
     n_art = ws.conn.execute("SELECT COUNT(*) c FROM artifacts").fetchone()["c"]
     typer.echo(f"instruments={n_instr} transactions={n_txn} price_rows={n_prices} "
                f"artifacts={n_art} db={ws.db_path}")
+
+
+# ---------- market data import ----------
+@app.command("import market")
+def import_market(symbol: str, adapter: str = "synthetic", db: str = DB_OPT,
+                  days: int = 504, seed: int = 42):
+    """Import market data from an external source.
+
+    Adapters: synthetic (default), yahoo (requires yfinance), alphavantage (requires key).
+    """
+    from packages.marketdata.adapters import import_prices_to_ws
+    ws = _ws(db)
+    result = import_prices_to_ws(ws, symbol, adapter=adapter, days=days, seed=seed)
+    typer.echo(f"imported {result['points']} bars for {result['symbol']} "
+               f"from {result['source']} ({result['license']})")
+
+
+# ---------- trading game ----------
+game_app = typer.Typer(help="Paper-trading training game.")
+app.add_typer(game_app, name="game")
+
+
+@game_app.command("create")
+def game_create(symbols: str = "IWDA,EIMI,AGGH", days: int = 63,
+                seed: int = 42, db: str = DB_OPT):
+    """Create a paper-trading game session."""
+    from packages.storage.state import get_game_engine
+    ws = _ws(db)
+    g = get_game_engine().create_game(
+        player="cli-user", symbols=symbols.split(","), days=days, seed=seed)
+    typer.echo(f"game_id={g.game_id} status={g.status.value} "
+               f"symbols={g.symbols} days={g.total_days}")
+
+
+@game_app.command("order")
+def game_order(game_id: str, symbol: str, side: str, quantity: float,
+               db: str = DB_OPT):
+    """Place an order: game_id, symbol, side (buy|sell), quantity."""
+    from packages.storage.state import get_game_engine
+    order = get_game_engine().place_order(game_id, symbol, side, quantity)
+    typer.echo(f"order_id={order.order_id} filled={order.filled}")
+
+
+@game_app.command("tick")
+def game_tick(game_id: str, days: int = 1, db: str = DB_OPT):
+    """Advance the game by N days (default 1)."""
+    from packages.storage.state import get_game_engine
+    for _ in range(days):
+        state = get_game_engine().tick(game_id)
+        typer.echo(f"day={state['day']} value={state['total_value']:,.2f} "
+                   f"return={state['return_pct']:+.2f}% status={state['status']}")
+        if state["status"] != "active":
+            break
+
+
+@game_app.command("state")
+def game_state(game_id: str, db: str = DB_OPT):
+    """Show current game state."""
+    from packages.storage.state import get_game_engine
+    state = get_game_engine().get_state(game_id)
+    typer.echo(json.dumps(state, indent=2))
+
+
+@game_app.command("leaderboard")
+def game_leaderboard(db: str = DB_OPT):
+    """Show leaderboard of finished games."""
+    from packages.storage.state import get_game_engine
+    lb = get_game_engine().leaderboard()
+    if not lb:
+        typer.echo("no finished games yet")
+        return
+    for i, entry in enumerate(lb, 1):
+        typer.echo(f"{i}. {entry['player']:<16} {entry['challenge']:<20} "
+                   f"score={entry['score']:>8} {entry['status']}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,29 @@
+services:
+  lml-api:
+    build: .
+    image: ghcr.io/mrmixx-max/local-market-lab:latest
+    container_name: lml-api
+    ports:
+      - "8322:8322"
+    environment:
+      LML_HOST: "0.0.0.0"
+      LML_PORT: 8322
+      LML_DB: /data/marketlab.db
+    volumes:
+      - lml-data:/data
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lml-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    profiles:
+      - full   # only spun up with: docker compose --profile full up
+
+volumes:
+  lml-data:
+  ollama-models:
