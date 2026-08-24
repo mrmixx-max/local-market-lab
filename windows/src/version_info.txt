@@ -17,12 +17,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'Erik Gieske'),
             StringStruct(u'FileDescription', u'Local Market Lab — Portfolio Analytics'),
-            StringStruct(u'FileVersion', u'0.9.1'),
+            StringStruct(u'FileVersion', u'1.0.0rc1'),
             StringStruct(u'InternalName', u'LocalMarketLab'),
             StringStruct(u'LegalCopyright', u'Copyright (C) 2026 Erik Gieske'),
             StringStruct(u'OriginalFilename', u'LocalMarketLab.exe'),
             StringStruct(u'ProductName', u'Local Market Lab'),
-            StringStruct(u'ProductVersion', u'0.9.1'),
+            StringStruct(u'ProductVersion', u'1.0.0rc1'),
           ]
         )
       ]

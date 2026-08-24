@@ -367,7 +367,7 @@ The project uses two GitHub Actions workflows:
 ### Release Process
 
 1. Update version in `windows/src/version_info.txt` and `windows/installer/setup.iss`
-2. Push a tag: `git tag v0.9.1 && git push origin v0.9.1`
+2. Push a tag: `git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1`
 3. GitHub Actions automatically builds and creates a release with:
    - `LocalMarketLab-Setup-v{version}.exe` (installer)
    - `LocalMarketLab.exe` (portable)

@@ -12,7 +12,7 @@
 ; -------------------------------------------------------------------
 
 #define MyAppName "Local Market Lab"
-#define MyAppVersion "0.9.1"
+#define MyAppVersion "1.0.0rc1"
 #define MyAppPublisher "Erik Gieske"
 #define MyAppURL "https://github.com/mrmixx-max/local-market-lab"
 #define MyAppExeName "LocalMarketLab.exe"

@@ -1,0 +1,46 @@
+{
+  "release_version": "1.0.0rc1",
+  "git_tag": "v1.0.0-rc.1",
+  "git_commit": "75e809f5e55a",
+  "build_timestamp": "2026-08-24T21:04:55.160195+00:00",
+  "artifacts": [
+    {
+      "name": "local_market_lab-1.0.0rc1-py3-none-any.whl",
+      "type": "wheel"
+    },
+    {
+      "name": "local_market_lab-1.0.0rc1.tar.gz",
+      "type": "sdist"
+    },
+    {
+      "name": "LocalMarketLab.exe",
+      "type": "windows-portable",
+      "version": "1.0.0rc1"
+    },
+    {
+      "name": "sbom-v1.0.0rc1.json",
+      "type": "sbom"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "type": "checksums"
+    }
+  ],
+  "test_summary": {
+    "total": 462,
+    "passed": 462,
+    "failed": 0,
+    "skipped": 6
+  },
+  "coverage": {
+    "total_percent": 78,
+    "critical_modules": "82-100%"
+  },
+  "sbom": "sbom-v1.0.0rc1.json",
+  "known_limitations": [
+    "In-Process-Job-Queue: keine Hochverfuegbarkeit; laufende Jobs koennen bei API-Absturz verloren gehen",
+    "Windows-Installer (Inno Setup) in dieser Build-Umgebung nicht reproduzierbar (ISCC fehlt) \u2014 portable EXE ist primaeres Windows-Artefakt",
+    "PDF/Excel-Exporte koennen aus technischen Metadaten nicht byte-identisch sein; fachlicher result_hash ist die Identitaetsquelle",
+    "Portfolio-Ziele/Risiko-Budgets (P2) noch nicht implementiert"
+  ]
+}

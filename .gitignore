@@ -33,3 +33,5 @@ windows/src/dist/
 exports/
 build/
 *.egg-info/
+.venv-rc-test/
+.coverage

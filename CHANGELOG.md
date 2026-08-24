@@ -54,7 +54,29 @@ Windows: Installer `LocalMarketLab-Setup-v0.9.1.exe` (enthält keine Python-Abh�
 Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 `*_versioned`-Methoden; alte Cache-Einträge werden bei Schema-Mismatch nicht genutzt.
 
+## [1.0.0rc1] — 2026-08-24 (Release Candidate, Pre-Release)
+
+### Feature-Freeze — v1.0 P1.1–P1.4 integriert
+- **P1.1 Job-Queue Backend:** In-Process-Worker, SQLite/WAL, Submit→Progress→
+  Result, Cancel, Artifact-Referenzen. API blockiert nicht.
+- **P1.2 Mindestordergrößen:** `suggest_rebalance_orders()` mit Min-Beträgen,
+  ganzzahlig/Fractional, Kosten-Nutzen-Check, `below_minimum`-Markierung.
+- **P1.3 Client-Binding:** `lml jobs` + Desktop (F9) + Web-UI (F9), gemeinsames
+  Statusmodell, kein Blockieren, API-Ausfall sichtbar.
+- **P1.4 Manifeste & Reproduzierbarkeit:** immutable Run-Manifeste, kanonische
+  Hashes (manifest_digest/parameters/data/model/environment/result_hash),
+  `lml rerun` (sync/async), Drift-Erkennung, byte-identischer fachlicher Hash.
+- **Release:** wheel + sdist + Windows-EXE (portable) + SBOM + SHA256SUMS.
+- **Tests:** 462 passed / 6 skipped. Coverage 78% (kritisch 82–100%).
+- **Bekannt:** In-Process-Queue ohne HA; Installer in Build-Env nicht
+  reproduzierbar; PDF/Excel nicht garantiert byte-identisch.
+
+### Unreleased (vor RC) — P1.1–P1.3 Vorarbeiten
+
 ## [Unreleased]
+
+### Added — v1.0 P1.4 (Manifest & Reproducibility) — siehe oben
+
 
 ### Added — v1.0 P1.4 (Manifest & Reproducibility)
 

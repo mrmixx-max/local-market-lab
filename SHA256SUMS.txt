@@ -1,4 +1,4 @@
-68aae7549dd6a02e730d763980adbdeec03a57ae95269f03c977e03b411aa77a *dist/local_market_lab-0.9.1-py3-none-any.whl
-8c6e1641100817aeddf6dd6bc6c68d6865cc4d8aea39b65aebf86d47cfd95086 *dist/local_market_lab-0.9.1.tar.gz
-33f8482364b8be40529fd93e878556daa5e958f2336e5d35b886b02c6fa87993 *windows/src/dist/LocalMarketLab.exe
-4605a800334286588b9d45b82e4321c12d1e4bfbbde11f14f34170eba4d41a9a *windows/output/LocalMarketLab-Setup-v0.9.1.exe
+b48d0f3691619d6b34c7bc552a4957e262d1cb61714fc9994507963c000ba8b0  local_market_lab-1.0.0rc1-py3-none-any.whl
+705e6044e963632c24b64f3f4fd8349dd0bb8551cf7766cd87160fe99edbaa49  local_market_lab-1.0.0rc1.tar.gz
+43fff8d123832c74cc56f678f118ac2398052b4c6a04b4e67b6ff7188e5413a0  LocalMarketLab-rc1.exe
+e457582cf0944dfd19fdc50de5a0bcc5a237c9cf5706d6cb5b5674b17208a815  sbom-v1.0.0rc1.json

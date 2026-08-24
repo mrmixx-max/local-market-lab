@@ -53,7 +53,7 @@ from apps.api.schemas import (
 # ---------------------------------------------------------------------------
 # App + lifecycle
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Local Market Lab", version="0.9.1")
+app = FastAPI(title="Local Market Lab", version="1.0.0rc1")
 _start_time = time.monotonic()
 _shutdown_done = False
 
@@ -126,7 +126,7 @@ async def health(ws=Depends(get_workspace)):
             ollama_host = f"http://{ollama_host}"
         if ":" not in ollama_host.split("://", 1)[-1]:
             ollama_host = f"{ollama_host}:11434"
-        req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/0.9.1"})
+        req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/1.0.0rc1"})
         with urllib.request.urlopen(req, timeout=3) as r:
             json.load(r)
         ollama_available = True
@@ -148,7 +148,7 @@ async def health(ws=Depends(get_workspace)):
     return HealthResponse(
         status="ok" if db_ok else "degraded",
         instruments=n,
-        version="0.9.1",
+        version="1.0.0rc1",
         db_connected=db_ok,
         uptime_seconds=uptime_seconds,
         ollama_available=ollama_available,
@@ -170,7 +170,7 @@ async def system_info(ws=Depends(get_workspace)):
     except OSError:
         db_size = 0
     return {
-        "version": "0.9.1",
+        "version": "1.0.0rc1",
         "uptime_seconds": round(time.monotonic() - _start_time, 1),
         "db_path": str(Path(db_path).name),  # Only expose filename, not full path
         "db_size_bytes": db_size,

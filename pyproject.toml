@@ -1,6 +1,6 @@
 [project]
 name = "local-market-lab"
-version = "0.9.1"
+version = "1.0.0rc1"
 description = "Local-first portfolio analytics, backtesting, and scenario simulation — without investment signals."
 readme = "README.md"
 requires-python = ">=3.10"
