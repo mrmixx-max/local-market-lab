@@ -144,6 +144,18 @@ jobs:
           "$installerHash  LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe" | Out-File -FilePath "windows\installer\output\checksums.txt" -Append -Encoding utf8
         shell: powershell
 
+      - name: Copy icon to installer output
+        run: |
+          copy "lml-icon.ico" "windows\installer\output\lml-icon.ico"
+        shell: cmd
+
+      - name: Upload Icon artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalMarketLab-Icon
+          path: windows/installer/output/lml-icon.ico
+          retention-days: 30
+
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
