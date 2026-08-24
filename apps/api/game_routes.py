@@ -101,6 +101,36 @@ async def state(game_id: str, game=Depends(get_game)):
         raise HTTPException(404, "game not found")
 
 
+# ---------- game summary (end-game stats) ----------
+@game_router.get(
+    "/{game_id}/summary",
+    summary="Get end-game summary with full stats",
+)
+async def game_summary(game_id: str, game=Depends(get_game)):
+    """Return the end-game summary (total_return, cagr, max_drawdown, sharpe, sortino, num_trades, win_rate)."""
+    try:
+        s = game.get_state(game_id)
+    except KeyError:
+        raise HTTPException(404, "game not found")
+    if not s.get("summary"):
+        raise HTTPException(400, "game is still active — no summary yet")
+    return s["summary"]
+
+
+# ---------- equity curve (replay) ----------
+@game_router.get(
+    "/{game_id}/equity",
+    summary="Get the full equity curve for replay",
+)
+async def equity_curve(game_id: str, game=Depends(get_game)):
+    """Return the full equity curve (list of daily portfolio values) for replay."""
+    try:
+        s = game.get_state(game_id)
+    except KeyError:
+        raise HTTPException(404, "game not found")
+    return {"game_id": game_id, "equity_curve": s.get("equity_curve", [])}
+
+
 # ---------- websocket live feed ----------
 @game_router.websocket("/ws/{game_id}")
 async def game_ws(ws: WebSocket, game_id: str):

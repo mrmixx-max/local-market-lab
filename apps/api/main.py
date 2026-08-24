@@ -6,23 +6,32 @@ Serves:
   - REST: /api/v1/game/*  (trading game)
   - REST: /api/v1/ollama/*  (local LLM bridge)
   - REST: /api/v1/market/indicators/{symbol}  (technical indicators)
+  - REST: /api/v1/system/info  (runtime metadata)
   - Static:  /            (the Bloomberg-style terminal web UI)
 """
 from __future__ import annotations
 
 import asyncio
+import atexit
 import json
 import os
+import random
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import random
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from apps.api.deps import get_game, get_workspace
+from apps.api.middleware import (
+    ExceptionHandlerMiddleware,
+    RateLimitMiddleware,
+    RequestIDMiddleware,
+    log_json,
+)
 from apps.api.schemas import (
     BacktestResult,
     HealthResponse,
@@ -32,26 +41,81 @@ from apps.api.schemas import (
     SymbolSchema,
 )
 
+# ---------------------------------------------------------------------------
+# App + lifecycle
+# ---------------------------------------------------------------------------
 app = FastAPI(title="Local Market Lab", version="0.1.0")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
-)
+_start_time = time.monotonic()
+
+
+def _shutdown() -> None:
+    """Close the SQLite connection pool on process exit."""
+    try:
+        from packages.storage.state import _workspace
+        if _workspace is not None:
+            _workspace.conn.close()
+            log_json("info", event="shutdown", msg="database connection closed")
+    except Exception as exc:  # noqa: BLE001
+        log_json("error", event="shutdown_error", msg=str(exc))
+
+
+atexit.register(_shutdown)
+
+
+# ---------------------------------------------------------------------------
+# Middleware  (order: outermost → innermost)
+# ---------------------------------------------------------------------------
+cors_origins = os.environ.get("LML_CORS_ORIGINS", "*")
+app.add_middleware(CORSMiddleware,
+    allow_origins=[o.strip() for o in cors_origins.split(",") if o.strip()] or ["*"],
+    allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 
 # ---------- health ----------
 @app.get("/api/v1/health", response_model=HealthResponse, summary="Service health check")
 async def health(ws=Depends(get_workspace)):
-    """Return service status and the number of instruments in the database."""
-    n = ws.conn.execute("SELECT COUNT(*) c FROM instruments").fetchone()["c"]
-    return HealthResponse(status="ok", instruments=n, version="0.1.0")
+    """Return service status, DB connectivity, instrument count, and uptime."""
+    db_ok = True
+    try:
+        ws.conn.execute("SELECT 1")
+    except Exception:
+        db_ok = False
+    n = ws.conn.execute("SELECT COUNT(*) c FROM instruments").fetchone()["c"] if db_ok else 0
+    uptime_seconds = round(time.monotonic() - _start_time, 1)
+    return HealthResponse(
+        status="ok" if db_ok else "degraded",
+        instruments=n,
+        version="0.1.0",
+        db_connected=db_ok,
+        uptime_seconds=uptime_seconds,
+    )
+
+
+# ---------- system info ----------
+@app.get("/api/v1/system/info", summary="Runtime metadata")
+async def system_info(ws=Depends(get_workspace)):
+    """Return version, uptime, DB path, and DB file size."""
+    from packages.storage.state import get_ws
+    ws = get_ws()
+    db_path = ws.db_path
+    try:
+        db_size = Path(db_path).stat().st_size
+    except OSError:
+        db_size = 0
+    return {
+        "version": "0.1.0",
+        "uptime_seconds": round(time.monotonic() - _start_time, 1),
+        "db_path": db_path,
+        "db_size_bytes": db_size,
+        "python_version": os.sys.version.split()[0],
+    }
 
 
 # ---------- market data ----------
-@app.get(
-    "/api/v1/market/symbols",
-    response_model=list[SymbolSchema],
-    summary="List all tradeable instruments",
-)
+@app.get("/api/v1/market/symbols", response_model=list[SymbolSchema], summary="List all tradeable instruments")
 async def symbols(ws=Depends(get_workspace)):
     """Return all instruments sorted by symbol."""
     rows = ws.conn.execute(
@@ -60,11 +124,7 @@ async def symbols(ws=Depends(get_workspace)):
     return [SymbolSchema(**dict(r)) for r in rows]
 
 
-@app.get(
-    "/api/v1/market/prices/{symbol}",
-    response_model=PriceSeriesResponse,
-    summary="Get price history for a symbol",
-)
+@app.get("/api/v1/market/prices/{symbol}", response_model=PriceSeriesResponse, summary="Get price history for a symbol")
 async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace)):
     """Return historical close prices for a given instrument."""
     q = "SELECT date, close, volume FROM prices WHERE symbol=? ORDER BY date"
@@ -73,49 +133,28 @@ async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace
         q += " LIMIT ?"
         params.append(limit)
     rows = ws.conn.execute(q, params).fetchall()
-    bars = [dict(r) for r in rows]
-    return PriceSeriesResponse(symbol=symbol.upper(), bars=bars)
+    return PriceSeriesResponse(symbol=symbol.upper(), bars=[dict(r) for r in rows])
 
 
 # ---------- technical indicators ----------
-@app.post(
-    "/api/v1/market/indicators/{symbol}",
-    summary="Compute technical indicators for a symbol",
-)
+@app.post("/api/v1/market/indicators/{symbol}", summary="Compute technical indicators for a symbol")
 async def indicators(symbol: str, payload: dict, ws=Depends(get_workspace)):
     """Compute SMA, EMA, RSI, MACD, or Bollinger indicators for a symbol."""
     from packages.marketdata.indicators import bollinger, ema, macd, rsi, sma
 
     ind = payload.get("indicator", "sma").lower()
-    period = int(
-        payload.get(
-            "period", 20 if ind == "bollinger" else 14 if ind == "rsi" else 12
-        )
-    )
-    rows = ws.conn.execute(
-        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
-    ).fetchall()
+    period = int(payload.get("period", 20 if ind == "bollinger" else 14 if ind == "rsi" else 12))
+    rows = ws.conn.execute("SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)).fetchall()
     if not rows:
         raise HTTPException(404, f"no prices for {symbol.upper()}")
     data = [r["close"] for r in rows]
     try:
-        if ind == "sma":
-            return sma(data, period)
-        elif ind == "ema":
-            return ema(data, period)
-        elif ind == "rsi":
-            return rsi(data, payload.get("period", 14))
-        elif ind == "macd":
-            return macd(
-                data,
-                fast=int(payload.get("fast", 12)),
-                slow=int(payload.get("slow", 26)),
-                signal=int(payload.get("signal", 9)),
-            )
-        elif ind == "bollinger":
-            return bollinger(data, period, float(payload.get("std", 2.0)))
-        else:
-            raise ValueError(f"unknown indicator: {ind}")
+        if ind == "sma": return sma(data, period)
+        elif ind == "ema": return ema(data, period)
+        elif ind == "rsi": return rsi(data, payload.get("period", 14))
+        elif ind == "macd": return macd(data, fast=int(payload.get("fast", 12)), slow=int(payload.get("slow", 26)), signal=int(payload.get("signal", 9)))
+        elif ind == "bollinger": return bollinger(data, period, float(payload.get("std", 2.0)))
+        else: raise ValueError(f"unknown indicator: {ind}")
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
@@ -135,18 +174,14 @@ async def ws_market(ws: WebSocket):
         lasts: dict[str, float] = {}
         for sym in subbed:
             row = get_workspace().conn.execute(
-                "SELECT close FROM prices WHERE symbol=? ORDER BY date DESC LIMIT 1",
-                (sym,),
+                "SELECT close FROM prices WHERE symbol=? ORDER BY date DESC LIMIT 1", (sym,),
             ).fetchone()
             lasts[sym] = row["close"] if row else 100.0
         while True:
             out = {}
             for sym in subbed:
                 lasts[sym] *= 1 + rng.gauss(0, 0.0008)
-                out[sym] = {
-                    "close": round(lasts[sym], 4),
-                    "ts": datetime.now(timezone.utc).isoformat(),
-                }
+                out[sym] = {"close": round(lasts[sym], 4), "ts": datetime.now(timezone.utc).isoformat()}
             await ws.send_text(json.dumps(out))
             await asyncio.sleep(1)
     except WebSocketDisconnect:
@@ -161,9 +196,11 @@ async def ws_market(ws: WebSocket):
     response_model=PortfolioValuation,
     summary="Value a portfolio at latest close",
 )
-async def portfolio(name: str, ws=Depends(get_workspace)):
-    """Compute the current value of all positions in a named portfolio."""
-    from packages.portfolio.engine import value_portfolio
+async def portfolio(name: str, benchmark: str | None = None,
+                    include_analytics: bool = True,
+                    ws=Depends(get_workspace)):
+    """Value a portfolio. Optional: benchmark symbol, allocation + risk analytics."""
+    from packages.portfolio.engine import (allocation_breakdown, benchmark_comparison, portfolio_returns, risk_contribution, value_portfolio)
     from packages.marketdata.fx import FxPolicy
 
     fx = FxPolicy()
@@ -171,6 +208,16 @@ async def portfolio(name: str, ws=Depends(get_workspace)):
         if k.startswith("LML_FX_"):
             fx.set_rate(k[8:], float(v))
     result = value_portfolio(ws, name, fx)
+    if include_analytics:
+        result["allocation"] = allocation_breakdown(ws, result)
+        if benchmark:
+            port_rets = portfolio_returns(ws, result, fx)
+            result["benchmark"] = benchmark_comparison(ws, port_rets, benchmark.upper())
+        result["risk_contribution"] = risk_contribution(ws, result, fx)
+    else:
+        result["allocation"] = []
+        result["benchmark"] = None
+        result["risk_contribution"] = []
     return PortfolioValuation(**result)
 
 
@@ -182,26 +229,13 @@ async def portfolio(name: str, ws=Depends(get_workspace)):
 )
 async def backtest(payload: dict, ws=Depends(get_workspace)):
     """Run a backtest with the given symbols, strategy, and assumptions."""
-    from packages.backtest.engine import (
-        Assumptions,
-        BuyAndHold,
-        PeriodicRebalance,
-        run_backtest,
-    )
+    from packages.backtest.engine import (Assumptions, BuyAndHold, PeriodicRebalance, run_backtest)
     from packages.marketdata.series import aligned_closes
 
-    symbols = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
     strat_name = payload.get("strategy", "buy-and-hold")
     strat = BuyAndHold() if strat_name == "buy-and-hold" else PeriodicRebalance(63)
-    dates, prices = aligned_closes(ws, symbols)
-    result = run_backtest(
-        prices,
-        strat,
-        Assumptions(
-            fees_bps=payload.get("fees_bps", 10),
-            slippage_bps=payload.get("slippage_bps", 5),
-        ),
-    )
+    _, prices = aligned_closes(ws, payload.get("symbols", ["IWDA", "EIMI", "AGGH"]))
+    result = run_backtest(prices, strat, Assumptions(fees_bps=payload.get("fees_bps", 10), slippage_bps=payload.get("slippage_bps", 5)))
     return BacktestResult(**result)
 
 
@@ -216,32 +250,23 @@ async def scenario(payload: dict, ws=Depends(get_workspace)):
     from packages.scenarios.engine import block_bootstrap, monte_carlo_iid
 
     symbol = payload.get("symbol", "IWDA")
-    kind = payload.get("kind", "bootstrap")
     runs = payload.get("runs", 2000)
     seed = payload.get("seed", 42)
     horizon = payload.get("horizon_days", 252)
-    if kind == "mc":
+    if payload.get("kind", "bootstrap") == "mc":
         res = monte_carlo_iid(ws, symbol, horizon, runs, seed)
     else:
         res = block_bootstrap(ws, symbol, horizon, runs, seed)
     return ScenarioSummary(**res.summary())
 
 
-# ---------- trading game ----------
+# ---------- routers ----------
 from apps.api.game_routes import game_router
-
-app.include_router(game_router)
-
-
-# ---------- ollama ----------
 from apps.api.ollama_routes import ollama_router
-
-app.include_router(ollama_router)
-
-
-# ---------- multiplayer lobby ----------
 from apps.api.lobby_routes import lobby_router
 
+app.include_router(game_router)
+app.include_router(ollama_router)
 app.include_router(lobby_router)
 
 

@@ -68,7 +68,7 @@ class Workspace:
         self.db_path = db_path or os.environ.get(
             "LML_DB", "./data/marketlab.db")
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
 
@@ -95,6 +95,14 @@ class Workspace:
         if row is None:
             raise KeyError(f"unknown instrument {symbol!r}")
         return row["currency"]
+
+    def instrument_asset_class(self, symbol: str) -> str:
+        row = self.conn.execute(
+            "SELECT asset_class FROM instruments WHERE symbol=?", (symbol.upper(),)
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"unknown instrument {symbol!r}")
+        return row["asset_class"]
 
     # ---------- transactions ----------
     def add_transaction(self, t: dict) -> int:

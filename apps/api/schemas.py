@@ -137,6 +137,18 @@ class PositionOut(BaseModel):
     unrealized_pl: float
 
 
+class GameSummary(BaseModel):
+    """End-game performance summary with full risk/return stats."""
+
+    total_return: float
+    cagr: float
+    max_drawdown: float
+    sharpe: float
+    sortino: float
+    num_trades: int
+    win_rate: float
+
+
 class GameState(BaseModel):
     """Current state of a paper-trading game session."""
 
@@ -153,6 +165,8 @@ class GameState(BaseModel):
     pending_orders: int
     filled_orders: int
     challenge: str
+    equity_curve: list[float] = Field(default_factory=list)
+    summary: GameSummary | None = None
 
 
 class LeaderboardEntry(BaseModel):
@@ -163,6 +177,31 @@ class LeaderboardEntry(BaseModel):
     score: float
     status: str
     days: int
+    summary: GameSummary | None = None
+
+
+# ---------- lobby ----------
+class RoomInfo(BaseModel):
+    """Public room listing entry."""
+
+    room_id: str
+    host: str
+    players: list[str]
+    spectators: list[str]
+    started: bool
+    symbols: list[str]
+    days: int
+    visibility: str
+    has_password: bool
+
+
+class ChatMessage(BaseModel):
+    """A chat message broadcast in a room."""
+
+    type: str
+    player: str
+    message: str
+    timestamp: str
 
 
 # ---------- ollama ----------

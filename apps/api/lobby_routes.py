@@ -32,17 +32,29 @@ async def list_rooms():
 @lobby_router.post("/rooms")
 async def create_room(payload: dict):
     lobby = get_lobby()
-    room = lobby.create_room(payload.get("host", "anonymous"))
-    return {"room_id": room.room_id, "host": room.host}
+    room = lobby.create_room(
+        host=payload.get("host", "anonymous"),
+        visibility=payload.get("visibility", "public"),
+        password=payload.get("password"),
+    )
+    return {
+        "room_id": room.room_id,
+        "host": room.host,
+        "visibility": room.visibility,
+    }
 
 
 @lobby_router.get("/rooms/{room_id}")
 async def room_info(room_id: str):
-    room = get_lobby()._player_room.get(room_id) if room_id in get_lobby()._player_room.values() else None
-    rooms = [r for r in get_lobby().list_rooms() if r["room_id"] == room_id]
+    rooms = [r for r in get_lobby().list_rooms(include_private=True) if r["room_id"] == room_id]
     if rooms:
         return rooms[0]
     raise HTTPException(404, "room not found")
+
+
+@lobby_router.get("/rooms/{room_id}/chat")
+async def chat_history(room_id: str):
+    return {"room_id": room_id, "messages": get_lobby().get_chat_history(room_id)}
 
 
 # ---------- WebSocket: lobby room ----------
@@ -50,10 +62,11 @@ async def room_info(room_id: str):
 async def lobby_ws(ws: WebSocket, room_id: str):
     """Real-time lobby WebSocket.
 
-    Client first sends: {"action": "join", "player": "alice"}
+    Client first sends: {"action": "join", "player": "alice", "role": "player"}
     Then: {"action": "start", "symbols": [...], "days": 63, "seed": 42}
         or: {"action": "order", "symbol": "IWDA", "side": "buy", "quantity": 10}
         or: {"action": "tick"}
+        or: {"action": "chat", "message": "hello"}
         or: {"action": "leave"}
     """
     lobby = get_lobby()
@@ -67,12 +80,14 @@ async def lobby_ws(ws: WebSocket, room_id: str):
             await ws.close(code=4001, reason="first action must be 'join'")
             return
         player = msg.get("player", "anon")
-        room = lobby.join_room(room_id, player, ws)
+        role = msg.get("role", "player")
+        password = msg.get("password")
+        room = lobby.join_room(room_id, player, ws, role=role, password=password)
         if room is None:
-            await ws.close(code=4002, reason="room not found or already started")
+            await ws.close(code=4002, reason="room not found, already started, or wrong password")
             return
-        await ws.send_json({"type": "joined", "room": room_id, "player": player})
-        await lobby.broadcast_state(room_id, "player_joined", player=player)
+        await ws.send_json({"type": "joined", "room": room_id, "player": player, "role": role})
+        await lobby.broadcast_state(room_id, "player_joined", player=player, role=role)
 
         # message loop
         while True:
@@ -94,6 +109,11 @@ async def lobby_ws(ws: WebSocket, room_id: str):
             elif action == "tick":
                 await lobby.tick_room(room_id)
                 await lobby.broadcast_state(room_id, "tick")
+
+            elif action == "chat":
+                message = msg.get("message", "")
+                if message:
+                    await lobby.broadcast_chat(room_id, player, message)
 
             elif action == "leave":
                 lobby.leave_room(player)
