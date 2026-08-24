@@ -173,8 +173,9 @@ body{
   <button class="on" data-t="markets">F2 · MARKETS</button>
   <button data-t="backtest">F4 · BACKTEST</button>
   <button data-t="scenarios">F5 · SCENARIOS</button>
-  <button data-t="game">F6 · TRADE!</button>
-  <button data-t="ollama">F7 · OLLAMA</button>
+  <button data-t="risk">F6 · RISK</button>
+  <button data-t="game">F7 · TRADE!</button>
+  <button data-t="ollama">F8 · OLLAMA</button>
 </div>
 
 <div id="main">
@@ -215,6 +216,30 @@ body{
     <div class="view" data-v="scenarios" style="display:none">
       <div class="ph"><span>SCENARIO LAB — MONTE CARLO DISTRIBUTION</span><em>SCEN</em></div>
       <div style="flex:1;position:relative;min-height:0"><canvas id="scenChart"></canvas></div>
+      <div class="ph" style="margin-top:1px"><span>KI-PREDICTION — ENSEMBLE FORECAST</span><em>FCAST</em></div>
+      <div style="flex:1;position:relative;min-height:0"><canvas id="fcChart"></canvas></div>
+    </div>
+
+    <!-- RISK VIEW -->
+    <div class="view" data-v="risk" style="display:none">
+      <div id="riskPanel" style="display:grid;grid-template-columns:220px 1fr 240px;gap:1px;background:var(--border);min-height:100%">
+        <div class="col">
+          <div class="ph"><span>RISK METRICS</span><em>VaR</em></div>
+          <div class="metric-grid" id="riskMetrics"></div>
+          <div class="ph" style="margin-top:6px"><span>ATTRIBUTION</span></div>
+          <table id="attrTable"><thead><tr><th>SYM</th><th class="num">WT%</th><th class="num">RET%</th><th class="num">CONTRIB%</th></tr></thead><tbody id="attrBody"></tbody></table>
+        </div>
+        <div class="col" style="background:var(--bg)">
+          <div class="ph"><span>DRAWDOWN</span><em>DD</em></div>
+          <div style="flex:1;position:relative;min-height:0"><canvas id="ddChart"></canvas></div>
+          <div class="ph" style="margin-top:1px"><span>ROLLING SHARPE</span><em>63D</em></div>
+          <div style="height:120px;position:relative"><canvas id="sharpeChart"></canvas></div>
+        </div>
+        <div class="col">
+          <div class="ph"><span>CORRELATION</span><em>CORR</em></div>
+          <div id="corrGrid" style="padding:8px;font-size:10px"></div>
+        </div>
+      </div>
     </div>
 
     <!-- GAME VIEW -->
@@ -337,7 +362,8 @@ document.querySelectorAll("#tabs button").forEach(btn=>{
     btn.classList.add("on");
     document.querySelector(`.view[data-v="${btn.dataset.t}"]`).style.display="flex";
     if(btn.dataset.t==="backtest")runBacktest();
-    if(btn.dataset.t==="scenarios")runScenario();
+    if(btn.dataset.t==="scenarios"){runScenario();runForecast();}
+    if(btn.dataset.t==="risk")runRisk();
   };
 });
 
@@ -573,6 +599,78 @@ function drawScenarioHist(r){
   });
   ctx.fillStyle="#ffa028";ctx.textAlign="center";ctx.font="9px monospace";
   ctx.fillText("MED "+r.median+"x",pad.l+(W-pad.l-pad.r)/2,H-14);
+}
+
+/* ============ FORECAST ============ */
+async function runForecast(){
+  const r=await API.post(`scenario/forecast/${selSym}`,{horizon:30});
+  if(r.error){updateStatus("Forecast error: "+r.error);return;}
+  drawForecastChart(r);
+  updateStatus(`Forecast ${selSym}: ${r.forecast.length}d horizon, last=${r.last}`);
+}
+
+function drawForecastChart(r){
+  const cv=$("fcChart");const[ctx,W,H]=setupCanvas(cv);ctx.clearRect(0,0,W,H);
+  const pad={l:56,r:12,t:14,b:40};
+  const plotW=W-pad.l-pad.r,plotH=H-pad.t-pad.b;
+  const fc=r.forecast,up=r.upper,lo=r.lower;
+  const n=fc.length;
+  const allVals=[r.last,...fc,...up,...lo];
+  const yMin=Math.min(...allVals)*0.998,yMax=Math.max(...allVals)*1.002;
+  const x=i=>pad.l+plotW*(i/(n));
+  const y=v=>pad.t+plotH*(1-(v-yMin)/(yMax-yMin));
+  // grid
+  ctx.strokeStyle="#141414";ctx.fillStyle="#8a5a1a";ctx.font="9px monospace";ctx.textAlign="right";
+  for(let g=0;g<=5;g++){const v=yMin+(yMax-yMin)*g/5,yy=y(v);ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();ctx.fillText(f(v,yMax<20?4:2),pad.l-5,yy+3)}
+  // confidence band
+  ctx.fillStyle="rgba(255,160,40,.12)";ctx.beginPath();
+  ctx.moveTo(x(0),y(up[0]));
+  for(let i=0;i<n;i++)ctx.lineTo(x(i),y(up[i]));
+  for(let i=n-1;i>=0;i--)ctx.lineTo(x(i),y(lo[i]));
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle="rgba(255,160,40,.3)";ctx.lineWidth=1;ctx.stroke();
+  // forecast line
+  ctx.strokeStyle="#ffa028";ctx.lineWidth=1.8;ctx.beginPath();
+  ctx.moveTo(x(0),y(r.last));
+  for(let i=0;i<n;i++)ctx.lineTo(x(i),y(fc[i]));
+  ctx.stroke();
+  // last price dot + label
+  ctx.fillStyle="#4fc3f7";ctx.beginPath();ctx.arc(x(0),y(r.last),4,0,7);ctx.fill();
+  ctx.fillStyle="#ffa028";ctx.beginPath();ctx.arc(x(n-1),y(fc[n-1]),4,0,7);ctx.fill();
+  // x labels
+  ctx.fillStyle="#8a5a1a";ctx.textAlign="center";ctx.font="9px monospace";
+  ctx.fillText("NOW",x(0),H-8);
+  ctx.fillText("+"+n+"D",x(n-1),H-8);
+  // legend
+  ctx.textAlign="left";ctx.font="9px monospace";
+  ctx.fillStyle="#4fc3f7";ctx.fillText("● LAST "+f(r.last),pad.l+4,12);
+  ctx.fillStyle="#ffa028";ctx.fillText("● FC "+f(fc[n-1]),pad.l+100,12);
+  const chg=((fc[n-1]/r.last)-1)*100;
+  ctx.fillStyle=chg>=0?"#00c853":"#ff5252";
+  ctx.fillText(fmtPct(chg),pad.l+200,12);
+}
+
+/* ============ RISK ============ */
+async function runRisk(){
+  const r=await API.post("metrics/advanced",{symbols:["IWDA","EIMI","AGGH"]});
+  if(r.error){updateStatus("Risk error: "+r.error);return;}
+  $("riskMetrics").innerHTML=
+    '<div class="metric"><div class="k">VaR 95%</div><div class="v dn">'+r.var_cvar.var_pct+'%</div></div>'+
+    '<div class="metric"><div class="k">CVaR 95%</div><div class="v dn">'+r.var_cvar.cvar_pct+'%</div></div>'+
+    '<div class="metric"><div class="k">TOTAL RET</div><div class="v '+(r.attribution.total_return_pct>=0?'up':'dn')+'">'+fmtPct(r.attribution.total_return_pct)+'</div></div>'+
+    '<div class="metric"><div class="k">SHARPE(now)</div><div class="v">'+(r.rolling_sharpe.at(-1)||"–")+'</div></div>';
+  $("attrBody").innerHTML=Object.entries(r.attribution.positions).map(([s,p])=>
+    '<tr><td>'+s+'</td><td class="num">'+p.weight_pct+'</td><td class="num '+(p.return_pct>=0?'up':'dn')+'">'+fmtPct(p.return_pct)+'</td><td class="num '+(p.contribution_pct>=0?'up':'dn')+'">'+fmtPct(p.contribution_pct)+'</td></tr>').join("");
+  drawLine($("ddChart"),r.drawdown,{color:"#ff5252"});
+  drawLine($("sharpeChart"),r.rolling_sharpe,{color:"#4fc3f7"});
+  const syms=r.correlation.symbols,m=r.correlation.matrix;
+  let h="<table style='width:100%;font-size:10px'><tr><th></th>";
+  syms.forEach(s=>h+="<th>"+s+"</th>");h+="</tr>";
+  syms.forEach(a=>{h+="<tr><td><b>"+a+"</b></td>";
+    syms.forEach(b=>{const c=m[a+"__"+b];h+='<td class="num" style="color:'+(c>0.7?'#ff5252':c>0.3?'#ffd54f':'#00c853')+'">'+c+"</td>"});
+    h+="</tr>"});
+  $("corrGrid").innerHTML=h+"</table>";
+  updateStatus("Risk dashboard updated");
 }
 
 /* ============ GAME ============ */

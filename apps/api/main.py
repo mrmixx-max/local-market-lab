@@ -260,14 +260,63 @@ async def scenario(payload: dict, ws=Depends(get_workspace)):
     return ScenarioSummary(**res.summary())
 
 
+# ---------- advanced metrics ----------
+@app.post("/api/v1/metrics/advanced", summary="Advanced risk metrics")
+async def metrics_advanced(payload: dict, ws=Depends(get_workspace)):
+    """VaR, CVaR, correlation matrix, rolling Sharpe, drawdown, performance attribution."""
+    from packages.marketdata.series import aligned_closes
+    from packages.metrics.risk import (correlation_matrix, drawdown_series, performance_attribution, rolling_sharpe, var_cvar, returns)
+
+    syms = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
+    conf = float(payload.get("confidence", 0.95))
+    win = int(payload.get("window", 63))
+    _, prices = aligned_closes(ws, syms)
+    rets = {s: returns(p) for s, p in prices.items()}
+    port = [sum(rets[s][i] for s in rets) / len(rets) for i in range(min(len(r) for r in rets.values()))]
+    eq = [1.0]
+    for r in port:
+        eq.append(eq[-1] * (1 + r))
+    w = {s: float(payload.get("weights", {}).get(s, 1.0 / len(syms))) for s in syms}
+    return {
+        "var_cvar": var_cvar(port, conf),
+        "correlation": correlation_matrix(rets),
+        "rolling_sharpe": rolling_sharpe(port, win),
+        "drawdown": drawdown_series(eq),
+        "attribution": performance_attribution(w, prices),
+    }
+
+
+# ---------- routers ----------
+@app.post("/api/v1/scenario/forecast/{symbol}", summary="Generate ML forecast for a symbol")
+async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
+    """Generate a pure-Python forecast (linear + Holt + ARIMA-like + ensemble)."""
+    from packages.scenarios.predict import ensemble_forecast
+
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
+    if not rows:
+        raise HTTPException(404, f"no prices for {symbol.upper()}")
+    data = [r["close"] for r in rows]
+    horizon = payload.get("horizon", 30)
+    try:
+        result = ensemble_forecast(data, horizon)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    result["symbol"] = symbol.upper()
+    return result
+
+
 # ---------- routers ----------
 from apps.api.game_routes import game_router
 from apps.api.ollama_routes import ollama_router
 from apps.api.lobby_routes import lobby_router
+from packages.compliance.bank_ready import compliance_router
 
 app.include_router(game_router)
 app.include_router(ollama_router)
 app.include_router(lobby_router)
+app.include_router(compliance_router)
 
 
 # ---------- static web UI ----------
