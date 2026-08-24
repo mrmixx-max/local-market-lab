@@ -10,7 +10,7 @@ body:
         und Logs anonymisieren.
   - type: input
     id: version
-    attributes: { label: "Version", placeholder: "0.9.1-rc.1" }
+    attributes: { label: "Version", placeholder: "1.0.0-rc.1" }
     validations: { required: true }
   - type: dropdown
     id: os
@@ -18,7 +18,7 @@ body:
     validations: { required: true }
   - type: dropdown
     id: install
-    attributes: { label: "Installationsmethode", options: ["Installer EXE", "Portable EXE", "pip (Source)", "Docker"] }
+    attributes: { label: "Installationsmethode", options: ["Installer EXE", "Portable EXE", "pip (Wheel/sdist)", "pip (Source)", "Docker"] }
     validations: { required: true }
   - type: input
     id: python
@@ -44,3 +44,6 @@ body:
   - type: textarea
     id: log
     attributes: { label: "Logauszug (API-Keys/Portfolio-Daten entfernen!)" }
+  - type: textarea
+    id: screenshot
+    attributes: { label: "Screenshot (falls relevant; keine privaten Daten!) " }

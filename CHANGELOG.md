@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.0.0-rc.1] — 2026-08-25 (Pre-Release, Feature-Freeze)
+
+> Release Candidate für externe Stabilisierung. **Kein stabiler v1.0.0-Tag.**
+> GitHub Pre-Release. Keine Order-, Broker- oder Finanzberatungsfunktionen.
+
+### Added (P1-Serie, bereits in rc integriert)
+- **P1.1 Job-Queue:** In-Process-Worker, SQLite/WAL-Persistenz, Progress, Cancel.
+- **P1.2 Mindestordergrößen:** `suggest_rebalance_orders()`, below_minimum-Markierung.
+- **P1.3 Client-Binding:** CLI (`lml jobs`) + Desktop (F9) + Web (F9).
+- **P1.4 Manifeste & Rerun:** immutable Run-Manifeste, `lml rerun`, Drift-Erkennung.
+
+### RC-Prozess
+- Externer RC-Testzyklus gestartet: `docs/v1.0-rc-test-plan.md`,
+  `docs/v1.0-rc-test-report.md`, `docs/external-feedback.md`.
+- Issue Templates ergänzt: Bug Report (Datenschutz-Hinweise, Pflichtfelder)
+  und Feature Request (RC: Sammlung ohne Umsetzung).
+- README: Installer-Abschnitt korrigiert — Installer im RC **nicht verfügbar**
+  (ISCC fehlt in Build-Umgebung); portable EXE als primäres Windows-Artefakt.
+
+### Known Limitations
+Siehe `docs/v1.0-known-limitations.md` (nicht stillschweigend als gelöst markiert).
+
 ## [0.9.1] — 2026-08-24 (Stable)
 
 ### Fixed — Critical & High

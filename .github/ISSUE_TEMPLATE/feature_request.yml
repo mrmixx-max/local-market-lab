@@ -1,0 +1,43 @@
+name: "Feature Request"
+description: "Vorschlag für eine neue Funktion (kein Bug)"
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Hinweis:** Feature Requests werden im RC-Zyklus gesammelt, aber
+        **nicht umgesetzt** (Feature-Freeze bis v1.0.0). Keine Bugs hier — bitte
+        stattdessen das Bug-Report-Template nutzen. Bitte keine API-Keys,
+        Tokens oder privaten Portfolio-Daten posten.
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Bereich"
+      options:
+        - "Datenimport / Adapter"
+        - "Backtest / Validation"
+        - "Job-Queue / Async"
+        - "Rebalancing"
+        - "Reporting / Exporte"
+        - "Desktop / Web UI"
+        - "CLI"
+        - "Sonstiges"
+    validations: { required: true }
+  - type: textarea
+    id: problem
+    attributes: { label: "Problem oder Bedürfnis", placeholder: "Welches Problem würde das gelöst?" }
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: "Vorgeschlagene Lösung" }
+    validations: { required: true }
+  - type: textarea
+    id: alternatives
+    attributes: { label: "Alternativen / Workarounds" }
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: "Bestätigung"
+      options:
+        - label: "Ich weiß, dass dies kein Bug-Report ist und im RC nicht umgesetzt wird."
+          required: true
