@@ -12,7 +12,7 @@
 ; -------------------------------------------------------------------
 
 #define MyAppName "Local Market Lab"
-#define MyAppVersion "0.8.0"
+#define MyAppVersion "0.9.1"
 #define MyAppPublisher "Erik Gieske"
 #define MyAppURL "https://github.com/mrmixx-max/local-market-lab"
 #define MyAppExeName "LocalMarketLab.exe"
@@ -92,8 +92,7 @@ Name: "startmenuicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescripti
 [Files]
 ; Main executable (built by PyInstaller --onefile)
 Source: "..\src\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion signonce
-; Config and examples (optional bundled files)
-Source: "..\..\configs\*"; DestDir: "{app}\configs"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Examples (optional bundled files) — configs/ dir no longer exists
 Source: "..\..\examples\*"; DestDir: "{app}\examples"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Data directory — don't overwrite existing user data
 Source: "..\..\data\demo-transactions.csv"; DestDir: "{app}\data"; Flags: ignoreversion onlyifdoesntexist
