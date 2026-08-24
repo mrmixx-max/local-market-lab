@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import urllib.request
 
+import requests
 from fastapi import APIRouter, HTTPException
 
 ollama_router = APIRouter(prefix="/api/v1/ollama", tags=["ollama"])
@@ -14,15 +15,21 @@ ollama_router = APIRouter(prefix="/api/v1/ollama", tags=["ollama"])
 
 def _ollama_host() -> str:
     import os
-    return os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    if not host.startswith("http"):
+        host = f"http://{host}"
+    if ":" not in host.split("://", 1)[-1]:
+        host = f"{host}:11434"
+    return host
 
 
 @ollama_router.get("/models")
 async def list_models():
     """List models available on the local Ollama daemon."""
     try:
-        with urllib.request.urlopen(f"{_ollama_host()}/api/tags", timeout=5) as r:
-            data = json.load(r)
+        r = requests.get(f"{_ollama_host()}/api/tags", timeout=5)
+        r.raise_for_status()
+        data = r.json()
         models = []
         for m in data.get("models", []):
             models.append({

@@ -11,6 +11,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(PROJECT_ROOT / 'packages'), 'packages'),
+        (str(PROJECT_ROOT / 'lml-icon.ico'), '.'),
     ],
     hiddenimports=[
         'PyQt6',
