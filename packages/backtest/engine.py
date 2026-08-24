@@ -131,7 +131,9 @@ def backtest_from_workspace(ws, portfolio: str, strategy: Strategy,
     txns = ws.transactions_for(portfolio)
     if not txns:
         raise ValueError(f"portfolio {portfolio!r} has no transactions")
-    symbols = sorted({t["symbol"] for t in txns})
+    # Cash entries (deposits/withdrawals) are not tradable and have no price
+    # series — exclude them, consistent with the scenarios replay path.
+    symbols = sorted({t["symbol"] for t in txns} - {"CASH"})
     dates, prices = aligned_closes(ws, symbols)
     result = run_backtest(prices, strategy, assumptions)
     result["symbols"] = symbols

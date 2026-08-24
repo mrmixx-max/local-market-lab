@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.0-rc.2] — 2026-08-25 (Pre-Release)
+
+> Auslöser: reproduzierter High-Bug im RC-Zyklus (rc.2-Regel erfüllt).
+
+### Fixed — High
+- **`lml backtest demo` crashte** mit `MissingPriceError: no price data for
+  'CASH'`: Demo-Fixtures enthalten eine CASH-Einlage ohne Preisreihe;
+  `backtest_from_workspace()` schloss CASH nicht aus der Symbolmenge aus.
+  Fix konsistent zum `scenarios replay`-Pfad; fehlende echte Kurse lösen
+  weiterhin `MissingPriceError` (keine stille Ersetzung). 3 Regressionstests.
+
+### Changed — Dokumentation/Assets (Low, dokumentiert)
+- SHA256SUMS.txt: Dateiname der portablen EXE korrigiert sich mit dem nächsten
+  Artefakt-Rebuild; Installer + Release-Manifest werden künftig aufgenommen.
+
 ## [1.0.0-rc.1] — 2026-08-25 (Pre-Release, Feature-Freeze)
 
 > Release Candidate für externe Stabilisierung. **Kein stabiler v1.0.0-Tag.**
