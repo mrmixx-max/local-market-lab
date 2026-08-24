@@ -254,10 +254,11 @@ a.binaries = filter_binaries(a.binaries)
 # Remove duplicate datas
 seen_datas = set()
 unique_datas = []
-for src, dest in a.datas:
+for item in a.datas:
+    src = item[0]
     if src not in seen_datas:
         seen_datas.add(src)
-        unique_datas.append((src, dest))
+        unique_datas.append(item)
 a.datas = unique_datas
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
