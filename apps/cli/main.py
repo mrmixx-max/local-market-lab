@@ -164,6 +164,11 @@ def import_market(symbol: str, adapter: str = "synthetic", db: str = DB_OPT,
                f"from {result['source']} ({result['license']})")
 
 
+# ---------- job queue client ----------
+from apps.cli.jobs_cli import jobs_app
+app.add_typer(jobs_app, name="jobs")
+
+
 # ---------- trading game ----------
 game_app = typer.Typer(help="Paper-trading training game.")
 app.add_typer(game_app, name="game")

@@ -51,6 +51,12 @@ DELETE /jobs/{id} → Abbruch
 - Variante B: WS-Endpunkt entfernen; Polling-Endpunkt für Snapshots.
 - In beiden Fällen: kein simulierter Feed in v1.0.
 
+## Client-Binding (P1.3)
+
+- `apps/cli/jobs_client.py` normalisiert Backend-Job → einheitliches Statusmodell
+  (CLI, Desktop, Web nutzen dasselbe). API-Requests nie blockierend;
+  `wait` hat hartes Timeout. Keine neuen Job-Typen, keine Cloud-Queue.
+
 ## Teststrategie gesamt
 - Unit je Package (Bestand: 385 Tests)
 - Contract-Tests für Adapter & Plugins (v1.0: Plugin-Contract vorbereiten)

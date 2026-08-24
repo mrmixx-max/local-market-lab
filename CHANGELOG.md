@@ -56,6 +56,24 @@ Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 
 ## [Unreleased]
 
+### Added — v1.0 P1.3 (Job-Queue Client Binding)
+
+- **CLI `lml jobs`**: list / status / cancel / wait / artifact (additiv).
+  Exit-Codes: 0 succeeded, 2 timeout, 3 failed, 4 cancelled, 5 no-artifact,
+  1 not_found/error. Kein künstlicher Fortschritt, keine Endlosschleifen.
+- **Desktop (PyQt6) Jobs-Tab (F9)**: Submit, Live-Tabelle, Cancel,
+  Artifact-Link. Eigenes Polling (`LML_JOBS_POLL_MS`, Default 2500) entkoppelt
+  vom Watchlist-Timer → UI responsiv. API-Ausfall sichtbar ("last known state").
+- **Web-UI Jobs-Tab (F9)**: Submit, Auto-Poll, Cancel, Artifact.
+- **Gemeinsames Statusmodell** `apps/cli/jobs_client.py` (normalize_job):
+  einheitlich für CLI/Desktop/Web. Keine Broker-, keine Orderpfade.
+- 21 neue Tests (normalize, CLI live [skip ohne Server], Desktop-Logik);
+  Suite 435 passed / 5 skipped.
+
+### Added — v1.0 P1.2 (Minimum order sizes) — bereits implementiert
+### Added — v1.0 P1.1 (Job-Queue Backend) — bereits implementiert
+
+
 ### Added — v1.0 P1.2 (Minimum order sizes & realistic rebalancing)
 
 - **`suggest_rebalance_orders()`** + `OrderProposal`/`RebalanceOrdersResult`:

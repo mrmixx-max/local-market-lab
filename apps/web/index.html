@@ -177,6 +177,7 @@ body{
   <button data-t="risk">F6 · RISK</button>
   <button data-t="game">F7 · TRADE!</button>
   <button data-t="ollama">F8 · OLLAMA</button>
+  <button data-t="jobs">F9 · JOBS</button>
 </div>
 
 <div id="main">
@@ -308,6 +309,29 @@ body{
           <div id="chatMsgs"></div>
           <div id="chatBox"><input id="chatIn" placeholder="Ask about portfolio, strategies, metrics..."><button id="chatSend" onclick="sendChat()">SEND</button></div>
         </div>
+      </div>
+    </div>
+    <!-- JOBS VIEW -->
+    <div class="view" data-v="jobs" style="display:none">
+      <div id="jobsPanel">
+        <div class="ph"><span>JOB QUEUE</span><em>F9</em></div>
+        <div class="game-ctrl">
+          <label>ANALYSIS JOB</label>
+          <select id="jobKind">
+            <option value="monte_carlo">monte_carlo</option>
+            <option value="walk_forward">walk_forward</option>
+            <option value="tuning">tuning</option>
+            <option value="stress">stress</option>
+          </select>
+          <button onclick="submitJob()">SUBMIT</button>
+          <button class="sec" onclick="refreshJobs()">REFRESH</button>
+          <span id="jobMsg" class="jobmsg"></span>
+        </div>
+        <table class="jobtbl" id="jobTbl">
+          <thead><tr><th>JOB ID</th><th>TYPE</th><th>STATUS</th><th>PROGRESS</th><th>PHASE</th><th>RUNTIME</th><th>CREATED</th></tr></thead>
+          <tbody id="jobRows"></tbody>
+        </table>
+        <div class="joblegend">Submit does not block the UI. Results are analysis-only — no execution.</div>
       </div>
     </div>
   </div>
@@ -784,6 +808,43 @@ $("cmd").addEventListener("keydown",e=>{
 
 /* ============ STATUS ============ */
 function updateStatus(msg){$("statusMsg").textContent=msg}
+
+/* ============ JOBS (client binding for in-process queue) ============ */
+const JOB_PHASE={queued:"queued",running:"execution",cancelling:"cancelling",cancelled:"cancelled",succeeded:"done",failed:"error"};
+function jobPhase(s){return JOB_PHASE[s]||"queued";}
+function fmtClock(t){return t?String(t).replace("T"," ").slice(0,19):"";}
+async function submitJob(){
+  const kind=$("jobKind").value;
+  const params={monte_carlo:{weights:{IWDA:1},runs:500,seed:42,horizon_days:63},
+    walk_forward:{prices:[1],seed:42},
+    tuning:{grid:[{w:1}],prices:[1],seed:42},stress:{weights:{IWDA:1},seed:42}}[kind]||{};
+  const r=await API.post("jobs",{kind,params});
+  if(r&&r.job_id){$("jobMsg").textContent="submitted "+r.job_id;refreshJobs();}
+  else $("jobMsg").textContent="submit failed: "+(r&&r.error||"n/a");
+}
+async function refreshJobs(){
+  const data=await API.get("jobs?limit=50");
+  if(data===undefined||(data&&data.error)){$("jobMsg").textContent="API unreachable — last known state shown";return;}
+  if(!Array.isArray(data)){$("jobMsg").textContent="API error";return;}
+  $("jobMsg").textContent="";
+  const tb=$("jobRows");tb.innerHTML="";
+  data.slice().reverse().forEach(j=>{
+    const tr=document.createElement("tr");
+    const rt=(j.started_at)?((j.finished_at||Date.now()/1000)-j.started_at).toFixed(1)+"s":"";
+    const cls=j.status;
+    tr.innerHTML=`<td>${j.id}</td><td>${j.kind}</td><td class="st st-${cls}">${j.status}</td>`+
+      `<td>${(j.progress*100).toFixed(0)}%</td><td>${jobPhase(j.status)}</td><td>${rt}</td><td>${fmtClock(j.created_at)}</td>`;
+    tr.onclick=()=>openArtifact(j.id,j.status);
+    tb.appendChild(tr);
+  });
+}
+async function openArtifact(id,status){
+  if(status!=="succeeded"){$("jobMsg").textContent=id+": status '"+status+"' — no artifact";return;}
+  const r=await API.get("jobs/"+id);
+  if(r&&r.result)$("jobMsg").textContent="artifact "+id+": "+JSON.stringify(r.result).slice(0,160);
+  else $("jobMsg").textContent="artifact fetch failed";
+}
+setInterval(()=>{const jv=document.querySelector('[data-v="jobs"]');if(jv&&jv.style.display!=="none")refreshJobs();},2500);
 
 /* ============ INIT ============ */
 (async()=>{

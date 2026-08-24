@@ -25,8 +25,8 @@
 - Steuereffekte im TLH-Hinweis sind Pauschalschätzungen (25 %), keine Steuerberatung.
 
 ## Betrieb
-- Lange Berechnungen (Monte Carlo >5k Runs) laufen synchron; API/UI blockieren
-  währenddessen für die Dauer des Requests.
+- ✅ Lange Berechnungen laufen jetzt asynchron über die In-Process-Job-Queue
+  (P1.1/P1.3): API/UI blockieren nicht; Fortschritt via REST-Polling sichtbar.
 - WebSocket `/ws/market` liefert einen simulierten Feed, keine echten Kurse.
 - Windows-Icon-Cache kann alte Icons zeigen bis Explorer-/Systemneustart.
 

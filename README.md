@@ -145,6 +145,17 @@ The web UI features:
 
 ## CLI commands
 
+Job-queue client (analysis jobs only, never executes trades):
+
+```bash
+lml jobs list [--json]
+lml jobs status <job_id> [--json]
+lml jobs cancel <job_id>
+lml jobs wait   <job_id> [--timeout 300]
+lml jobs artifact <job_id>
+```
+
+
 | Command | Purpose |
 |---|---|
 | `lml demo` | end-to-end synthetic demo |

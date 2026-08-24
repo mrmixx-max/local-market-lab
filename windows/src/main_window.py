@@ -120,6 +120,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._build_risk_tab(), "Risk")
         self.tabs.addTab(self._build_ollama_tab(), "Ollama")
         self.tabs.addTab(self._build_game_tab(), "Game")
+        self.tabs.addTab(self._build_jobs_tab(), "Jobs")
         main.addWidget(self.tabs, 1)
         root.addLayout(main, 1)
         self.setStatusBar(self._build_statusbar())
@@ -690,10 +691,168 @@ class MainWindow(QMainWindow):
                     size = m.get("size_gb", "?")
                     self.ol_model.addItem(f"{name} ({size}GB)", name)
 
+    # ─── Jobs tab (client binding for the in-process job queue) ───────────
+    def _build_jobs_tab(self) -> QWidget:
+        import os
+        from PyQt6.QtCore import Qt  # noqa: F401
+
+        w = QWidget()
+        lo = QVBoxLayout(w)
+        lo.setContentsMargins(10, 10, 10, 10)
+
+        top = QHBoxLayout()
+        top.addWidget(QLabel("Run analysis job:"))
+        self.jobs_kind = QComboBox()
+        self.jobs_kind.addItems(["monte_carlo", "walk_forward", "tuning",
+                                 "stress"])
+        top.addWidget(self.jobs_kind)
+        submit_btn = QPushButton("Submit")
+        submit_btn.clicked.connect(self._jobs_submit)
+        top.addWidget(submit_btn)
+        top.addStretch()
+        self.jobs_status = QLabel("idle")
+        self.jobs_status.setStyleSheet(f"color: {C_DIM};")
+        top.addWidget(self.jobs_status)
+        lo.addLayout(top)
+
+        self.jobs_table = QTableWidget(0, 7)
+        self.jobs_table.setHorizontalHeaderLabels(
+            ["Job ID", "Type", "Status", "Progress", "Phase",
+             "Runtime", "Created"])
+        self.jobs_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows)
+        self.jobs_table.setColumnWidth(0, 120)
+        self.jobs_table.setColumnWidth(1, 120)
+        self.jobs_table.setColumnWidth(3, 90)
+        self.jobs_table.setColumnWidth(5, 90)
+        self.jobs_table.doubleClicked.connect(self._jobs_open_artifact)
+        lo.addWidget(self.jobs_table, 1)
+
+        btn_row = QHBoxLayout()
+        cancel_btn = QPushButton("Cancel selected")
+        cancel_btn.clicked.connect(self._jobs_cancel_selected)
+        btn_row.addWidget(cancel_btn)
+        refresh_btn = QPushButton("Refresh now")
+        refresh_btn.clicked.connect(self._jobs_refresh)
+        btn_row.addWidget(refresh_btn)
+        btn_row.addStretch()
+        self.jobs_msg = QLabel("")
+        self.jobs_msg.setStyleSheet(f"color: {C_RED};")
+        btn_row.addWidget(self.jobs_msg)
+        lo.addLayout(btn_row)
+
+        self._jobs_poll_ms = int(os.environ.get("LML_JOBS_POLL_MS", "2500"))
+        self._jobs_cache: dict[str, str] = {}  # job_id -> last status
+        return w
+
+    def _jobs_submit(self) -> None:
+        kind = self.jobs_kind.currentText()
+        # Demo params; real params would come from form inputs. The queue is
+        # analysis-only — no execution, no broker.
+        params = {
+            "monte_carlo": {"weights": {"IWDA": 1.0}, "runs": 500, "seed": 42,
+                            "horizon_days": 63},
+            "walk_forward": {"prices": [1.0] * 260, "seed": 42},
+            "tuning": {"grid": [{"w": 1.0}], "prices": [1.0] * 260, "seed": 42},
+            "stress": {"weights": {"IWDA": 1.0}, "seed": 42},
+        }.get(kind, {})
+        resp = self.api.post("/api/v1/jobs", {"kind": kind, "params": params})
+        if not isinstance(resp, dict) or "job_id" not in resp:
+            self.jobs_msg.setText(f"submit failed: {resp}")
+            return
+        self.jobs_msg.setText(f"submitted {resp['job_id']}")
+        self._jobs_refresh()  # non-blocking: just refreshes table
+
+    def _jobs_refresh(self) -> None:
+        """Called by the poll timer and on demand. Never blocks the UI."""
+        data = self.api.get("/api/v1/jobs?limit=50")
+        if data is None:
+            # API down — show stale state clearly, do not fabricate
+            self.jobs_msg.setText("API unreachable — showing last known state")
+            return
+        if not isinstance(data, list):
+            self.jobs_msg.setText("API error")
+            return
+        self.jobs_msg.setText("")
+        rows = list(reversed(data))  # newest first
+        self.jobs_table.setRowCount(len(rows))
+        for i, raw in enumerate(rows):
+            status = raw.get("status", "?")
+            progress = float(raw.get("progress", 0.0) or 0.0)
+            started = raw.get("started_at")
+            finished = raw.get("finished_at")
+            runtime = ""
+            if started:
+                import time as _t
+                rt = round((finished or _t.time()) - started, 1)
+                runtime = f"{rt}s"
+            created = raw.get("created_at")
+            created_s = ""
+            if created:
+                created_s = str(created)[:19].replace("T", " ")
+            values = [str(raw.get("id", "")), str(raw.get("kind", "")), status,
+                      f"{progress*100:.0f}%", self._jobs_phase(raw), runtime,
+                      created_s]
+            for col, val in enumerate(values):
+                item = QTableWidgetItem(val)
+                item.setForeground(QColor(
+                    {"succeeded": C_GREEN, "failed": C_RED,
+                     "cancelled": C_RED, "running": C_AMBER,
+                     "cancelling": C_AMBER}.get(status, C_WHITE)))
+                self.jobs_table.setItem(i, col, item)
+            self._jobs_cache[str(raw.get("id"))] = status
+
+    @staticmethod
+    def _jobs_phase(raw: dict) -> str:
+        s = raw.get("status")
+        return {"queued": "queued", "running": "execution",
+                "cancelling": "cancelling", "cancelled": "cancelled",
+                "succeeded": "done", "failed": "error"}.get(s, "queued")
+
+    def _jobs_cancel_selected(self) -> None:
+        row = self.jobs_table.currentRow()
+        if row < 0:
+            self.jobs_msg.setText("select a job first")
+            return
+        item = self.jobs_table.item(row, 0)
+        if not item:
+            return
+        job_id = item.text()
+        resp = self.api.delete(f"/api/v1/jobs/{job_id}")
+        if isinstance(resp, dict) and "status" in resp:
+            self.jobs_msg.setText(f"cancel → {resp['status']}")
+        else:
+            self.jobs_msg.setText(f"cancel failed: {resp}")
+        self._jobs_refresh()
+
+    def _jobs_open_artifact(self) -> None:
+        """Only succeeded jobs expose a result payload. Others show a note."""
+        row = self.jobs_table.currentRow()
+        if row < 0:
+            return
+        job_id = self.jobs_table.item(row, 0).text()
+        status = self.jobs_table.item(row, 2).text()
+        if status != "succeeded":
+            self.jobs_msg.setText(f"{job_id}: status '{status}' — "
+                                  f"no artifact available")
+            return
+        resp = self.api.get(f"/api/v1/jobs/{job_id}")
+        if isinstance(resp, dict) and "result" in resp:
+            self.jobs_msg.setText(f"artifact {job_id}: "
+                                  f"{json.dumps(resp['result'])[:160]}")
+        else:
+            self.jobs_msg.setText(f"artifact fetch failed: {resp}")
+
     def _build_timers(self) -> None:
         self.timer = QTimer()
         self.timer.timeout.connect(self._poll)
         self.timer.start(POLL_MS)
+        # Jobs polling on its own configurable interval (default 2500ms).
+        # Kept off the main watchlist timer so a slow jobs endpoint cannot
+        # delay the rest of the UI — and vice versa.
+        self.jobs_timer = QTimer()
+        self.jobs_timer.timeout.connect(self._jobs_refresh)
+        self.jobs_timer.start(getattr(self, "_jobs_poll_ms", 2500))
         self.clock_timer = QTimer()
         self.clock_timer.timeout.connect(self._update_clock)
         self.clock_timer.start(1000)
