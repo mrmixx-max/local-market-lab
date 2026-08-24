@@ -257,7 +257,6 @@ missing module named compression - imported by urllib3.util.request (conditional
 missing module named 'h2.events' - imported by urllib3.http2.connection (top-level)
 missing module named 'h2.connection' - imported by urllib3.http2.connection (top-level)
 missing module named h2 - imported by urllib3.http2.connection (top-level)
-missing module named brotli - imported by urllib3.util.request (optional), urllib3.response (optional)
 missing module named brotlicffi - imported by urllib3.util.request (optional), urllib3.response (optional)
 missing module named socks - imported by urllib3.contrib.socks (optional)
 missing module named cryptography.x509.UnsupportedExtension - imported by cryptography.x509 (optional), urllib3.contrib.pyopenssl (optional)

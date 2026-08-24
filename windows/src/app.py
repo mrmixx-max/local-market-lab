@@ -81,7 +81,7 @@ def main():
     api_ok = _check_api()
 
     from windows.src.main_window import MainWindow
-    window = MainWindow(api_online=api_ok)
+    window = MainWindow()
     window.show()
     splash_widget.close()
 
