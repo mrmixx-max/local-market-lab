@@ -10,6 +10,7 @@ import numpy as np
 
 
 def _as_array(obj, name: str, min_n: int = 10) -> np.ndarray:
+    """Validate and convert input to a 1-D float array with >= min_n finite elements."""
     arr = np.asarray(obj, dtype=float)
     if arr.ndim != 1 or arr.size < min_n:
         raise ValueError(f"{name} must be 1-D with >= {min_n} elements")
@@ -19,6 +20,7 @@ def _as_array(obj, name: str, min_n: int = 10) -> np.ndarray:
 
 
 def _gauss(x: np.ndarray, mu: float, s: float) -> np.ndarray:
+    """Univariate Gaussian density at x with mean mu and std s."""
     s = max(s, 1e-12)
     z = (x - mu) / s
     return np.exp(-0.5 * z * z) / (s * math.sqrt(2.0 * math.pi))
@@ -30,7 +32,7 @@ def _gmm_fit(x: np.ndarray, k: int, max_iter: int = 50, seed: int = 42):
     Stabilisiert durch:
     - Min-Sigma-Boden (1e-4) zur Vermeidung degenerierter Cluster
     - K-means++-ähnliche Initialisierung für bessere Konvergenz
-    - Log-Domain-Berechnung der Responsibilities für numerische Stabilität
+    - Vektorisierte E-Step (alle Komponenten gleichzeitig)
     """
     n = x.size
     rng = np.random.default_rng(seed)
@@ -45,10 +47,13 @@ def _gmm_fit(x: np.ndarray, k: int, max_iter: int = 50, seed: int = 42):
     pi = np.ones(k) / k
     min_sigma = 1e-4  # hard floor to prevent degenerate clusters
     resp = np.zeros((n, k))
+    sqrt_2pi = math.sqrt(2.0 * math.pi)
     for _ in range(max_iter):
-        # E-step: compute responsibilities in log-domain for stability
-        for j in range(k):
-            resp[:, j] = pi[j] * _gauss(x, mu[j], sigma[j])
+        # E-step: vectorized — compute all components at once
+        # Shape: (n, k)
+        z = (x[:, None] - mu[None, :]) / sigma[None :]  # (n, k)
+        gauss = np.exp(-0.5 * z * z) / (sigma[None, :] * sqrt_2pi)
+        resp = pi[None, :] * gauss  # (n, k)
         rs = resp.sum(axis=1, keepdims=True)
         rs = np.where(rs < 1e-30, 1e-30, rs)
         resp /= rs
@@ -83,14 +88,14 @@ def detect_regime(returns, n_regimes: int = 3) -> dict:
 
 
 def _momentum(data: np.ndarray, h: int) -> list[float]:
-    """Momentum: extrapoliert Drift aus letztem Fenster."""
+    """Momentum model: extrapolates drift from the last 20-point window."""
     w = data[-min(20, len(data)):]
     drift = float(np.mean(np.diff(w))) if len(w) > 1 else 0.0
     return [round(float(data[-1]) + drift * (i + 1), 4) for i in range(h)]
 
 
 def _mean_reversion(data: np.ndarray, h: int) -> list[float]:
-    """Mean-Reversion: Pull zurück zum langfristigen Mittel."""
+    """Mean-reversion model: pulls toward the long-term mean with rate 0.15."""
     target = float(np.mean(data))
     v = float(data[-1])
     fc = []
@@ -101,7 +106,7 @@ def _mean_reversion(data: np.ndarray, h: int) -> list[float]:
 
 
 def _garch_like(data: np.ndarray, h: int) -> list[float]:
-    """GARCH(1,1)-ähnlich: Volatilitätsextrapolation via MC-Simulation."""
+    """GARCH(1,1)-like: volatility extrapolation via Monte Carlo simulation."""
     rets = np.diff(data)
     omega, alpha, beta = 1e-5, 0.1, 0.85
     var = float(np.var(rets))

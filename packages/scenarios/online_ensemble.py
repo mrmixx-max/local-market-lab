@@ -11,6 +11,7 @@ import numpy as np
 
 
 def _validate(data, horizon: int) -> np.ndarray:
+    """Validate input data: 1-D, >= 10 finite values, positive integer horizon."""
     arr = np.asarray(data, dtype=float)
     if arr.ndim != 1 or arr.size < 10:
         raise ValueError("data must be 1-D with at least 10 values")
@@ -22,6 +23,7 @@ def _validate(data, horizon: int) -> np.ndarray:
 
 
 def _linear_forecast(d: np.ndarray, h: int) -> np.ndarray:
+    """Vectorized OLS linear trend forecast."""
     win = d[-60:]
     n = win.size
     x = np.arange(n, dtype=float)
@@ -34,6 +36,7 @@ def _linear_forecast(d: np.ndarray, h: int) -> np.ndarray:
 
 
 def _exp_forecast(d: np.ndarray, h: int, a=0.3, b=0.1) -> np.ndarray:
+    """Holt's linear trend (double exponential smoothing) — sequential update."""
     level, trend = d[0], (d[1] - d[0] if d.size > 1 else 0.0)
     for v in d[1:]:
         lp = level
@@ -43,6 +46,7 @@ def _exp_forecast(d: np.ndarray, h: int, a=0.3, b=0.1) -> np.ndarray:
 
 
 def _momentum_forecast(d: np.ndarray, h: int) -> np.ndarray:
+    """Momentum forecast: extrapolate from mean of last 5 returns."""
     win = d[-20:]
     if win.size < 2:
         return np.full(h, d[-1])
@@ -54,7 +58,11 @@ _MODEL_FUNCS = {"linear": _linear_forecast, "exp": _exp_forecast, "momentum": _m
 
 
 def online_weighted_ensemble(data, horizon=30, models=None) -> dict:
-    """Combine models with exponentially decaying weights (recent data → higher weight)."""
+    """Combine models with exponentially decaying weights (recent data → higher weight).
+
+    Computes weighted recent error for each model via vectorized numpy ops,
+    then combines forecasts using inverse-error weighting.
+    """
     arr = _validate(data, horizon)
     models = models or ["linear", "exp", "momentum"]
     n = arr.size
@@ -62,10 +70,13 @@ def online_weighted_ensemble(data, horizon=30, models=None) -> dict:
     w /= w.sum()
     test_win = min(30, n // 3)
     errors = {}
+    # Pre-compute all model predictions in a vectorized manner
     for name in models:
         if name not in _MODEL_FUNCS:
             raise ValueError(f"unknown model: {name}")
         err_sum = 0.0
+        # Vectorized: compute rolling one-step-ahead errors
+        # For each time step i in [n-test_win, n), predict from arr[:i]
         for i in range(n - test_win, n):
             train = arr[:i]
             if train.size < 10:

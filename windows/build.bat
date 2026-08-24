@@ -14,6 +14,7 @@
 ::   build.bat              Build EXE + installer
 ::   build.bat --no-installer   Build EXE only (skip Inno Setup)
 ::   build.bat --clean      Clean build artifacts first
+::   build.bat --no-upx     Skip UPX compression
 :: ===================================================================
 
 setlocal enabledelayedexpansion
@@ -22,22 +23,26 @@ setlocal enabledelayedexpansion
 set APP_NAME=LocalMarketLab
 set APP_VERSION=0.8.0
 set PROJECT_ROOT=%~dp0..\..
-set SRC_DIR=%~dp0..
-set BUILD_SPEC=%SRC_DIR%\build.spec
-set ISS_SCRIPT=%SRC_DIR%\installer\setup.iss
-set OUTPUT_DIR=%SRC_DIR%\installer\output
-set DIST_DIR=%SRC_DIR%\dist
+
+:: Resolve absolute paths
+for %%I in ("%PROJECT_ROOT%") do set PROJECT_ROOT=%%~fI
+set SRC_DIR=%~dp0
+set BUILD_SPEC=%SRC_DIR%src\build.spec
+set ISS_SCRIPT=%SRC_DIR%installer\setup.iss
+set OUTPUT_DIR=%SRC_DIR%installer\output
+set DIST_DIR=%SRC_DIR%src\dist
 set INNO_SETUP_DIR=C:\Program Files (x86)\Inno Setup 6
 set UPX_DIR=
-
-:: Parse arguments
 set BUILD_INSTALLER=1
 set CLEAN_BUILD=0
+set USE_UPX=1
 
+:: Parse arguments
 :parse_args
 if "%~1"=="" goto :main
 if /i "%~1"=="--no-installer" set BUILD_INSTALLER=0
 if /i "%~1"=="--clean" set CLEAN_BUILD=1
+if /i "%~1"=="--no-upx" set USE_UPX=0
 shift
 goto :parse_args
 
@@ -61,13 +66,18 @@ if "%BUILD_INSTALLER%"=="1" (
 )
 
 :: Optional: check UPX
-call :check_upx
+if "%USE_UPX%"=="1" (
+    call :check_upx
+) else (
+    echo [INFO] UPX compression disabled (--no-upx)
+)
 
 :: Clean if requested
 if "%CLEAN_BUILD%"=="1" (
+    echo.
     echo [BUILD] Cleaning previous build artifacts...
     if exist "%DIST_DIR%" rmdir /s /q "%DIST_DIR%"
-    if exist "%SRC_DIR%\build" rmdir /s /q "%SRC_DIR%\build"
+    if exist "%SRC_DIR%src\build" rmdir /s /q "%SRC_DIR%src\build"
     if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
     echo [BUILD] Clean complete.
 )
@@ -91,32 +101,41 @@ if not "%UPX_DIR%"=="" (
 
 pyinstaller "%BUILD_SPEC%" ^
     --distpath "%DIST_DIR%" ^
-    --workpath "%SRC_DIR%\build\build" ^
+    --workpath "%SRC_DIR%src\build\build" ^
     --noconfirm ^
     --clean
 
 if errorlevel 1 (
+    echo.
     echo [ERROR] PyInstaller build failed!
     goto :error
 )
 
 :: Check EXE size
 for %%F in ("%DIST_DIR%\%APP_NAME%.exe") do set EXE_SIZE=%%~zF
-echo [BUILD] EXE built: %DIST_DIR%\%APP_NAME%.exe (%EXE_SIZE% bytes)
+echo.
+echo [BUILD] EXE built: %DIST_DIR%\%APP_NAME%.exe
+
+:: Calculate size in MB (with decimal)
+set /a SIZE_MB=%EXE_SIZE% / 1048576
+set /a SIZE_KB_REMAINDER=(%EXE_SIZE% %% 1048576) / 10486
+echo [BUILD] EXE size: %SIZE_MB%.%SIZE_KB_REMAINDER% MB
 
 :: Warn if over 30MB
-set /a SIZE_MB=%EXE_SIZE% / 1048576
 if %SIZE_MB% GTR 30 (
+    echo.
     echo [WARNING] EXE size is %SIZE_MB%MB ^(target: ^<30MB^)
     echo [WARNING] Consider adding more excludes to build.spec
+    echo [WARNING] Check that UPX is installed and working
 ) else (
-    echo [BUILD] EXE size OK: %SIZE_MB%MB
+    echo [BUILD] EXE size OK: %SIZE_MB%MB ^(target: ^<30MB^)
 )
 
 :: ===================================================================
 :: Step 2: Inno Setup — Build Installer
 :: ===================================================================
 if "%BUILD_INSTALLER%"=="0" (
+    echo.
     echo [BUILD] Skipping installer build (--no-installer)
     goto :success
 )
@@ -128,16 +147,19 @@ echo.
 iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
 
 if errorlevel 1 (
+    echo.
     echo [ERROR] Inno Setup build failed!
     goto :error
 )
 
 :: Check installer size
 for %%F in ("%OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe") do set INSTALLER_SIZE=%%~zF
-echo [BUILD] Installer built: %OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe (%INSTALLER_SIZE% bytes)
+echo.
+echo [BUILD] Installer built: %OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe
 
 set /a INSTALLER_MB=%INSTALLER_SIZE% / 1048576
-echo [BUILD] Installer size: %INSTALLER_MB%MB
+set /a INSTALLER_KB_REMAINDER=(%INSTALLER_SIZE% %% 1048576) / 10486
+echo [BUILD] Installer size: %INSTALLER_MB%.%INSTALLER_KB_REMAINDER% MB
 
 goto :success
 
@@ -149,6 +171,7 @@ goto :success
 python --version >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Python not found in PATH!
+    echo [ERROR] Install Python 3.10+ from https://www.python.org/downloads/
     exit /b 1
 )
 for /f "tokens=*" %%v in ('python --version') echo [CHECK] %%v
@@ -157,7 +180,8 @@ exit /b 0
 :check_pyinstaller
 pyinstaller --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] PyInstaller not found! Install with: pip install pyinstaller
+    echo [ERROR] PyInstaller not found!
+    echo [ERROR] Install with: pip install pyinstaller
     exit /b 1
 )
 for /f "tokens=*" %%v in ('pyinstaller --version') echo [CHECK] PyInstaller %%v
@@ -193,8 +217,16 @@ if exist "%~dp0tools\upx\upx.exe" (
     echo [CHECK] UPX found at %~dp0tools\upx
     exit /b 0
 )
+:: Check if UPX is in a sibling directory
+if exist "%~dp0..\tools\upx\upx.exe" (
+    set "UPX_DIR=%~dp0..\tools\upx"
+    set "PATH=%PATH%;%UPX_DIR%"
+    echo [CHECK] UPX found at %~dp0..\tools\upx
+    exit /b 0
+)
 echo [INFO] UPX not found ^(optional, for additional compression^)
 echo [INFO] Download from https://github.com/upx/upx/releases
+echo [INFO] Or install with: choco install upx
 exit /b 0
 
 :success

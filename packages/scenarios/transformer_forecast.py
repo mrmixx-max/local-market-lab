@@ -22,30 +22,60 @@ def positional_encoding(seq_len: int, d_model: int = 32) -> np.ndarray:
 
 
 def _layer_norm(x: np.ndarray, eps: float = 1e-6) -> np.ndarray:
+    """Layer normalization: zero-mean, unit-variance along last axis."""
     mean = x.mean(axis=-1, keepdims=True)
     var = x.var(axis=-1, keepdims=True)
     return (x - mean) / np.sqrt(var + eps)
 
 
+_FF_W1: np.ndarray | None = None
+_FF_W2: np.ndarray | None = None
+_FF_D_MODEL: int = 0
+_FF_D_FF: int = 0
+
+
 def _feed_forward(x: np.ndarray, d_ff: int = 64) -> np.ndarray:
+    """ReLU feed-forward sub-layer with lazily-cached random weights.
+
+    Weights are created once per (d_model, d_ff) shape and reused
+    across calls to avoid redundant allocation.
+    """
+    global _FF_W1, _FF_W2, _FF_D_MODEL, _FF_D_FF
     d_model = x.shape[-1]
-    rng = np.random.RandomState(0)
-    w1 = rng.randn(d_model, d_ff).astype(float) * 0.1
-    w2 = rng.randn(d_ff, d_model).astype(float) * 0.1
-    return np.maximum(0, x @ w1) @ w2
+    if _FF_W1 is None or _FF_D_MODEL != d_model or _FF_D_FF != d_ff:
+        rng = np.random.RandomState(0)
+        _FF_W1 = rng.randn(d_model, d_ff).astype(float) * 0.1
+        _FF_W2 = rng.randn(d_ff, d_model).astype(float) * 0.1
+        _FF_D_MODEL = d_model
+        _FF_D_FF = d_ff
+    return np.maximum(0, x @ _FF_W1) @ _FF_W2
+
+
+_MHA_W_Q: np.ndarray | None = None
+_MHA_W_K: np.ndarray | None = None
+_MHA_W_V: np.ndarray | None = None
+_MHA_W_O: np.ndarray | None = None
+_MHA_D_MODEL: int = 0
 
 
 def multi_head_attention(Q, K, V, n_heads=4, mask=None):
-    """Scaled dot-product attention with n_heads parallel heads."""
+    """Scaled dot-product attention with n_heads parallel heads.
+
+    Uses lazily-cached projection weights to avoid reallocation.
+    Weights are reset when d_model changes.
+    """
     seq_len, d_model = Q.shape
     assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
     d_head = d_model // n_heads
-    rng = np.random.RandomState(42)
-    w_q = rng.randn(d_model, d_model).astype(float) * 0.1
-    w_k = rng.randn(d_model, d_model).astype(float) * 0.1
-    w_v = rng.randn(d_model, d_model).astype(float) * 0.1
-    w_o = rng.randn(d_model, d_model).astype(float) * 0.1
-    Q, K, V = Q @ w_q, K @ w_k, V @ w_v
+    global _MHA_W_Q, _MHA_W_K, _MHA_W_V, _MHA_W_O, _MHA_D_MODEL
+    if _MHA_W_Q is None or _MHA_D_MODEL != d_model:
+        rng = np.random.RandomState(42)
+        _MHA_W_Q = rng.randn(d_model, d_model).astype(float) * 0.1
+        _MHA_W_K = rng.randn(d_model, d_model).astype(float) * 0.1
+        _MHA_W_V = rng.randn(d_model, d_model).astype(float) * 0.1
+        _MHA_W_O = rng.randn(d_model, d_model).astype(float) * 0.1
+        _MHA_D_MODEL = d_model
+    Q, K, V = Q @ _MHA_W_Q, K @ _MHA_W_K, V @ _MHA_W_V
     Q = Q.reshape(seq_len, n_heads, d_head).transpose(1, 0, 2)
     K = K.reshape(seq_len, n_heads, d_head).transpose(1, 0, 2)
     V = V.reshape(seq_len, n_heads, d_head).transpose(1, 0, 2)
@@ -58,11 +88,11 @@ def multi_head_attention(Q, K, V, n_heads=4, mask=None):
     attn /= attn.sum(axis=-1, keepdims=True)
     out = attn @ V
     out = out.transpose(1, 0, 2).reshape(seq_len, d_model)
-    return out @ w_o
+    return out @ _MHA_W_O
 
 
 def _encoder_layer(x, n_heads=4, mask=None):
-    """MHA → Add&Norm → FFN → Add&Norm."""
+    """Single encoder block: Multi-Head Attention → Add&Norm → FFN → Add&Norm."""
     attn_out = multi_head_attention(x, x, x, n_heads=n_heads, mask=mask)
     x = _layer_norm(x + attn_out)
     ff_out = _feed_forward(x)

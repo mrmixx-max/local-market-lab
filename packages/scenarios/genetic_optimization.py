@@ -7,6 +7,7 @@ import numpy as np
 
 
 def _kfold(n, k=5, seed=42):
+    """Generate k-fold train/test index splits without shuffling within folds."""
     rng = np.random.RandomState(seed)
     idx = rng.permutation(n)
     folds = np.array_split(idx, k)
@@ -15,6 +16,7 @@ def _kfold(n, k=5, seed=42):
 
 
 def _rmse(y, p):
+    """Root mean squared error between actual y and predicted p."""
     return float(np.sqrt(np.mean((y - p) ** 2)))
 
 
@@ -149,11 +151,23 @@ def nsga2_multi_objective(data, target, model_fn, param_space,
             return float("inf"), float("inf")
 
     def nds(objs):
+        """Non-dominated sorting — vectorized with numpy.
+
+        Returns a list of fronts, where each front is a list of
+        indices into objs that belong to that Pareto front.
+        """
         n = len(objs)
-        dom = np.array([[all(objs[i] <= objs[j]) and any(objs[i] < objs[j])
-                         for j in range(n)] for i in range(n)])
+        # Vectorized dominance check: dom[i,j] = True if i dominates j
+        # objs is (n, n_obj)
+        le = objs[:, None, :] <= objs[None, :, :]  # (n, n, n_obj)
+        lt = objs[:, None, :] < objs[None, :, :]   # (n, n, n_obj)
+        dom = np.all(le, axis=2) & np.any(lt, axis=2)  # (n, n)
+        # S[i] = set of individuals dominated by i
+        # n_dom[i] = number of individuals that dominate i
+        n_dom = dom.sum(axis=0)  # (n,)
         S = [set(np.where(dom[i])[0]) for i in range(n)]
-        n_dom, remaining, fronts = dom.sum(axis=0), set(range(n)), []
+        remaining = set(range(n))
+        fronts = []
         while remaining:
             front = [i for i in remaining if n_dom[i] == 0]
             fronts.append(front)

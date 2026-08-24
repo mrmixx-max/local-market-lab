@@ -12,24 +12,37 @@ on:
         description: 'Create GitHub Release'
         required: false
         default: 'false'
+        type: boolean
 
 env:
   PYTHON_VERSION: '3.11'
   APP_VERSION: '0.8.0'
+  APP_NAME: 'LocalMarketLab'
 
 jobs:
   # -----------------------------------------------------------------
-  # Job 1: Lint + Tests (from existing CI)
+  # Job 1: Lint + Tests
   # -----------------------------------------------------------------
   test:
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
@@ -37,9 +50,10 @@ jobs:
   # Job 2: Windows EXE + Installer Build
   # -----------------------------------------------------------------
   build-windows:
+    name: Build Windows EXE + Installer
     needs: test
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,9 +70,22 @@ jobs:
           pip install pyinstaller
           pip install -e "."
 
+      - name: Cache UPX
+        id: cache-upx
+        uses: actions/cache@v4
+        with:
+          path: C:\upx
+          key: upx-4.2.4-win64
+
       - name: Install UPX
+        if: steps.cache-upx.outputs.cache-hit != 'true'
         run: |
           choco install upx -y
+        shell: powershell
+
+      - name: Add UPX to PATH
+        run: |
+          echo "C:\Program Files\UPX" >> $env:GITHUB_PATH
         shell: powershell
 
       - name: Install Inno Setup
@@ -81,15 +108,40 @@ jobs:
         shell: cmd
 
       - name: Check EXE size
+        id: exe-size
         run: |
           $exe = "windows\src\dist\LocalMarketLab.exe"
           $size = (Get-Item $exe).Length
           $sizeMB = [math]::Round($size / 1MB, 2)
           Write-Host "EXE size: ${sizeMB} MB"
+          echo "size_mb=$sizeMB" >> $env:GITHUB_OUTPUT
           if ($sizeMB -gt 30) {
             Write-Error "EXE size ${sizeMB}MB exceeds 30MB limit!"
             exit 1
           }
+        shell: powershell
+
+      - name: Check Installer size
+        id: installer-size
+        run: |
+          $installer = "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          $size = (Get-Item $installer).Length
+          $sizeMB = [math]::Round($size / 1MB, 2)
+          Write-Host "Installer size: ${sizeMB} MB"
+          echo "size_mb=$sizeMB" >> $env:GITHUB_OUTPUT
+        shell: powershell
+
+      - name: Generate checksums
+        run: |
+          $exe = "windows\src\dist\LocalMarketLab.exe"
+          $installer = "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          Get-FileHash $exe -Algorithm SHA256 | Select-Object Hash, Path | Format-Table -AutoSize
+          Get-FileHash $installer -Algorithm SHA256 | Select-Object Hash, Path | Format-Table -AutoSize
+          # Save checksums to file
+          $exeHash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $installerHash = (Get-FileHash $installer -Algorithm SHA256).Hash
+          "$exeHash  LocalMarketLab.exe" | Out-File -FilePath "windows\installer\output\checksums.txt" -Encoding utf8
+          "$installerHash  LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe" | Out-File -FilePath "windows\installer\output\checksums.txt" -Append -Encoding utf8
         shell: powershell
 
       - name: Upload EXE artifact
@@ -106,7 +158,14 @@ jobs:
           path: windows/installer/output/LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe
           retention-days: 30
 
-      - name: VirusTotal Scan (optional)
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalMarketLab-Checksums
+          path: windows/installer/output/checksums.txt
+          retention-days: 30
+
+      - name: VirusTotal Scan (optional, on tag only)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: maxladines/virus-total-action@v1
         with:
@@ -118,9 +177,10 @@ jobs:
   # Job 3: Create GitHub Release (on tag push)
   # -----------------------------------------------------------------
   release:
+    name: Create GitHub Release
     needs: build-windows
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
@@ -137,6 +197,12 @@ jobs:
           name: LocalMarketLab-Windows-EXE
           path: ./release
 
+      - name: Download checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: LocalMarketLab-Checksums
+          path: ./release
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -144,17 +210,21 @@ jobs:
           prerelease: false
           files: |
             ./release/*.exe
+            ./release/checksums.txt
           body: |
-            ## Local Market Lab v${{ env.PYTHON_VERSION }}
-            
+            ## Local Market Lab v${{ env.APP_VERSION }}
+
             ### Windows Installation
             1. Download `LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe`
-            2. Run the installer
+            2. Run the installer (no admin rights required)
             3. Launch from Start Menu or Desktop shortcut
-            
+
             ### Portable Version
             - `LocalMarketLab.exe` — standalone, no installation required
-            
+
+            ### Checksums
+            SHA256 checksums are provided in `checksums.txt` for verification.
+
             See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full documentation.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

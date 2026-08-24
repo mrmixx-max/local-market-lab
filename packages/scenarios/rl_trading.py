@@ -13,6 +13,7 @@ N_ACT = 3
 
 
 def _returns(data: np.ndarray) -> np.ndarray:
+    """Compute simple returns from a price series: r[t] = p[t]/p[t-1] - 1."""
     return data[1:] / data[:-1] - 1.0
 
 
@@ -23,7 +24,7 @@ def _disc(ret: float, n: int = 5, clip: float = 0.03) -> int:
 
 
 def _svec(t: int, pos: int, rets: np.ndarray) -> np.ndarray:
-    """State: one-hot position(3) + normalised return + momentum."""
+    """State vector: one-hot position(3) + normalised return + momentum."""
     mom = np.mean(rets[max(0, t - 4):t + 1]) if t > 0 else 0.0
     return np.array([float(i == pos) for i in range(3)] + [rets[t] * 10, mom * 10])
 

@@ -10,15 +10,18 @@ import numpy as np
 
 
 def _sigmoid(x):
+    """Numerically stable sigmoid — clips input to avoid overflow."""
     return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))
 
 
 def _xavier(fan_in, fan_out, rng):
+    """Xavier/Glorot uniform initialization for weight matrices."""
     lim = np.sqrt(6.0 / (fan_in + fan_out))
     return rng.uniform(-lim, lim, (fan_out, fan_in))
 
 
 def _adam_step(params, grads, m, v, t, lr=1e-3, b1=0.9, b2=0.999, eps=1e-8):
+    """Adam optimizer update step with bias correction."""
     for i in range(len(params)):
         m[i] = b1 * m[i] + (1 - b1) * grads[i]
         v[i] = b2 * v[i] + (1 - b2) * grads[i] ** 2
@@ -28,6 +31,7 @@ def _adam_step(params, grads, m, v, t, lr=1e-3, b1=0.9, b2=0.999, eps=1e-8):
 
 
 def _clip_grads(grads, max_norm=1.0):
+    """Gradient clipping by global norm — prevents exploding gradients."""
     total = np.sqrt(sum(np.sum(g ** 2) for g in grads))
     if total > max_norm:
         for g in grads:
@@ -35,6 +39,7 @@ def _clip_grads(grads, max_norm=1.0):
 
 
 def _normalize(data):
+    """Min-max normalization to [0, 1]. Returns (normalized, min, scale)."""
     dmin, dmax = data.min(), data.max()
     scale = dmax - dmin if dmax - dmin > 1e-12 else 1.0
     return (data - dmin) / scale, dmin, scale

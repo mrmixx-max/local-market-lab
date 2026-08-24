@@ -51,6 +51,44 @@ class TestHealthEndpoint:
         assert data["status"] == "ok"
         assert "instruments" in data
 
+    def test_health_has_all_fields(self, client):
+        """Health response should include all status fields."""
+        response = client.get("/api/v1/health")
+        assert response.status_code == 200
+        data = response.json()
+        # All expected fields present
+        assert "db_connected" in data
+        assert "uptime_seconds" in data
+        assert "ollama_available" in data
+        assert "yahoo_available" in data
+        assert "ollama_error" in data or data["ollama_available"]
+        assert "yahoo_error" in data or data["yahoo_available"]
+        assert data["version"] == "0.1.0"
+
+    def test_health_ollama_status(self, client):
+        """Health endpoint should correctly report Ollama availability."""
+        from unittest.mock import patch, MagicMock
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = b'{"models": []}'
+
+        with patch("apps.api.main.urllib.request.urlopen", return_value=mock_resp):
+            response = client.get("/api/v1/health")
+        data = response.json()
+        assert data["ollama_available"] is True
+        assert data["ollama_error"] is None
+
+    def test_health_ollama_unavailable(self, client):
+        """Health endpoint should report Ollama error when unreachable."""
+        from unittest.mock import patch
+        with patch("apps.api.main.urllib.request.urlopen", side_effect=Exception("connection refused")):
+            response = client.get("/api/v1/health")
+        data = response.json()
+        # When Ollama is unreachable, ollama_available should be False
+        assert data["ollama_available"] is False
+        assert data["ollama_error"] is not None
+
 
 class TestGameChallenges:
     def test_challenges_list(self, client):
@@ -188,6 +226,78 @@ class TestYahooEndpoint:
         # Either we got data, or we got an error dict
         assert "symbol" in data or "error" in data
 
+    def test_yahoo_query2_fallback(self, client):
+        """Yahoo endpoint should fall back to query2 when query1 fails."""
+        from unittest.mock import patch, MagicMock
+        import json as _json
+
+        # Mock query1 to fail, query2 to succeed
+        def mock_urlopen(req, timeout=None):
+            url = req.full_url if hasattr(req, 'full_url') else str(req)
+            if "query1" in url:
+                raise Exception("query1 blocked")
+            # query2 succeeds
+            mock = MagicMock()
+            mock.__enter__ = MagicMock(return_value=mock)
+            mock.__exit__ = MagicMock(return_value=False)
+            mock.read.return_value = _json.dumps({
+                "chart": {"result": [{"meta": {"regularMarketPrice": 150.0, "chartPreviousClose": 145.0, "currency": "USD"}}]}
+            }).encode()
+            return mock
+
+        with patch("apps.api.main.urllib.request.urlopen", side_effect=mock_urlopen):
+            response = client.get("/api/v1/market/yahoo/TEST")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("symbol") == "TEST"
+        assert data.get("price") == 150.0
+        assert "query2" in data.get("source", "")
+
+    def test_yahoo_user_agent_header(self, client):
+        """Yahoo endpoint should send a realistic browser User-Agent."""
+        from unittest.mock import patch, MagicMock
+        import json as _json
+
+        captured_req = {}
+        def mock_urlopen(req, timeout=None):
+            captured_req['headers'] = dict(req.headers) if hasattr(req, 'headers') else {}
+            captured_req['url'] = req.full_url if hasattr(req, 'full_url') else str(req)
+            mock = MagicMock()
+            mock.__enter__ = MagicMock(return_value=mock)
+            mock.__exit__ = MagicMock(return_value=False)
+            mock.read.return_value = _json.dumps({
+                "chart": {"result": [{"meta": {"regularMarketPrice": 100.0}}]}
+            }).encode()
+            return mock
+
+        with patch("apps.api.main.urllib.request.urlopen", side_effect=mock_urlopen):
+            client.get("/api/v1/market/yahoo/AAPL")
+
+        # Check that a browser-like User-Agent was sent
+        headers = captured_req.get('headers', {})
+        ua = headers.get('User-agent', headers.get('User-Agent', ''))
+        assert "Mozilla" in ua or "Chrome" in ua or "Browser" in ua
+
+    def test_yahoo_timeout_configurable(self, client):
+        """Yahoo endpoint should respect LML_YAHOO_TIMEOUT env var."""
+        from unittest.mock import patch, MagicMock
+        import os
+
+        with patch.dict(os.environ, {"LML_YAHOO_TIMEOUT": "3"}):
+            with patch("apps.api.main.urllib.request.urlopen") as mock_urlopen:
+                mock_resp = MagicMock()
+                mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+                mock_resp.__exit__ = MagicMock(return_value=False)
+                mock_resp.read.return_value = b'{"chart": {"result": [{"meta": {"regularMarketPrice": 100.0}}]}}'
+                mock_urlopen.return_value = mock_resp
+
+                response = client.get("/api/v1/market/yahoo/AAPL")
+                assert response.status_code == 200
+                # Verify timeout was passed
+                call_kwargs = mock_urlopen.call_args
+                assert call_kwargs[1].get("timeout") == 3 or (len(call_kwargs[0]) > 1 and call_kwargs[0][1] == 3)
+
 
 class TestOllamaEndpoints:
     """Tests for Ollama bridge routes using mocked HTTP."""
@@ -210,6 +320,53 @@ class TestOllamaEndpoints:
         data = response.json()
         assert data["content"] == "Hello there!"
         assert data["model"] == "llama3.1"
+
+    def test_ollama_chat_response_has_content_not_response(self, client):
+        """Chat route must return 'content' field, NOT 'response' field."""
+        from unittest.mock import patch, MagicMock
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = b'{"message": {"content": "Test answer"}}'
+
+        with patch("apps.api.ollama_routes.urllib.request.urlopen", return_value=mock_resp):
+            response = client.post("/api/v1/ollama/chat", json={
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": "Hi"}],
+            })
+
+        data = response.json()
+        # Must have 'content'
+        assert "content" in data
+        assert data["content"] == "Test answer"
+        # Must NOT have 'response' (old incorrect field name)
+        assert "response" not in data
+
+    def test_ollama_chat_with_system_prompt(self, client):
+        """Chat route should prepend system message when provided."""
+        from unittest.mock import patch, MagicMock
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = b'{"message": {"content": "System acknowledged"}}'
+
+        with patch("apps.api.ollama_routes.urllib.request.urlopen", return_value=mock_resp) as mock_urlopen:
+            response = client.post("/api/v1/ollama/chat", json={
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": "Hi"}],
+                "system": "You are a trading coach.",
+            })
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == "System acknowledged"
+        # Verify system message was sent in request body
+        call_args = mock_urlopen.call_args
+        req = call_args[0][0]
+        import json
+        body = json.loads(req.data)
+        assert body["messages"][0]["role"] == "system"
+        assert body["messages"][0]["content"] == "You are a trading coach."
 
     def test_ollama_chat_missing_model_400(self, client):
         response = client.post("/api/v1/ollama/chat", json={
@@ -235,3 +392,21 @@ class TestOllamaEndpoints:
         data = response.json()
         assert "error" in data["content"].lower()
         assert data["model"] == "llama3.1"
+
+    def test_ollama_chat_returns_tokens_and_duration(self, client):
+        """Chat route should return duration_ms and tokens fields."""
+        from unittest.mock import patch, MagicMock
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = b'{"message": {"content": "Hi"}, "total_duration": 5000000000, "eval_count": 42}'
+
+        with patch("apps.api.ollama_routes.urllib.request.urlopen", return_value=mock_resp):
+            response = client.post("/api/v1/ollama/chat", json={
+                "model": "llama3.1",
+                "messages": [{"role": "user", "content": "Hi"}],
+            })
+
+        data = response.json()
+        assert data["duration_ms"] == 5000  # 5s in ns -> ms
+        assert data["tokens"] == 42

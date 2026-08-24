@@ -6,8 +6,10 @@ Strategy:
   1. Exclude all unused Qt6 DLLs (Quick, QML, Multimedia, Pdf, etc.)
   2. Exclude opengl32sw.dll (20MB software renderer)
   3. Exclude ffmpeg DLLs (avcodec, avformat, avutil = 37MB)
-  4. Exclude all unused Python packages
-  5. Enable UPX compression when available
+  4. Exclude numpy distutils, tests, doc, f2py (not needed at runtime)
+  5. Exclude all unused Python packages (web frameworks, imaging, etc.)
+  6. Enable UPX compression when available
+  7. Bundle certifi CA certificates properly
 """
 import sys
 import os
@@ -61,7 +63,11 @@ QT6_EXCLUDE_DLLS = [
     'opengl32sw.dll',
     # FFmpeg codecs (37MB — not needed for a non-media app)
     'avcodec-61.dll', 'avformat-61.dll', 'avutil-59.dll',
-    'swresample-5.dll', 'swscale-8.dll',
+    'avcodec-60.dll', 'avformat-60.dll', 'avutil-58.dll',
+    'avcodec-62.dll', 'avformat-62.dll', 'avutil-60.dll',
+    'swresample-5.dll', 'swresample-4.dll', 'swresample-6.dll',
+    'swscale-8.dll', 'swscale-7.dll', 'swscale-9.dll',
+    'swscale-6.dll', 'swscale-5.dll',
 ]
 
 # -------------------------------------------------------------------
@@ -79,21 +85,34 @@ QT6_EXCLUDE_PLUGINS = [
 ]
 
 # -------------------------------------------------------------------
-# Python modules to EXCLUDE
+# Python modules to EXCLUDE — comprehensive list for minimal EXE
 # -------------------------------------------------------------------
 EXCLUDE_MODULES = [
     # Heavy scientific (not used)
     'sklearn', 'pandas', 'matplotlib', 'scipy', 'tensorflow',
     'torch', 'torchvision', 'keras', 'statsmodels', 'seaborn',
     'plotly', 'bokeh', 'dash',
+    # Numpy submodules not needed at runtime
+    'numpy.distutils', 'numpy.distutils.cpuinfo', 'numpy.distutils.misc_util',
+    'numpy.distutils.system_info', 'numpy.distutils.log',
+    'numpy.tests', 'numpy.testing', 'numpy.doc',
+    'numpy.f2py', 'numpy.py', 'numpy.version',
+    'numpy.core.tests', 'numpy.core._dotblas',
+    'numpy.lib.tests', 'numpy.linalg.tests',
+    'numpy.fft.tests', 'numpy.random.tests',
+    'numpy.ma.tests', 'numpy.matrixlib.tests',
+    'numpy.compat', 'numpy.core.include', 'numpy.core.lib',
     # Web frameworks (not used in GUI)
     'flask', 'django', 'aiohttp', 'tornado',
+    'werkzeug', 'jinja2', 'markupsafe', 'itsdangerous', 'click',
     # API server (not bundled in GUI EXE)
     'fastapi', 'uvicorn', 'pydantic', 'starlette', 'anyio',
     'httptools', 'uvloop', 'yaml', 'yfinance',
+    'h11', 'httptools', 'watchfiles', 'python_multipart',
     # Dev tools
     'IPython', 'jupyter', 'notebook', 'sphinx', 'pytest',
     'setuptools', 'pip', 'pkg_resources', 'pip._internal',
+    'pyflakes', 'pycodestyle', 'mccabe', 'rope',
     # Imaging (not used)
     'PIL', 'pillow', 'PIL._imaging',
     # Crypto (not used)
@@ -101,7 +120,14 @@ EXCLUDE_MODULES = [
     # Other unused stdlib
     'tkinter', 'turtle', 'idlelib', 'ensurepip',
     '_pydecimal', 'pydoc', 'doctest', 'unittest',
-    'lib2to3', 'test',
+    'lib2to3', 'test', 'tests',
+    'xmlrpc', 'mailbox', 'mhlib', 'mimetools', 'MimeWriter',
+    'mimify', 'multifile', 'netrc', 'nturl2path',
+    'plistlib', 'pstats', 'pty', 'sched', 'smtpd',
+    'smtplib', 'sndhdr', 'sunau', 'sunaudiodev',
+    'telnetlib', 'this', 'timeit', 'toai',
+    'trace', 'traceback', 'tty', 'urllib.robotparser',
+    'wave', 'webbrowser', 'xdrlib', 'zipfile',  # zipfile is stdlib but often not needed
     # Qt modules we don't use
     'PyQt6.QtBluetooth', 'PyQt6.QtDesigner', 'PyQt6.QtHelp',
     'PyQt6.QtMultimedia', 'PyQt6.QtMultimediaWidgets', 'PyQt6.QtNetwork',
@@ -130,6 +156,7 @@ EXCLUDE_MODULES = [
     'PyQt6.QtLabsQmlModels', 'PyQt6.QtLabsSettings',
     'PyQt6.QtLabsSharedImage', 'PyQt6.QtLabsWavefrontMesh',
     'PyQt6.QtMultimediaQuick', 'PyQt6.QtShaderTools',
+    'PyQt6.sip',  # sip module — not needed when using compiled PyQt6
 ]
 
 # -------------------------------------------------------------------
@@ -144,13 +171,28 @@ def filter_binaries(binaries):
             continue
         # Check plugin excludes
         skip = False
+        dest_normalized = dest.replace('\\', '/')
         for plugin in QT6_EXCLUDE_PLUGINS:
-            if plugin in dest.replace('\\', '/'):
+            if plugin in dest_normalized:
                 skip = True
                 break
         if not skip:
             filtered.append((dest, src, typecode))
     return filtered
+
+# -------------------------------------------------------------------
+# Collect certifi CA bundle
+# -------------------------------------------------------------------
+def collect_certifi():
+    """Collect certifi CA bundle as data files."""
+    try:
+        import certifi
+        cert_path = certifi.where()
+        if os.path.exists(cert_path):
+            return [(cert_path, 'certifi')]
+    except ImportError:
+        pass
+    return []
 
 # -------------------------------------------------------------------
 # Analysis
@@ -161,8 +203,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(PROJECT_ROOT / 'packages'), 'packages'),
-        (str(PROJECT_ROOT / 'lml-icon.ico'), '.'),
-    ],
+    ] + collect_certifi(),
     hiddenimports=[
         'PyQt6',
         'PyQt6.QtWidgets',
@@ -170,10 +211,32 @@ a = Analysis(
         'PyQt6.QtGui',
         'pyqtgraph',
         'pyqtgraph.graphicsItems',
+        'pyqtgraph.graphicsItems.PlotItem',
+        'pyqtgraph.graphicsItems.ViewBox',
+        'pyqtgraph.graphicsItems.PlotCurveItem',
+        'pyqtgraph.graphicsItems.ScatterPlotItem',
+        'pyqtgraph.graphicsItems.BarGraphItem',
+        'pyqtgraph.graphicsItems.LegendItem',
+        'pyqtgraph.graphicsItems.AxisItem',
+        'pyqtgraph.graphicsItems.GridItem',
+        'pyqtgraph.graphicsItems.InfiniteLine',
+        'pyqtgraph.graphicsItems.LinearRegionItem',
+        'pyqtgraph.exporters',
+        'pyqtgraph.exporters.ImageExporter',
+        'pyqtgraph.exporters.SVGExporter',
+        'pyqtgraph.Qt',
+        'pyqtgraph.Qt.QtWidgets',
+        'pyqtgraph.Qt.QtCore',
+        'pyqtgraph.Qt.QtGui',
+        'pyqtgraph.functions',
+        'pyqtgraph.widgets',
         'requests',
-        'sqlite3',
         'certifi',
+        'sqlite3',
         'numpy',
+        'numpy.core',
+        'numpy.core._methods',
+        'numpy.lib.format',
     ],
     hookspath=[],
     hooksconfig={},
@@ -187,6 +250,15 @@ a = Analysis(
 
 # Filter out unwanted binaries
 a.binaries = filter_binaries(a.binaries)
+
+# Remove duplicate datas
+seen_datas = set()
+unique_datas = []
+for src, dest in a.datas:
+    if src not in seen_datas:
+        seen_datas.add(src)
+        unique_datas.append((src, dest))
+a.datas = unique_datas
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
@@ -206,6 +278,7 @@ exe = EXE(
     strip=True,
     upx=True,
     upx_exclude=[
+        # MSVC runtime DLLs — UPX breaks these
         'vcruntime140.dll',
         'vcruntime140_1.dll',
         'msvcp140.dll',
@@ -215,8 +288,13 @@ exe = EXE(
         'msvcp140_codecvt_ids.dll',
         'concrt140.dll',
         'vccorlib140.dll',
+        # Python DLLs
         'python3.dll',
         'python311.dll',
+        # Qt6 DLLs that may have issues with UPX
+        'Qt6Core.dll',
+        'Qt6Gui.dll',
+        'Qt6Widgets.dll',
     ],
     runtime_tmpdir=None,
     console=False,

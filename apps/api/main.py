@@ -112,6 +112,10 @@ async def health(ws=Depends(get_workspace)):
     ollama_error = None
     try:
         ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+        if not ollama_host.startswith("http"):
+            ollama_host = f"http://{ollama_host}"
+        if ":" not in ollama_host.split("://", 1)[-1]:
+            ollama_host = f"{ollama_host}:11434"
         req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/0.1"})
         with urllib.request.urlopen(req, timeout=3) as r:
             json.load(r)

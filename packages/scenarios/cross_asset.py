@@ -2,14 +2,20 @@
 from __future__ import annotations
 import numpy as np
 
-def _returns(p): return np.diff(np.log(p + 1e-12))
+def _returns(p):
+    """Log-returns from a price series: r[t] = log(p[t]/p[t-1])."""
+    return np.diff(np.log(p + 1e-12))
+
 
 def _corr(x, y):
+    """Pearson correlation between two arrays. Returns 0.0 if degenerate."""
     if len(x) < 3 or len(y) < 3: return 0.0
     sx, sy = x.std(), y.std()
     return 0.0 if sx < 1e-12 or sy < 1e-12 else float(np.corrcoef(x, y)[0, 1])
 
+
 def _rss(X, y):
+    """Ridge-regressed residual sum of squares: ||y - Xw||^2 with w = (X'X + λI)^-1 X'y."""
     b = np.linalg.solve(X.T @ X + 1e-8 * np.eye(X.shape[1]), X.T @ y)
     return float(np.sum((y - X @ b) ** 2))
 

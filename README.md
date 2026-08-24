@@ -1,5 +1,8 @@
 # Local Market Lab
 
+[![CI](https://github.com/mrmixx-max/local-market-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/mrmixx-max/local-market-lab/actions/workflows/ci.yml)
+[![Windows Build](https://github.com/mrmixx-max/local-market-lab/actions/workflows/windows-build.yml/badge.svg)](https://github.com/mrmixx-max/local-market-lab/actions/workflows/windows-build.yml)
+
 **Privacy-first portfolio analytics, backtesting, and scenario simulation — without investment signals.**
 
 > Research tool. Not financial advice. No buy/sell signals. No forecasts disguised as math.
@@ -23,6 +26,7 @@ The installer includes:
 - Automatic uninstaller (via Windows "Apps & Features")
 - Start Menu and Desktop shortcuts
 - All dependencies bundled (no Python installation needed)
+- LZMA2-compressed installer (~15MB download)
 
 ### Portable Version
 
@@ -167,7 +171,7 @@ apps/web/               Bloomberg-style terminal UI
 ### Prerequisites
 - Python 3.10+
 - [Inno Setup 6](https://jrsoftware.org/isdl.php) (for installer)
-- [UPX](https://github.com/upx/upx/releases) (optional, for compression)
+- [UPX](https://github.com/upx/upx/releases) (optional, for additional compression)
 
 ### Build Steps
 
@@ -186,14 +190,44 @@ build.bat
 ```
 
 Output:
-- `windows/src/dist/LocalMarketLab.exe` — standalone EXE (~25MB)
+- `windows/src/dist/LocalMarketLab.exe` — standalone EXE (target: <30MB with UPX)
 - `windows/installer/output/LocalMarketLab-Setup-v0.8.0.exe` — installer
 
 ### Build Options
 ```bash
 build.bat --clean          # Clean build (removes cached artifacts)
 build.bat --no-installer   # Build EXE only, skip Inno Setup
+build.bat --no-upx         # Skip UPX compression
 ```
+
+### Build Optimization
+
+The build is optimized for minimal EXE size through:
+
+1. **Qt6 DLL Excludes** — Only Qt6Core, Qt6Gui, Qt6Widgets are bundled. All Quick, QML, Multimedia, PDF, Network, and other unused Qt modules are excluded (~40MB savings).
+2. **UPX Compression** — All compressible binaries are UPX-packed (~50% size reduction).
+3. **Unused Module Excludes** — sklearn, pandas, matplotlib, scipy, tensorflow, torch, flask, django, fastapi, and 100+ other unused modules are excluded.
+4. **Numpy Optimization** — Only numpy core runtime is bundled; distutils, tests, docs, and f2py are excluded (~5MB savings).
+5. **FFmpeg Excludes** — avcodec, avformat, avutil, swresample, swscale DLLs excluded (~37MB savings).
+6. **LZMA2 Compression** — Inno Setup uses ultra64 LZMA2 solid compression for the installer.
+
+## CI/CD
+
+### GitHub Actions
+
+The project uses two GitHub Actions workflows:
+
+- **CI** (`ci.yml`) — Runs on every push/PR. Lints with black/flake8 and runs pytest on Python 3.10–3.13.
+- **Windows Build** (`windows-build.yml`) — Runs on push to main/develop, tags, and PRs. Builds the Windows EXE and installer, checks size (<30MB limit), and creates releases.
+
+### Release Process
+
+1. Update version in `windows/src/version_info.txt` and `windows/installer/setup.iss`
+2. Push a tag: `git tag v0.8.0 && git push origin v0.8.0`
+3. GitHub Actions automatically builds and creates a release with:
+   - `LocalMarketLab-Setup-v0.8.0.exe` (installer)
+   - `LocalMarketLab.exe` (portable)
+   - SHA256 checksums
 
 ## Docker
 
@@ -203,6 +237,19 @@ docker compose up --build
 
 # with Ollama support
 docker compose --profile full up --build
+```
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run unit tests only
+pytest tests/unit/ -v
+
+# Run with coverage
+pytest tests/ --cov=packages --cov-report=html
 ```
 
 ## License

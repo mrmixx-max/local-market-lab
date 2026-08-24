@@ -21,7 +21,10 @@ def _validate(data: list[float], horizon: int) -> None:
 
 
 def _ols(x: list[float], y: list[float]) -> tuple[float, float]:
-    """Ordinary least squares: returns (slope, intercept)."""
+    """Ordinary least squares: returns (slope, intercept).
+
+    Uses pure-Python math (no numpy dependency for this module).
+    """
     n = len(x)
     mx, my = sum(x) / n, sum(y) / n
     sxy = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
