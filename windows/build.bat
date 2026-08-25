@@ -36,13 +36,14 @@ set INNO_SETUP_DIR=%ProgramFiles(x86)%\Inno Setup 6
 set INNO_SETUP_DIR_ESC=C:\Program Files ^(x86^)\Inno Setup 6
 set UPX_DIR=
 set BUILD_INSTALLER=1
+set SKIP_INSTALLER=no
 set CLEAN_BUILD=0
 set USE_UPX=1
 
 :: Parse arguments
 :parse_args
 if "%~1"=="" goto :main
-if /i "%~1"=="--no-installer" set BUILD_INSTALLER=0
+if /i "%~1"=="--no-installer" set SKIP_INSTALLER=yes
 if /i "%~1"=="--clean" set CLEAN_BUILD=1
 if /i "%~1"=="--no-upx" set USE_UPX=0
 shift
@@ -62,7 +63,7 @@ if errorlevel 1 goto :error
 call :check_pyinstaller
 if errorlevel 1 goto :error
 
-if "%BUILD_INSTALLER%"=="1" (
+if "%SKIP_INSTALLER%"=="no" (
     call :check_inno_setup
     if errorlevel 1 goto :error
 )
@@ -135,13 +136,8 @@ if %SIZE_MB% GTR 30 (
 
 :: ===================================================================
 :: Step 2: Inno Setup - Build Installer
-:: ===================================================================
-if "%BUILD_INSTALLER%"=="0" (
-    echo.
-    echo [BUILD] Skipping installer build (--no-installer)
-    goto :success
-)
-
+:: Default: build installer. Only skip if SKIP_INSTALLER=yes.
+if "%SKIP_INSTALLER%"=="yes" goto :skip_installer
 echo.
 echo [BUILD] Step 2/2: Building installer with Inno Setup...
 echo [BUILD] Running: iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
@@ -154,6 +150,8 @@ if %ISCC_EXIT% neq 0 (
     echo.
     echo [ERROR] Inno Setup build failed with exit code %ISCC_EXIT%!
     echo [ERROR] Check that iscc is in PATH and the .iss source files exist.
+    goto :error
+)
     goto :error
 )
 
@@ -173,6 +171,11 @@ set /a INSTALLER_MB=%INSTALLER_SIZE% / 1048576
 set /a INSTALLER_KB_REMAINDER=(%INSTALLER_SIZE% %% 1048576) / 10486
 echo [BUILD] Installer size: %INSTALLER_MB%.%INSTALLER_KB_REMAINDER% MB
 
+goto :success
+
+:skip_installer
+echo.
+echo [BUILD] Skipping installer build (--no-installer)
 goto :success
 
 :: ===================================================================
@@ -247,7 +250,7 @@ echo ================================================================
 echo  BUILD SUCCESS
 echo ================================================================
 echo  EXE:       %DIST_DIR%\%APP_NAME%.exe
-if "%BUILD_INSTALLER%"=="1" (
+if "%SKIP_INSTALLER%"=="no" (
     echo  Installer:  %OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe
 )
 echo ================================================================
