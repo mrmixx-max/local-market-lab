@@ -21,7 +21,7 @@ setlocal enabledelayedexpansion
 
 :: Configuration
 set APP_NAME=LocalMarketLab
-set APP_VERSION=0.8.0
+set APP_VERSION=0.9.1
 set PROJECT_ROOT=%~dp0..\..
 
 :: Resolve absolute paths
