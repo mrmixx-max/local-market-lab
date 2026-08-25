@@ -1,3 +1,12 @@
+
+## [Unreleased] — Post-Release
+
+### Added (Dokumentation)
+- `docs/post-release-monitoring.md` — Monitoring-Zyklus und Status-Log
+- `docs/issue-triage.md` — Klassifikation, 10-Schritt-Bug-Prozess, v1.0.1-Regeln
+- `docs/p2-roadmap.md` — priorisierte P2-Planung (P2.4→P2.2→P2.5→P2.3→P2.1)
+- `docs/p2-architecture.md` — technische Entwürfe je P2-Item
+- `docs/known-limitations.md` — kompakte Stable-Limitationsübersicht
 # Changelog
 
 ## [1.0.0] — 2026-08-25 (Stable)
