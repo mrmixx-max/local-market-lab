@@ -33,3 +33,4 @@ windows/src/dist/
 exports/
 build/
 *.egg-info/
+pytest_out.txt
