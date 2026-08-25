@@ -152,8 +152,6 @@ if %ISCC_EXIT% neq 0 (
     echo [ERROR] Check that iscc is in PATH and the .iss source files exist.
     goto :error
 )
-    goto :error
-)
 
 :: Verify the installer was actually produced
 if not exist "%OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe" (
