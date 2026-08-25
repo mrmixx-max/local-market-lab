@@ -40,3 +40,15 @@ Saubere Windows-VM: nicht verfügbar.
 Installationsprüfung: lokaler Host.
 Aussagekraft: begrenzt.
 ```
+
+## Stable-Freigabe v1.0.0
+
+```text
+Externe RC-Rückmeldungen: keine eingegangen.
+Externe Installationen: nicht verifiziert.
+Aussagekraft: begrenzt.
+Freigabegrundlage: interne Tests, Asset-Audit und dokumentierter RC-Testplan.
+```
+
+Kein reproduzierter relevanter Bug nach rc.2 → kein rc.3, kein Code-Change,
+Stable-Vorbereitung eingeleitet (Version 1.0.0).

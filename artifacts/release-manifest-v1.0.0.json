@@ -1,0 +1,46 @@
+{
+  "release_version": "1.0.0",
+  "git_tag": "v1.0.0",
+  "git_commit": "133228339c6aa31f0b0dee592f59e38d7e5e3609",
+  "build_timestamp": "2026-08-25T00:08:58.583152+00:00",
+  "build_environment": {
+    "python_version": "3.11.15",
+    "platform": "Windows 11 (AMD64)",
+    "inno_setup_version": "6.7.3"
+  },
+  "artifacts": [
+    {
+      "name": "local_market_lab-1.0.0-py3-none-any.whl",
+      "sha256": "8d14c75d85fc4952a1b8f4e08fd78f1f6d360f40fec0ac86a57b13b8bc3fda94",
+      "size": 190303
+    },
+    {
+      "name": "local_market_lab-1.0.0.tar.gz",
+      "sha256": "d41b08cd4cd1dcb2944a2aee943c67a76d42668f169dd0051aa36887a3c69b42",
+      "size": 165386
+    },
+    {
+      "name": "LocalMarketLab.exe",
+      "sha256": "9fc661d30c4b87f7bde908497692043c834bc156e121e00adc8fade9213089f9",
+      "size": 42453186
+    },
+    {
+      "name": "LocalMarketLab-Setup-v1.0.0.exe",
+      "sha256": "b520d3c0a248b6754db591ec365760988cd905bc6e3716c59c07b61feceaa8b2",
+      "size": 43779149
+    }
+  ],
+  "tests": {
+    "passed": 459,
+    "failed": 0,
+    "skipped": 6
+  },
+  "known_limitations": [
+    "In-Process-Queue ohne automatische Wiederaufnahme nach API-Absturz; keine Hochverfuegbarkeit",
+    "Installer-Build nicht byte-identisch wegen Build-Zeitstempeln; SHA256 gilt pro Artefakt",
+    "PDF/Excel nicht byte-identisch; fachlicher result_hash ist die Identitaetsquelle",
+    "Audit-Hash-Kette noch offen",
+    "CV-Embargo noch offen",
+    "Generischer Rerun-Executor nur teilweise vorhanden (P1.4-Rerun-Engine funktioniert)"
+  ]
+}

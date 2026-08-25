@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0] — 2026-08-25 (Stable)
+
+> Erster stabiler Release. Enthält alle rc-Fixes, keine neuen Features
+> gegenüber rc.2. RC-Tags (v1.0.0-rc.1, v1.0.0-rc.2) bleiben unverändert.
+
+### Fixed (aus dem externen RC-Zyklus)
+- **High:** `lml backtest demo` crashte mit `MissingPriceError` für CASH —
+  CASH wird aus der Backtest-Symbolmenge ausgeschlossen; Regressionstests.
+- Wheel bündelt die Web-UI-Assets (`apps/web`).
+- SHA256SUMS.txt: echte Dateinamen, vollständig (inkl. Installer + Manifest).
+
+### Hinweise
+- Installer nicht byte-reproduzierbar (Build-Zeitstempel); SHA256 gilt pro Artefakt.
+- Externe Rückmeldungen: keine eingegangen; Aussagekraft begrenzt —
+  dokumentiert in docs/external-feedback.md und docs/release-audit-v1.0.md.
+
+
 ## [1.0.0-rc.2] — 2026-08-25 (Pre-Release)
 
 > Auslöser: reproduzierter High-Bug im RC-Zyklus (rc.2-Regel erfüllt).

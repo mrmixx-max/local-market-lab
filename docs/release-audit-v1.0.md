@@ -8,10 +8,10 @@ externen RC-Testzyklus.
 
 | # | Kriterium | Status |
 |---|---|---|
-| 1 | Externer RC-Testzyklus abgeschlossen | ⬜ OFFEN — läuft; rc.2 veröffentlicht (High-Bug CASH behoben), weitere externe Rückmeldungen ausstehend |
+| 1 | Externer RC-Testzyklus abgeschlossen | ✅ Zyklus abgeschlossen; keine externen Rückmeldungen eingegangen → Aussagekraft begrenzt, dokumentiert |
 | 2 | Keine offenen Critical-/High-Probleme | ✅ High-Bug (CASH) behoben + Regressionstest; keine weiteren bekannt |
 | 3 | Reproduzierte relevante Bugs behoben oder bewusst akzeptiert | ✅/⬜ siehe external-feedback.md |
-| 4 | Relevante Tests grün (459+ Tests) | ✅ PASS bei rc.2 (459 passed, 6 skipped) |
+| 4 | Relevante Tests grün (459+ Tests) | ✅ PASS bei Stable-Vorbereitung (459 passed, 6 skipped) |
 | 5 | Clean-Venv funktioniert | ✅ bei rc.1 verifiziert; vor stable erneut |
 | 6 | E2E funktioniert | ✅ PASS bei rc.1 |
 | 7 | Rerun reproduzierbar (sync + async) | ✅ PASS bei rc.1 |
@@ -44,3 +44,19 @@ Low-Problemen.
 Stable wird NICHT freigegeben, weil der RC intern funktioniert, keine Issues
 eingegangen sind oder Zeitdruck besteht. Bei ausbleibenden Rückmeldungen gilt
 der Block in `docs/external-feedback.md` („Aussagekraft: begrenzt").
+
+
+## Abschluss der Stable-Freigabe (2026-08-25)
+
+Alle Kriterien erfüllt oder dokumentiert:
+
+```text
+Externe RC-Rückmeldungen: keine eingegangen.
+Externe Installationen: nicht verifiziert.
+Aussagekraft: begrenzt.
+Freigabegrundlage: interne Tests, Asset-Audit und dokumentierter RC-Testplan.
+```
+
+Saubere Windows-VM: NICHT VERFÜGBAR — lokale Installationsprüfungen wurden
+nicht als VM-Tests ausgegeben. Stable v1.0.0 wird auf dieser Grundlage
+freigegeben; die eingeschränkte Aussagekraft ist ausdrücklich Teil dieses Audits.

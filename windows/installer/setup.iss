@@ -12,9 +12,9 @@
 ; -------------------------------------------------------------------
 
 #define MyAppName "Local Market Lab"
-#define MyAppVersion "1.0.0.2"
-; 1.0.0rc2 → numerisch 1.0.0.2 (Windows-Versionsinfo braucht Zahlen)
-#define MyAppDisplayVersion "1.0.0-rc.2"
+#define MyAppVersion "1.0.0.0"
+; v1.0.0 stable (Windows-Versionsinfo braucht Zahlen)
+#define MyAppDisplayVersion "1.0.0"
 #define MyAppPublisher "Erik Gieske"
 #define MyAppURL "https://github.com/mrmixx-max/local-market-lab"
 #define MyAppExeName "LocalMarketLab.exe"

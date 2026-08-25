@@ -13,23 +13,18 @@ provider. There is no cloud, no account, no telemetry.
 
 ## Install
 
-> **v1.0.0-rc.2 note:** The Windows Installer is **not available in this RC**
-> (not reproducibly buildable — Inno Setup/ISCC missing in the release build
-> environment). Use the **portable EXE** (primary Windows artifact) or pip.
-> See `docs/v1.0-known-limitations.md`.
-
 ### Windows Installer
 
-`LocalMarketLab-Setup-v1.0.0.2.exe` from Releases — per-user install, no admin rights. **Not byte-reproducible** (Inno Setup embeds build timestamps); the published SHA256 applies to exactly this artifact.
+Download `LocalMarketLab-Setup-v1.0.0.exe` from the [Releases](https://github.com/mrmixx-max/local-market-lab/releases) page — per-user install (default `%LOCALAPPDATA%\Local Market Lab`), no admin rights required. **Note:** installer builds are not byte-reproducible (Inno Setup embeds build timestamps); the published SHA256 applies to exactly that artifact.
 
-### Portable Version (Recommended for RC)
+### Portable Version
 
-Download `LocalMarketLab.exe` from [Releases](https://github.com/mrmixx-max/local-market-lab/releases) — runs standalone, no installation and no Python required.
+Download `LocalMarketLab.exe` from Releases — runs standalone, no installation and no Python required.
 
 ### pip
 
 ```bash
-pip install local-market-lab==1.0.0rc2
+pip install local-market-lab==1.0.0
 ```
 
 Requires Python 3.10+.
