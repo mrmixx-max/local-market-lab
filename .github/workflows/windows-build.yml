@@ -111,7 +111,7 @@ jobs:
       - name: Check EXE size
         id: exe-size
         run: |
-          $exe = "windows\src\dist\LocalMarketLab.exe"
+          $exe = Join-Path $env:GITHUB_WORKSPACE "windows\src\dist\LocalMarketLab.exe"
           $size = (Get-Item $exe).Length
           $sizeMB = [math]::Round($size / 1MB, 2)
           Write-Host "EXE size: ${sizeMB} MB"
@@ -125,7 +125,7 @@ jobs:
       - name: Check Installer size
         id: installer-size
         run: |
-          $installer = Join-Path $PSScriptRoot "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          $installer = Join-Path $env:GITHUB_WORKSPACE "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
           Write-Host "Looking for installer at: $installer"
           if (-not (Test-Path $installer)) {
             Write-Host "Directory contents of windows\installer\output:"
@@ -141,8 +141,8 @@ jobs:
 
       - name: Generate checksums
         run: |
-          $exe = "windows\src\dist\LocalMarketLab.exe"
-          $installer = "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          $exe = Join-Path $env:GITHUB_WORKSPACE "windows\src\dist\LocalMarketLab.exe"
+          $installer = Join-Path $env:GITHUB_WORKSPACE "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
           Get-FileHash $exe -Algorithm SHA256 | Select-Object Hash, Path | Format-Table -AutoSize
           Get-FileHash $installer -Algorithm SHA256 | Select-Object Hash, Path | Format-Table -AutoSize
           # Save checksums to file
