@@ -125,7 +125,14 @@ jobs:
       - name: Check Installer size
         id: installer-size
         run: |
-          $installer = "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          $installer = Join-Path $PSScriptRoot "windows\installer\output\LocalMarketLab-Setup-v${{ env.APP_VERSION }}.exe"
+          Write-Host "Looking for installer at: $installer"
+          if (-not (Test-Path $installer)) {
+            Write-Host "Directory contents of windows\installer\output:"
+            Get-ChildItem "windows\installer\output" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $($_.Name) ($($_.Length) bytes)" }
+            Write-Error "Installer EXE not found at $installer"
+            exit 1
+          }
           $size = (Get-Item $installer).Length
           $sizeMB = [math]::Round($size / 1MB, 2)
           Write-Host "Installer size: ${sizeMB} MB"
