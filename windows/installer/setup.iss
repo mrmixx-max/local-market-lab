@@ -174,3 +174,5 @@ begin
     mbConfirmation, MB_YESNO or MB_DEFBUTTON2);
   Result := (Res = IDYES);
 end;
+
+end.
