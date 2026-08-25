@@ -144,13 +144,23 @@ if "%BUILD_INSTALLER%"=="0" (
 
 echo.
 echo [BUILD] Step 2/2: Building installer with Inno Setup...
+echo [BUILD] Running: iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
 echo.
 
 iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
+set ISCC_EXIT=%errorlevel%
 
-if errorlevel 1 (
+if %ISCC_EXIT% neq 0 (
     echo.
-    echo [ERROR] Inno Setup build failed!
+    echo [ERROR] Inno Setup build failed with exit code %ISCC_EXIT%!
+    echo [ERROR] Check that iscc is in PATH and the .iss source files exist.
+    goto :error
+)
+
+:: Verify the installer was actually produced
+if not exist "%OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe" (
+    echo.
+    echo [ERROR] iscc reported success but installer EXE not found at %OUTPUT_DIR%\LocalMarketLab-Setup-v%APP_VERSION%.exe
     goto :error
 )
 
