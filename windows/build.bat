@@ -1,6 +1,6 @@
 @echo off
 :: ===================================================================
-:: Local Market Lab — Windows Build Script
+:: Local Market Lab - Windows Build Script
 :: ===================================================================
 :: Chains: PyInstaller -> Inno Setup Compiler
 :: Output: windows/output/LocalMarketLab-Setup-v0.8.0.exe
@@ -49,7 +49,7 @@ goto :parse_args
 :main
 echo.
 echo ================================================================
-echo  Local Market Lab v%APP_VERSION% — Windows Build
+echo  Local Market Lab v%APP_VERSION% - Windows Build
 echo ================================================================
 echo.
 
@@ -86,7 +86,7 @@ if "%CLEAN_BUILD%"=="1" (
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 :: ===================================================================
-:: Step 1: PyInstaller — Build EXE
+:: Step 1: PyInstaller - Build EXE
 :: ===================================================================
 echo.
 echo [BUILD] Step 1/2: Building %APP_NAME%.exe with PyInstaller...
@@ -132,7 +132,7 @@ if %SIZE_MB% GTR 30 (
 )
 
 :: ===================================================================
-:: Step 2: Inno Setup — Build Installer
+:: Step 2: Inno Setup - Build Installer
 :: ===================================================================
 if "%BUILD_INSTALLER%"=="0" (
     echo.
