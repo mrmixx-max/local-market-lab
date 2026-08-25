@@ -108,7 +108,7 @@ async def state(game_id: str, game=Depends(get_game)):
     summary="Get end-game summary with full stats",
 )
 async def game_summary(game_id: str, game=Depends(get_game)):
-    """Return the end-game summary (total_return, cagr, max_drawdown, sharpe, sortino, num_trades, win_rate)."""
+    """Return the end-game summary (total_return, cagr, max_drawdown, sharpe, sortino, num_trades, win_rate)."""  # noqa: E501
     try:
         s = game.get_state(game_id)
     except KeyError:

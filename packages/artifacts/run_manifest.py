@@ -142,7 +142,7 @@ def build_run_manifest(
         }
 
     env_hash, deps = _env_hash()
-    mid = f"man_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
+    mid = f"man_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"  # noqa: E501
     run_id = f"run_{uuid.uuid4().hex[:12]}"
 
     manifest = {

@@ -1,10 +1,9 @@
-"""Tests for data quality edge cases: missing values, duplicates, timezones, weekends, incomplete series."""
+"""Tests for data quality edge cases: missing values, duplicates, timezones, weekends, incomplete series."""  # noqa: E501
 
 from __future__ import annotations
 
 from datetime import date, timedelta
 
-import pytest
 
 from packages.domain.entities import PriceBar, PriceSeries
 from packages.quality.checks import (

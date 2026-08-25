@@ -416,9 +416,9 @@ class TestTransformer:
         mask = causal_attention_mask(5)
         assert mask.shape == (5, 5)
         # upper triangular
-        assert mask[0, 0] == False
-        assert mask[0, 1] == True
-        assert mask[1, 0] == False
+        assert mask[0, 0] is np.False_ or not mask[0, 0]
+        assert bool(mask[0, 1])
+        assert not mask[1, 0]
 
 
 # ===========================================================================

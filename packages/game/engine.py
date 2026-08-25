@@ -351,7 +351,7 @@ class TradingGame:
         return total_ret, vol, mdd, sharpe, bench
 
     def _compute_summary(self, game: GameState) -> dict:
-        """Produce end-game summary: {total_return, cagr, max_drawdown, sharpe, sortino, num_trades, win_rate}."""
+        """Produce end-game summary: {total_return, cagr, max_drawdown, sharpe, sortino, num_trades, win_rate}."""  # noqa: E501
         values = self._equity(game)
         if len(values) < 2:
             return {

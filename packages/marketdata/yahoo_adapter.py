@@ -14,10 +14,10 @@ from datetime import date
 
 from packages.domain.entities import PriceBar, PriceSeries
 
-from .base_adapter import (
+from .base_adapter import (  # noqa: F401
     AdapterError,
     BaseAdapter,
-    RateLimitError,  # noqa: F401  (re-exported for API compat)
+    RateLimitError,  # re-exported for API compat
     detect_currency,
 )
 

@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import time
-from pathlib import Path
-
-import pytest
 
 from packages.marketdata.cache import MarketDataCache
 
@@ -129,7 +125,7 @@ class TestProviderErrors:
         conn.close()
         # Should not crash — returns None or raises gracefully
         try:
-            result = cache.get("AAPL", "1d", "yahoo")
+            cache.get("AAPL", "1d", "yahoo")
             # either None or exception is acceptable
         except (ValueError, Exception):
             pass  # acceptable — corruption detected

@@ -106,25 +106,25 @@ async def optimize_prompt(payload: dict):
     style = payload.get("style", "concise")
 
     templates = {
-        "paper-trading coach": f"""You are an AI trading coach for a paper-trading simulator. Your role:
+        "paper-trading coach": f"""You are an AI trading coach for a paper-trading simulator. Your role:  # noqa: E501
 - Analyze portfolio positions, risk metrics, and trade history the user provides.
-- Explain concepts like Sharpe ratio, max drawdown, position sizing, and diversification in plain language.
-- When the user describes a trade idea, evaluate it on risk/reward, position size relative to portfolio, and correlation with existing holdings — NOT on whether you think the price will go up or down.
-- If the user asks "will X go up?", answer: "I don't predict prices. Instead, let's look at the risk if you're wrong."
+- Explain concepts like Sharpe ratio, max drawdown, position sizing, and diversification in plain language.  # noqa: E501
+- When the user describes a trade idea, evaluate it on risk/reward, position size relative to portfolio, and correlation with existing holdings — NOT on whether you think the price will go up or down.  # noqa: E501
+- If the user asks "will X go up?", answer: "I don't predict prices. Instead, let's look at the risk if you're wrong."  # noqa: E501
 - Be {style}. Use bullet points. Keep responses under 200 words unless asked for depth.
 - Remind the user that paper-trading results do not guarantee live-trading outcomes.""",
         "strategy explainer": f"""You are a quantitative strategy explainer. Your role:
-- Given a strategy description, break it into: (1) signal logic, (2) execution rules, (3) risk controls, (4) known failure modes.
-- Always stress-test the strategy against: high-volatility regimes, low-liquidity environments, and black-swan events.
+- Given a strategy description, break it into: (1) signal logic, (2) execution rules, (3) risk controls, (4) known failure modes.  # noqa: E501
+- Always stress-test the strategy against: high-volatility regimes, low-liquidity environments, and black-swan events.  # noqa: E501
 - If a strategy lacks an explicit stop-loss or position limit, call that out immediately.
 - Use precise language. {style} delivery.
 - You do NOT predict whether a strategy will be profitable in the future.""",
         "risk auditor": f"""You are a portfolio risk auditor. Your role:
-- Given a portfolio composition (list of positions with weights), identify: concentration risk, sector/currency exposure, tail-risk contributions.
-- Flag any single position above 10% of total, any sector above 30%, any currency exposure above 20%.
+- Given a portfolio composition (list of positions with weights), identify: concentration risk, sector/currency exposure, tail-risk contributions.  # noqa: E501
+- Flag any single position above 10% of total, any sector above 30%, any currency exposure above 20%.  # noqa: E501
 - Suggest specific rebalancing moves (e.g., "reduce X from 15% to 8%, redistribute to Y and Z").
 - Tone: factual, direct, {style}.
-- You do not provide buy/sell recommendations — only risk observations and rebalancing mechanics.""",
+- You do not provide buy/sell recommendations — only risk observations and rebalancing mechanics.""",  # noqa: E501
     }
 
     prompt = templates.get(goal, templates["paper-trading coach"])
@@ -137,8 +137,8 @@ async def optimize_prompt(payload: dict):
         "tips": [
             "Keep system prompt under 1000 chars for faster CPU inference.",
             "Use temperature 0.3-0.5 for analysis, 0.6-0.8 for creative strategy brainstorming.",
-            "If the model goes off-topic, add: 'Stay strictly on the topic of risk management and execution.'",
-            "For Ollama models: include a one-shot example in the system prompt for better format adherence.",
-            "If using a small model (<7B), keep prompts under 500 chars and ask for shorter outputs.",
+            "If the model goes off-topic, add: 'Stay strictly on the topic of risk management and execution.'",  # noqa: E501
+            "For Ollama models: include a one-shot example in the system prompt for better format adherence.",  # noqa: E501
+            "If using a small model (<7B), keep prompts under 500 chars and ask for shorter outputs.",  # noqa: E501
         ],
     }

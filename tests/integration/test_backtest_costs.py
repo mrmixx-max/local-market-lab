@@ -16,7 +16,6 @@ application precisely.
 
 from __future__ import annotations
 
-import pytest
 
 from packages.backtest.engine import (
     Assumptions,

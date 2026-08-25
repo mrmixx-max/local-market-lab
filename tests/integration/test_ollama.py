@@ -3,9 +3,8 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from packages.ollama.client import OllamaClient, OllamaModel
+from packages.ollama.client import OllamaClient
 
 
 def _mock_response(data: dict):

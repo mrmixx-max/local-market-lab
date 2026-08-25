@@ -1,6 +1,5 @@
 """Unit tests for pure technical indicator functions."""
 
-import math
 import pytest
 
 from packages.marketdata.indicators import bollinger, ema, macd, rsi, sma
@@ -125,9 +124,9 @@ class TestBollinger:
         data = [100.0 + i * 0.1 for i in range(30)]
         result = bollinger(data, period=20, std_dev=2.0)
         vals = result["values"]
-        for l, m in zip(vals["lower"], vals["middle"]):
-            if l is not None and m is not None:
-                assert l <= m
+        for lo, mid in zip(vals["lower"], vals["middle"]):
+            if lo is not None and mid is not None:
+                assert lo <= mid
 
     def test_invalid_period(self):
         with pytest.raises(ValueError, match=">= 2"):

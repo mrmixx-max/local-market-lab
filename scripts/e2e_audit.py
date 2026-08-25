@@ -14,7 +14,6 @@ import json
 import os
 import sys
 import tempfile
-import uuid
 
 SEED = 42
 OUT = sys.argv[1] if len(sys.argv) > 1 else "e2e_result.json"

@@ -1,7 +1,6 @@
 """Integration tests for market data adapters with mocked HTTP."""
 
 import json
-import os
 import sys
 from unittest.mock import MagicMock, patch
 

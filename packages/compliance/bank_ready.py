@@ -98,7 +98,7 @@ class DataIntegrity:
             cs = self._tbl_cs(t)
             result[t] = cs
             self.conn.execute(
-                "INSERT OR REPLACE INTO table_checksums(table_name,checksum,computed_at) VALUES(?,?,?)",
+                "INSERT OR REPLACE INTO table_checksums(table_name,checksum,computed_at) VALUES(?,?,?)",  # noqa: E501
                 (t, cs, _utc()),
             )
         self.conn.commit()

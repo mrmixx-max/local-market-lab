@@ -13,7 +13,6 @@ from packages.backtest.engine import (
     PeriodicRebalance,
     run_backtest,
 )
-from packages.metrics.risk import all_metrics
 from packages.ingest.csv_import import import_prices
 from packages.storage.workspace import Workspace
 

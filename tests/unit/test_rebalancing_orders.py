@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from packages.portfolio.rebalancing import (
-    OrderProposal,
     RebalanceOrdersResult,
     suggest_rebalance_orders,
 )
@@ -32,7 +31,6 @@ class TestMinOrderSize:
         assert any(p.below_minimum for p in res.proposals)
 
     def test_above_minimum_normal(self):
-        pos = _positions({"A": (0, 1.0)})  # buy needed
         # total value = 0 + nothing; use cash to create weight
         res = suggest_rebalance_orders(
             _positions({"A": (0, 10.0), "B": (0, 10.0)}),
@@ -68,7 +66,6 @@ class TestRounding:
     def test_integer_rounding_residual_note(self):
         # drift implies 10.4 fractional shares at price 10 -> 104 value
         # raw_qty 10.4 -> round to 10, residual 0.4*10 = 4.0
-        pos = _positions({"A": (0, 10.0)})
         # craft so target weight shift yields ~10.4 shares: keep simple via override
         res = suggest_rebalance_orders(
             _positions({"A": (0, 10.0), "B": (0, 10.0)}),

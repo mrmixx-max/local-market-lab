@@ -11,7 +11,7 @@ import tempfile
 import pytest
 
 from packages.artifacts.canonical import canonical, stable_hash
-from packages.artifacts.registry import save_manifest, load_manifest, list_manifests
+from packages.artifacts.registry import save_manifest, load_manifest
 from packages.artifacts.run_manifest import build_run_manifest, manifest_result_hash
 from packages.artifacts.rerun import rerun_manifest, DriftError
 
@@ -94,7 +94,8 @@ class TestManifestStorage:
         loaded = load_manifest(m["manifest_id"])
         loaded["parameters"]["a"] = 999  # mutate a normal field
         # Keep the ORIGINAL (correct) digest so the tampering is detected
-        import json, os
+        import json
+        import os
         from pathlib import Path
 
         d = Path(os.environ["LML_MANIFEST_DIR"])
@@ -108,7 +109,8 @@ class TestManifestStorage:
         save_manifest(m)
         loaded = load_manifest(m["manifest_id"])
         loaded["manifest_digest"] = "sha256:deadbeef"
-        import json, os
+        import json
+        import os
         from pathlib import Path
 
         d = Path(os.environ["LML_MANIFEST_DIR"])
@@ -127,7 +129,6 @@ class TestManifestStorage:
 
     def test_decimal_stability_in_digest(self):
         from decimal import Decimal
-        from packages.artifacts.registry import manifest_digest_of
         from packages.artifacts.canonical import stable_hash
 
         assert stable_hash({"x": Decimal("1.50")}) == stable_hash(
@@ -135,7 +136,8 @@ class TestManifestStorage:
         )
 
     def test_missing_manifest_digest_legacy_ok(self):
-        import json, os
+        import json
+        import os
         from pathlib import Path
 
         m = _sample_manifest()

@@ -487,7 +487,7 @@ class TestOllamaEndpoints:
         mock_resp = MagicMock()
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.read.return_value = b'{"message": {"content": "Hi"}, "total_duration": 5000000000, "eval_count": 42}'
+        mock_resp.read.return_value = b'{"message": {"content": "Hi"}, "total_duration": 5000000000, "eval_count": 42}'  # noqa: E501
 
         with patch(
             "apps.api.ollama_routes.urllib.request.urlopen", return_value=mock_resp

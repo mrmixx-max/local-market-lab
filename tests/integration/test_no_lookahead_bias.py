@@ -168,7 +168,7 @@ class TestFeatureEngineeringNoLeakage:
         assert len(test_scaled) == 63
         # The key point: we used train stats, not test stats
         test_mean = sum(test) / len(test)
-        test_std = (sum((x - test_mean) ** 2 for x in test) / (len(test) - 1)) ** 0.5
+        (sum((x - test_mean) ** 2 for x in test) / (len(test) - 1)) ** 0.5
         # If we had used test stats, test_scaled would have mean=0, std=1
         # With train stats, it generally won't
         scaled_mean = sum(test_scaled) / len(test_scaled)

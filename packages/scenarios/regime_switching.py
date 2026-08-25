@@ -80,7 +80,7 @@ def detect_regime(returns, n_regimes: int = 3) -> dict:
     labels = np.argmax(resp, axis=1)
     order = np.argsort(mu)[::-1]  # Trend (höchster Mean) → Seitwärts → Volatil
     mapping = {int(old): int(new) for new, old in enumerate(order)}
-    labels = np.array([mapping[int(l)] for l in labels], dtype=int)
+    labels = np.array([mapping[int(v)] for v in labels], dtype=int)
     mu, sigma, pi = mu[order], sigma[order], pi[order]
     names = (
         ["Trend", "Seitwaerts", "Volatil"]

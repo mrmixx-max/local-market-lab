@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 
-import numpy as np
 import pytest
 
 from packages.reports.export import (
@@ -104,7 +103,7 @@ class TestPdfExport:
 
 class TestExcelExport:
     def test_excel_report_basic(self, dq):
-        from openpyxl import load_workbook
+        pass
 
         metrics = {"sharpe": 1.2, "cagr": 0.08}
         trades = [{"symbol": "TEST", "side": "buy", "qty": 10, "price": 100}]

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import tempfile
 
 os.environ["LML_DB_PATH"] = os.path.join(
@@ -29,7 +28,7 @@ try:
 
     seed_demo()
     record("demo-data", True)
-except Exception as e:
+except Exception:
     try:
         from packages.storage.workspace import Workspace
 

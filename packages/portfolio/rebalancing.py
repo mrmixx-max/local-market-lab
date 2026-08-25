@@ -217,7 +217,6 @@ def rebalance_from_valuation(
 import hashlib
 import json
 import math
-import os
 
 DISCLAIMER = (
     "Dies ist ein Analyseergebnis. Keine automatische Orderausführung, "

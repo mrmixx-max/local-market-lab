@@ -253,7 +253,7 @@ async def yahoo_fallback(symbol: str):
         raise HTTPException(400, f"invalid symbol format: {symbol!r}")
 
     timeout = int(os.environ.get("LML_YAHOO_TIMEOUT", "10"))
-    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"  # noqa: E501
     endpoints = [
         f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m",
         f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1m",
@@ -667,7 +667,6 @@ async def rebalance_orders(
     from packages.portfolio.engine import value_portfolio
     from packages.portfolio.rebalancing import (
         rebalance_orders_from_valuation,
-        suggest_rebalance_orders,
     )
     from packages.marketdata.fx import FxPolicy
 
@@ -759,38 +758,6 @@ async def rebalance_orders_explicit(payload: dict):
         "warnings": result.warnings,
         "proposals": [p.__dict__ for p in result.proposals],
         "disclaimer": result.disclaimer,
-    }
-    """Generate rebalancing proposals for a portfolio given target weights.
-
-    @experimental — NEVER executes trades. Only returns RebalancingProposal
-    suggestions with drift analysis and cost-benefit estimates.
-    """
-    from packages.portfolio.engine import value_portfolio
-    from packages.portfolio.rebalancing import rebalance_from_valuation
-    from packages.marketdata.fx import FxPolicy
-
-    if not payload.target_weights:
-        raise HTTPException(400, "target_weights required")
-
-    fx = FxPolicy()
-    for k, v in os.environ.items():
-        if k.startswith("LML_FX_"):
-            fx.set_rate(k[8:], float(v))
-    valued = value_portfolio(ws, name, fx)
-    result = rebalance_from_valuation(
-        valued,
-        payload.target_weights,
-        payload.threshold,
-        payload.transaction_cost_bps,
-    )
-    return {
-        "needs_rebalance": result.needs_rebalance,
-        "drift_threshold": result.drift_threshold,
-        "proposals": [p.__dict__ for p in result.proposals],
-        "total_estimated_cost": result.total_estimated_cost,
-        "tax_loss_opportunities": result.tax_loss_opportunities,
-        "summary": result.summary,
-        "disclaimer": "Suggestions only — no trades executed.",
     }
 
 

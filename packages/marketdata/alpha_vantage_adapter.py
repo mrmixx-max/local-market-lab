@@ -16,12 +16,13 @@ import os
 
 from packages.domain.entities import PriceBar
 
-from .base_adapter import (
+from .base_adapter import (  # noqa: F401
     AdapterError,
     BaseAdapter,
-    RateLimitError,
+    PriceSeries,
+    RateLimitError,  # noqa: F401  (re-exported for API compat)
     detect_currency,
-)  # noqa: F401
+)
 
 log = logging.getLogger(__name__)
 

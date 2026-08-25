@@ -90,13 +90,13 @@ def exp_smooth_forecast(
         trend = beta * (level - l_pre) + (1 - beta) * trend
     forecast = [level + (h + 1) * trend for h in range(horizon)]
     # historical smoothing error for band
-    l, t = data[0], (data[1] - data[0] if len(data) > 1 else 0.0)
+    level, t = data[0], (data[1] - data[0] if len(data) > 1 else 0.0)
     errs = []
     for v in data[1:]:
-        errs.append(v - (l + t))
-        lp = l
-        l = alpha * v + (1 - alpha) * (l + t)
-        t = beta * (l - lp) + (1 - beta) * t
+        errs.append(v - (level + t))
+        lp = level
+        level = alpha * v + (1 - alpha) * (level + t)
+        t = beta * (level - lp) + (1 - beta) * t
     sigma = math.sqrt(sum(e * e for e in errs) / max(1, len(errs))) if errs else 1.0
     return {
         "model": "exp_smooth",

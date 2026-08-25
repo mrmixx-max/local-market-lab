@@ -1,0 +1,12 @@
+[flake8]
+max-line-length = 100
+extend-ignore =
+    # whitespace before ':' — conflicts with black formatting
+    E203,
+    # module-level import not at top — deliberate FastAPI router pattern
+    E402,
+per-file-ignores =
+    # lambda assignment helpers in tests/scripts are conventional
+    tests/*:E731
+    scripts/*:E731
+exclude = .venv,.git,__pycache__,chroma_db,output,node_modules,dist,build

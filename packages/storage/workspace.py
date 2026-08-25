@@ -116,8 +116,10 @@ class Workspace:
     # ---------- transactions ----------
     def add_transaction(self, t: dict) -> int:
         cur = self.conn.execute(
-            """INSERT INTO transactions(portfolio,symbol,txn_type,date,quantity,price,fees,currency,note)
-               VALUES(:portfolio,:symbol,:txn_type,:date,:quantity,:price,:fees,:currency,:note)""",
+            "INSERT INTO transactions(portfolio,symbol,txn_type,date,"
+            "quantity,price,fees,currency,note)"
+            " VALUES(:portfolio,:symbol,:txn_type,:date,:quantity,"
+            ":price,:fees,:currency,:note)",
             t,
         )
         self.conn.commit()

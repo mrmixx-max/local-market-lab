@@ -84,10 +84,10 @@ def build_positions(
 
 
 def _avg_cost(p: Position) -> float:
-    total_q = sum(l.quantity for l in p.lots)
+    total_q = sum(lot.quantity for lot in p.lots)
     if total_q <= 0:
         return 0.0
-    return sum(l.quantity * l.price for l in p.lots) / total_q
+    return sum(lot.quantity * lot.price for lot in p.lots) / total_q
 
 
 def _consume_lots(p: Position, qty: float) -> None:
@@ -138,7 +138,7 @@ def value_portfolio(
         cur = ws.instrument_currency(sym)
 
         value_local = p.quantity * last_close
-        cost_local = sum(l.quantity * l.price for l in p.lots)
+        cost_local = sum(lot.quantity * lot.price for lot in p.lots)
         value_rep = fx.convert(value_local, cur)
         cost_rep = fx.convert(cost_local, cur)
         if value_rep is None or cost_rep is None:

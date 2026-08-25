@@ -7,9 +7,8 @@ import pytest
 from packages.storage.workspace import Workspace
 from packages.portfolio.engine import build_positions, value_portfolio
 from packages.marketdata.fx import FxPolicy
-from packages.ingest.csv_import import import_prices, import_transactions
+from packages.ingest.csv_import import import_prices
 from pathlib import Path
-import tempfile
 
 
 @pytest.fixture

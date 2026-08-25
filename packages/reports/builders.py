@@ -54,7 +54,7 @@ def backtest_report(result: dict, manifest: dict) -> str:
         "",
         f"- Artifact: `{manifest['artifact_id']}` · created {manifest['created_at'][:10]}",
         f"- Symbols: {', '.join(result['symbols'])}",
-        f"- Period: {result['dates'][0]} → {result['dates'][-1]} ({len(result['dates'])-1} trading days)",
+        f"- Period: {result['dates'][0]} → {result['dates'][-1]} ({len(result['dates'])-1} trading days)",  # noqa: E501
         "",
         "## Assumptions (explicit)",
         "",

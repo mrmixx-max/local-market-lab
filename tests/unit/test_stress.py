@@ -10,7 +10,6 @@ import pytest
 
 from packages.scenarios.stress import (
     HISTORICAL_CRISES,
-    HYPOTHETICAL_SCENARIOS,
     available_scenarios,
     monte_carlo_fat_tail,
     run_historical_stress,

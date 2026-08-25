@@ -8,14 +8,13 @@ import sys
 import numpy as np
 import pyqtgraph as pg
 import requests
-from PyQt6.QtCore import Qt, QTimer, QTime
-from PyQt6.QtGui import QColor, QIcon, QPen
+from PyQt6.QtCore import QTimer, QTime
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
     QDoubleSpinBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -588,7 +587,7 @@ class MainWindow(QMainWindow):
             return
         self.mk_chart.clear()
         closes = [b["close"] for b in bars]
-        dates = list(range(len(closes)))
+        list(range(len(closes)))
         # Candlesticks
         for i, bar in enumerate(bars):
             o, h, l, c = bar["open"], bar["high"], bar["low"], bar["close"]
