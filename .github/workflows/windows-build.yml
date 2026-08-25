@@ -98,7 +98,8 @@ jobs:
           python --version
           pyinstaller --version
           upx --version
-          iscc /? | Select-Object -First 1
+          cmd /c "iscc /? >nul 2>&1 & exit /b 0"
+          Write-Host "Inno Setup present (iscc resolved)"
         shell: powershell
 
       - name: Build EXE + Installer
