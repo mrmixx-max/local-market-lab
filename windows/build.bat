@@ -31,7 +31,9 @@ set BUILD_SPEC=%SRC_DIR%src\build.spec
 set ISS_SCRIPT=%SRC_DIR%installer\setup.iss
 set OUTPUT_DIR=%SRC_DIR%installer\output
 set DIST_DIR=%SRC_DIR%src\dist
-set INNO_SETUP_DIR=C:\Program Files (x86)\Inno Setup 6
+set INNO_SETUP_DIR=%ProgramFiles(x86)%\Inno Setup 6
+:: escaped form for use inside echo/if blocks (parentheses break cmd parsing)
+set INNO_SETUP_DIR_ESC=C:\Program Files ^(x86^)\Inno Setup 6
 set UPX_DIR=
 set BUILD_INSTALLER=1
 set CLEAN_BUILD=0
@@ -174,7 +176,7 @@ if errorlevel 1 (
     echo [ERROR] Install Python 3.10+ from https://www.python.org/downloads/
     exit /b 1
 )
-for /f "tokens=*" %%v in ('python --version') echo [CHECK] %%v
+for /f "delims=" %%v in ('python --version') do echo [CHECK] %%v
 exit /b 0
 
 :check_pyinstaller
@@ -184,20 +186,20 @@ if errorlevel 1 (
     echo [ERROR] Install with: pip install pyinstaller
     exit /b 1
 )
-for /f "tokens=*" %%v in ('pyinstaller --version') echo [CHECK] PyInstaller %%v
+for /f "delims=" %%v in ('pyinstaller --version') do echo [CHECK] PyInstaller %%v
 exit /b 0
 
 :check_inno_setup
 :: Check if ISCC is already in PATH
 where iscc >nul 2>&1
 if not errorlevel 1 (
-    for /f "tokens=*" %%v in ('iscc /? 2^>nul ^| findstr "Inno Setup"') echo [CHECK] %%v
+    for /f "delims=" %%v in ('iscc /? 2^>nul ^| findstr "Inno Setup"') do echo [CHECK] %%v
     exit /b 0
 )
 :: Check default install location
 if exist "%INNO_SETUP_DIR%\ISCC.exe" (
     set "PATH=%PATH%;%INNO_SETUP_DIR%"
-    echo [CHECK] Inno Setup 6 found at %INNO_SETUP_DIR%
+    call :safe_echo Inno Setup 6 found at "%INNO_SETUP_DIR%"
     exit /b 0
 )
 echo [ERROR] Inno Setup 6 not found!
@@ -207,7 +209,7 @@ exit /b 1
 :check_upx
 where upx >nul 2>&1
 if not errorlevel 1 (
-    for /f "tokens=*" %%v in ('upx --version 2^>nul ^| findstr "UPX"') echo [CHECK] %%v
+    for /f "delims=" %%v in ('upx --version 2^>nul ^| findstr "UPX"') do echo [CHECK] %%v
     exit /b 0
 )
 :: Check common UPX locations
@@ -249,3 +251,9 @@ echo  BUILD FAILED
 echo ================================================================
 echo.
 exit /b 1
+
+:: Safely echo a string that may contain parentheses (e.g. "Program Files (x86)")
+:: without breaking cmd.exe block parsing.
+:safe_echo
+echo [CHECK] %*
+goto :eof
