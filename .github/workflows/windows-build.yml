@@ -105,7 +105,7 @@ jobs:
       - name: Build EXE + Installer
         run: |
           cd windows
-          .\build.bat --clean
+          .\build.bat
         shell: cmd
 
       - name: Check EXE size
