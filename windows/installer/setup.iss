@@ -61,8 +61,8 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 
 ; Architecture — 64-bit only
-ArchitecturesInstallIn64bitMode=x64compatible
-ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64bitMode=x64
+ArchitecturesAllowed=x64
 
 ; Version info
 VersionInfoVersion={#MyAppVersion}
