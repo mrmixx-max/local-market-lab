@@ -143,7 +143,7 @@ echo [BUILD] Step 2/2: Building installer with Inno Setup...
 echo [BUILD] Running: iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
 echo.
 
-iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%"
+iscc "%ISS_SCRIPT%" /O"%OUTPUT_DIR%" /F"LocalMarketLab-Setup-v%APP_VERSION%" 2>&1 | findstr /V "Inno Setup 6 Command-Line" 
 set ISCC_EXIT=%errorlevel%
 
 if %ISCC_EXIT% neq 0 (
