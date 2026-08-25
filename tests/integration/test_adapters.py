@@ -1,4 +1,5 @@
 """Integration tests for market data adapters with mocked HTTP."""
+
 import json
 import os
 import sys
@@ -96,6 +97,7 @@ class TestYahooAdapter:
         saved = sys.modules.pop("yfinance", None)
 
         import builtins
+
         real_import = builtins.__import__
 
         def fake_import(name, *args, **kwargs):

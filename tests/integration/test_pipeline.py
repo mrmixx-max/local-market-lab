@@ -1,10 +1,18 @@
 """Scenario + backtest integration — seeded determinism + replay."""
+
 import pytest
 
-from packages.scenarios.engine import (block_bootstrap, historical_replay,
-                                       monte_carlo_iid)
-from packages.backtest.engine import (Assumptions, BuyAndHold,
-                                       PeriodicRebalance, run_backtest)
+from packages.scenarios.engine import (
+    block_bootstrap,
+    historical_replay,
+    monte_carlo_iid,
+)
+from packages.backtest.engine import (
+    Assumptions,
+    BuyAndHold,
+    PeriodicRebalance,
+    run_backtest,
+)
 from packages.metrics.risk import all_metrics
 from packages.ingest.csv_import import import_prices
 from packages.storage.workspace import Workspace
@@ -23,6 +31,7 @@ def ws(tmp_path):
 def _csv(path, symbol, n, drift, vol):
     import random
     from pathlib import Path
+
     rng = random.Random(hash(symbol) % 2**31)
     p = Path(path) / f"{symbol}.csv"
     px = 100.0
@@ -49,6 +58,7 @@ class TestScenarioDeterminism:
 class TestBacktest:
     def test_buy_and_hold_vs_rebalance(self, ws):
         from packages.marketdata.series import aligned_closes
+
         dates, prices = aligned_closes(ws, ["A", "B", "C"])
         bh = run_backtest(prices, BuyAndHold(), Assumptions())
         rb = run_backtest(prices, PeriodicRebalance(63), Assumptions())
@@ -66,6 +76,7 @@ class TestBacktest:
     def test_rebalance_generates_trades(self, ws):
         """Quarterly rebalance should execute at least one trade after t0."""
         from packages.marketdata.series import aligned_closes
+
         _, prices = aligned_closes(ws, ["A", "B", "C"])
         rb = run_backtest(prices, PeriodicRebalance(63), Assumptions())
         assert rb["trades"] > 0

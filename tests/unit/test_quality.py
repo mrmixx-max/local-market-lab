@@ -1,4 +1,5 @@
 """Tests for the data quality checks layer."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta

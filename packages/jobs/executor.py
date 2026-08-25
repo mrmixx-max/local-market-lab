@@ -1,4 +1,5 @@
 """Built-in job executors — thin wrappers around existing package APIs."""
+
 from __future__ import annotations
 
 import random
@@ -14,6 +15,7 @@ def register(kind: str):
     def deco(fn: ExecFn) -> ExecFn:
         REGISTRY[kind] = fn
         return fn
+
     return deco
 
 
@@ -29,6 +31,7 @@ def known_kinds() -> list[str]:
 # monte_carlo — wraps packages.scenarios.stress.monte_carlo_fat_tail
 # --------------------------------------------------------------------------
 
+
 @register("monte_carlo")
 def run_monte_carlo(params: dict, progress: ProgressFn) -> dict:
     from packages.scenarios.stress import monte_carlo_fat_tail
@@ -37,17 +40,21 @@ def run_monte_carlo(params: dict, progress: ProgressFn) -> dict:
     runs = int(params.get("runs", 1000))
     seed = int(params.get("seed", 42))
     progress(0.05)
-    res = monte_carlo_fat_tail(weights, runs=runs, seed=seed,
-                               horizon_days=int(params.get("horizon_days", 252)))
+    res = monte_carlo_fat_tail(
+        weights, runs=runs, seed=seed, horizon_days=int(params.get("horizon_days", 252))
+    )
     progress(1.0)
-    return {"metrics": {"p01": res["p01"], "p05": res.get("p05"),
-                        "p50": res.get("p50")},
-            "runs": runs, "seed": seed}
+    return {
+        "metrics": {"p01": res["p01"], "p05": res.get("p05"), "p50": res.get("p50")},
+        "runs": runs,
+        "seed": seed,
+    }
 
 
 # --------------------------------------------------------------------------
 # walk_forward — wraps packages.validation.walk_forward.walk_forward_backtest
 # --------------------------------------------------------------------------
+
 
 @register("walk_forward")
 def run_walk_forward(params: dict, progress: ProgressFn) -> dict:
@@ -57,19 +64,27 @@ def run_walk_forward(params: dict, progress: ProgressFn) -> dict:
     predict = params.get("predict") or (lambda tr, te: [1.0] * len(te))
     seed = int(params.get("seed", 42))
     progress(0.05)
-    r = walk_forward_backtest(prices, predict,
-                              train_window=params.get("train_window", 200),
-                              test_window=params.get("test_window", 50),
-                              step=params.get("step", 25), seed=seed)
+    r = walk_forward_backtest(
+        prices,
+        predict,
+        train_window=params.get("train_window", 200),
+        test_window=params.get("test_window", 50),
+        step=params.get("step", 25),
+        seed=seed,
+    )
     s = r.summary()
     progress(1.0)
-    return {"summary": {k: s[k] for k in ("n_folds", "oos_sharpe", "oos_mae", "seed")
-                        if k in s}}
+    return {
+        "summary": {
+            k: s[k] for k in ("n_folds", "oos_sharpe", "oos_mae", "seed") if k in s
+        }
+    }
 
 
 # --------------------------------------------------------------------------
 # tuning — wraps packages.validation.hyperparameter.hyperparameter_tune
 # --------------------------------------------------------------------------
+
 
 @register("tuning")
 def run_tuning(params: dict, progress: ProgressFn) -> dict:
@@ -84,17 +99,25 @@ def run_tuning(params: dict, progress: ProgressFn) -> dict:
         progress(min(0.95, done["n"] / total))
 
     r = hyperparameter_tune(
-        lambda tr, te, **p: [p.get("w", 1.0)] * len(te), params["prices"],
-        grid, n_trials=int(params.get("n_trials", len(grid))),
-        seed=int(params.get("seed", 42)), method=params.get("method", "grid"),
-        on_trial=cb if _supports_callback(hyperparameter_tune) else None)
+        lambda tr, te, **p: [p.get("w", 1.0)] * len(te),
+        params["prices"],
+        grid,
+        n_trials=int(params.get("n_trials", len(grid))),
+        seed=int(params.get("seed", 42)),
+        method=params.get("method", "grid"),
+        on_trial=cb if _supports_callback(hyperparameter_tune) else None,
+    )
     progress(1.0)
-    return {"best_params": r.best_params, "best_metric": r.best_metric,
-            "n_trials": r.n_trials}
+    return {
+        "best_params": r.best_params,
+        "best_metric": r.best_metric,
+        "n_trials": r.n_trials,
+    }
 
 
 def _supports_callback(fn) -> bool:
     import inspect
+
     return "on_trial" in inspect.signature(fn).parameters
 
 
@@ -102,10 +125,11 @@ def _supports_callback(fn) -> bool:
 # stress — historical + hypothetical scenarios
 # --------------------------------------------------------------------------
 
+
 @register("stress")
 def run_stress(params: dict, progress: ProgressFn) -> dict:
-    from packages.scenarios.stress import (HISTORICAL_CRISES,
-                                           run_historical_stress)
+    from packages.scenarios.stress import HISTORICAL_CRISES, run_historical_stress
+
     weights = params["weights"]
     seed = int(params.get("seed", 42))
     out = {}
@@ -121,6 +145,7 @@ def run_stress(params: dict, progress: ProgressFn) -> dict:
 # demo/sleep — for tests and UI development only; deterministic
 # --------------------------------------------------------------------------
 
+
 @register("demo_sleep")
 def run_demo_sleep(params: dict, progress: ProgressFn) -> dict:
     steps = int(params.get("steps", 10))
@@ -129,6 +154,7 @@ def run_demo_sleep(params: dict, progress: ProgressFn) -> dict:
     acc = 0.0
     for i in range(steps):
         import time as _t
+
         _t.sleep(delay)
         acc += rng.random()
         progress((i + 1) / steps)
@@ -153,9 +179,13 @@ def run_rerun(params: dict, progress: ProgressFn) -> dict:
     cur_env, _ = _env_hash()
     try:
         report = rerun_manifest(
-            manifest_id, executor, cur_ver, cur_env,
+            manifest_id,
+            executor,
+            cur_ver,
+            cur_env,
             allow_data_drift=params.get("allow_data_drift", False),
-            allow_environment_drift=params.get("allow_environment_drift", False))
+            allow_environment_drift=params.get("allow_environment_drift", False),
+        )
     except FileNotFoundError:
         raise ValueError(f"manifest {manifest_id} not found")
     except DriftError as exc:

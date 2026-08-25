@@ -3,6 +3,7 @@
 Pure numpy implementation. Results include run_id, data_hash, and splits_used
 to align with walk-forward validation (packages/domain/constants.py).
 """
+
 from __future__ import annotations
 
 import uuid
@@ -10,7 +11,11 @@ from typing import Callable
 
 import numpy as np
 
-from packages.domain.entities import ExportQuality, ExplainabilityResult, FeatureImportanceItem
+from packages.domain.entities import (
+    ExportQuality,
+    ExplainabilityResult,
+    FeatureImportanceItem,
+)
 
 from ._shared import _data_hash
 
@@ -49,8 +54,10 @@ def permutation_importance(
             imp[r, f] = perm_err - base_err
     means = imp.mean(axis=0)
     stds = imp.std(axis=0)
-    items = [FeatureImportanceItem(feature_names[i], float(means[i]), float(stds[i]))
-             for i in range(n_features)]
+    items = [
+        FeatureImportanceItem(feature_names[i], float(means[i]), float(stds[i]))
+        for i in range(n_features)
+    ]
     return ExplainabilityResult(
         run_id=str(uuid.uuid4())[:12],
         model=model_name,
@@ -104,14 +111,20 @@ def shapley_approx(
         "approximation": True,
         "method": "sampling_marginal_contributions",
         "n_samples_per_feature": n_samples,
-        "note": ("Approximation via random coalitions over a background sample. "
-                 "Not exact Shapley values. Descriptive attribution only — "
-                 "not causal effects."),
+        "note": (
+            "Approximation via random coalitions over a background sample. "
+            "Not exact Shapley values. Descriptive attribution only — "
+            "not causal effects."
+        ),
     }
 
 
-def _build_instance(instance: np.ndarray, background: np.ndarray,
-                    include: np.ndarray | set[int], exclude: int) -> np.ndarray:
+def _build_instance(
+    instance: np.ndarray,
+    background: np.ndarray,
+    include: np.ndarray | set[int],
+    exclude: int,
+) -> np.ndarray:
     """Build blended instance: features in `include` from `instance`, others from background."""
     n_bg = len(background)
     n = len(instance)

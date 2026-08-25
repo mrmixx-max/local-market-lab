@@ -4,6 +4,7 @@ Implements expanding-window walk-forward backtesting with configurable
 train/test sizes and step length. Results use unified ValidationResult
 format with data provenance tracking.
 """
+
 from __future__ import annotations
 
 import os
@@ -11,7 +12,6 @@ from dataclasses import dataclass, field
 
 from packages.domain.decorators import experimental
 from packages.metrics.risk import sharpe_ratio
-
 
 # ---------------------------------------------------------------------------
 # Configuration constants (override via .env)
@@ -28,6 +28,7 @@ DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
 @dataclass
 class WalkForwardFold:
     """Result of a single walk-forward fold."""
+
     fold: int
     train_start: int
     train_end: int
@@ -39,6 +40,7 @@ class WalkForwardFold:
 @dataclass
 class WalkForwardResult:
     """Aggregated walk-forward backtest result."""
+
     folds: list[WalkForwardFold]
     train_window: int
     test_window: int
@@ -72,7 +74,9 @@ class WalkForwardResult:
         }
 
 
-def _curve_from_returns(returns: list[float], start_value: float = 100.0) -> list[float]:
+def _curve_from_returns(
+    returns: list[float], start_value: float = 100.0
+) -> list[float]:
     """Build equity curve from return series."""
     curve = [start_value]
     for r in returns:
@@ -122,7 +126,7 @@ def walk_forward_backtest(
     i = train_window
     while i + test_window <= n:
         train_data = data[:i]
-        test_data = data[i:i + test_window]
+        test_data = data[i : i + test_window]
         signals = strategy_fn(train_data, test_data)
         if len(signals) != test_window:
             raise ValueError(
@@ -139,11 +143,20 @@ def walk_forward_backtest(
         except ValueError:
             sh = 0.0
         total_ret = curve[-1] / curve[0] - 1 if curve[0] != 0 else 0.0
-        folds.append(WalkForwardFold(
-            fold=pos, train_start=0, train_end=i,
-            test_start=i, test_end=i + test_window,
-            metrics={"sharpe": round(sh, 4), "return": round(total_ret, 4), "n_obs": test_window},
-        ))
+        folds.append(
+            WalkForwardFold(
+                fold=pos,
+                train_start=0,
+                train_end=i,
+                test_start=i,
+                test_end=i + test_window,
+                metrics={
+                    "sharpe": round(sh, 4),
+                    "return": round(total_ret, 4),
+                    "n_obs": test_window,
+                },
+            )
+        )
         i += step
         pos += 1
 
@@ -156,9 +169,11 @@ def walk_forward_backtest(
     all_pnl = []
     for f in folds:
         idx = f.test_start
-        tdata = data[idx:idx + (f.test_end - f.test_start)]
-        sigs = strategy_fn(data[:f.train_end], tdata)
-        trets = [tdata[j] / tdata[j - 1] - 1 if j > 0 else 0.0 for j in range(len(tdata))]
+        tdata = data[idx : idx + (f.test_end - f.test_start)]
+        sigs = strategy_fn(data[: f.train_end], tdata)
+        trets = [
+            tdata[j] / tdata[j - 1] - 1 if j > 0 else 0.0 for j in range(len(tdata))
+        ]
         all_pnl.extend(sigs[j] * trets[j] for j in range(len(tdata)))
     oos_curve = _curve_from_returns(all_pnl)
     try:
@@ -167,7 +182,13 @@ def walk_forward_backtest(
         oos_sharpe = 0.0
 
     return WalkForwardResult(
-        folds=folds, train_window=train_window, test_window=test_window,
-        step=step, n_folds=len(folds), avg_sharpe=avg_sharpe,
-        avg_return=avg_return, oos_sharpe=oos_sharpe, seed=seed,
+        folds=folds,
+        train_window=train_window,
+        test_window=test_window,
+        step=step,
+        n_folds=len(folds),
+        avg_sharpe=avg_sharpe,
+        avg_return=avg_return,
+        oos_sharpe=oos_sharpe,
+        seed=seed,
     )

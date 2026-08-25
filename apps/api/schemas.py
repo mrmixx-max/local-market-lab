@@ -3,6 +3,7 @@
 Every response model documents its shape for OpenAPI. All models are
 read-only (frozen) and compatible with the dict-based returns they replace.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -213,16 +214,23 @@ class ChatMessage(BaseModel):
 # ---------- stress / crisis ----------
 class StressRequest(BaseModel):
     """Request body for stress-test scenarios."""
-    scenario: str = Field(..., description="Scenario name (e.g. 2008_financial_crisis, crash_30pct)")
-    scenario_type: str | None = Field(default=None,
-                                       description="historical or hypothetical — auto-detected if not set")
-    positions: dict[str, float] = Field(default_factory=dict,
-                                         description="symbol -> weight fraction")
+
+    scenario: str = Field(
+        ..., description="Scenario name (e.g. 2008_financial_crisis, crash_30pct)"
+    )
+    scenario_type: str | None = Field(
+        default=None,
+        description="historical or hypothetical — auto-detected if not set",
+    )
+    positions: dict[str, float] = Field(
+        default_factory=dict, description="symbol -> weight fraction"
+    )
     seed: int = Field(default=42, description="Reproducibility seed")
 
 
 class StressOut(BaseModel):
     """Stress-test result — unified format with run_id, metrics, timeline."""
+
     run_id: str = ""
     scenario: str = ""
     seed: int = 42
@@ -235,7 +243,11 @@ class StressOut(BaseModel):
 
 class CrisisRequest(BaseModel):
     """Request body for crisis scenario analysis."""
-    crisis_type: str = Field(default="correlation_break", description="correlation_break, liquidity_crunch, sector_rotation")
+
+    crisis_type: str = Field(
+        default="correlation_break",
+        description="correlation_break, liquidity_crunch, sector_rotation",
+    )
     positions: dict[str, float] = Field(default_factory=dict)
     params: dict = Field(default_factory=dict)
 
@@ -243,6 +255,7 @@ class CrisisRequest(BaseModel):
 # ---------- rebalancing ----------
 class RebalanceRequest(BaseModel):
     """Request body for rebalancing proposals — NEVER executes trades."""
+
     target_weights: dict[str, float] = Field(default_factory=dict)
     threshold: float = Field(default=0.05, ge=0.001, le=0.5)
     transaction_cost_bps: float = Field(default=10.0, ge=0.0)

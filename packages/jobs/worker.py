@@ -1,4 +1,5 @@
 """In-process worker: pulls queued jobs, runs executors, honors cancellation."""
+
 from __future__ import annotations
 
 import logging
@@ -30,8 +31,9 @@ class Worker:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._run_loop,
-                                        name="lml-job-worker", daemon=True)
+        self._thread = threading.Thread(
+            target=self._run_loop, name="lml-job-worker", daemon=True
+        )
         self._thread.start()
 
     def stop(self, timeout: float = 5.0) -> None:
@@ -46,9 +48,11 @@ class Worker:
     def submit(self, kind: str, params: dict[str, Any]) -> Job:
         if get_executor(kind) is None:
             from .errors import UnknownJobKind
+
             raise UnknownJobKind(
                 f"unknown job kind {kind!r}; known: monte_carlo, walk_forward,"
-                " tuning, stress, demo_sleep")
+                " tuning, stress, demo_sleep"
+            )
         job = self.store.create(kind, params)
         log.info("job submitted %s kind=%s", job.id, kind)
         return job
@@ -75,15 +79,18 @@ class Worker:
             return job
         return job  # terminal state — no-op
 
-    def wait(self, job_id: str, timeout: float = 60.0,
-             poll: float = 0.1) -> Job | None:
+    def wait(self, job_id: str, timeout: float = 60.0, poll: float = 0.1) -> Job | None:
         """Block until job reaches a terminal status or timeout."""
         import time as _t
+
         deadline = _t.time() + timeout
         while _t.time() < deadline:
             job = self.store.get(job_id)
-            if job and job.status in (JobStatus.SUCCEEDED, JobStatus.FAILED,
-                                      JobStatus.CANCELLED):
+            if job and job.status in (
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            ):
                 return job
             _t.sleep(poll)
         return self.store.get(job_id)
@@ -101,8 +108,9 @@ class Worker:
     def _next_queued(self) -> Job | None:
         for job in reversed(self.store.list(limit=100)):  # oldest first
             if job.status == JobStatus.QUEUED:
-                t = self.store.transition(job.id, JobStatus.RUNNING,
-                                          expect=JobStatus.QUEUED)
+                t = self.store.transition(
+                    job.id, JobStatus.RUNNING, expect=JobStatus.QUEUED
+                )
                 return t
         return None
 
@@ -149,14 +157,17 @@ class Worker:
     def _persist_result(self, job_id: str, result: dict) -> None:
         """Store full result JSON next to the status DB (artifact reference)."""
         import json
+
         path = self.store.db_path.parent / "results"
         path.mkdir(parents=True, exist_ok=True)
-        (path / f"{job_id}.json").write_text(json.dumps(result, indent=1),
-                                             encoding="utf-8")
+        (path / f"{job_id}.json").write_text(
+            json.dumps(result, indent=1), encoding="utf-8"
+        )
 
 
 def _now() -> float:
     import time
+
     return time.time()
 
 

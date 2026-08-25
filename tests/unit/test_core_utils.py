@@ -1,4 +1,5 @@
 """Tests for core utilities: hashing, dates, money."""
+
 from __future__ import annotations
 
 import hashlib
@@ -9,10 +10,10 @@ import pytest
 
 from packages.core.hashing import sha256_file, sha256_obj
 
-
 # ---------------------------------------------------------------------------
 # sha256_obj tests
 # ---------------------------------------------------------------------------
+
 
 class TestSha256Obj:
     def test_stable_for_same_object(self):
@@ -66,6 +67,7 @@ class TestSha256Obj:
 # ---------------------------------------------------------------------------
 # sha256_file tests
 # ---------------------------------------------------------------------------
+
 
 class TestSha256File:
     def test_known_content(self, tmp_path):

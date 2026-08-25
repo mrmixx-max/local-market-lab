@@ -2,6 +2,7 @@
 
 float is forbidden for money in domain and ledger logic.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_EVEN, getcontext
@@ -32,7 +33,8 @@ class Money:
     def _check(self, other: "Money") -> None:
         if not isinstance(other, Money) or other.currency != self.currency:
             raise ValueError(
-                f"currency mismatch: {self.currency} vs {getattr(other,'currency',other)}")
+                f"currency mismatch: {self.currency} vs {getattr(other,'currency',other)}"
+            )
 
     def __add__(self, other: "Money") -> "Money":
         self._check(other)
@@ -44,7 +46,9 @@ class Money:
 
     def __mul__(self, factor: Union[int, Decimal]) -> "Money":
         if isinstance(factor, float):
-            raise TypeError("float multiplication on Money is forbidden; use Decimal or int")
+            raise TypeError(
+                "float multiplication on Money is forbidden; use Decimal or int"
+            )
         return Money(self.amount * Decimal(factor), self.currency)
 
     def __neg__(self) -> "Money":
@@ -57,8 +61,11 @@ class Money:
         return Money(self.amount * factor, self.currency)
 
     def __eq__(self, other) -> bool:
-        return (isinstance(other, Money) and self.amount == other.amount
-                and self.currency == other.currency)
+        return (
+            isinstance(other, Money)
+            and self.amount == other.amount
+            and self.currency == other.currency
+        )
 
     def __lt__(self, other: "Money") -> bool:
         self._check(other)

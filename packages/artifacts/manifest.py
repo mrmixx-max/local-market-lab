@@ -1,4 +1,5 @@
 """Artifacts — reproducibility manifests for every analysis run."""
+
 from __future__ import annotations
 
 import json
@@ -13,9 +14,14 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{uuid.uuid4().hex[:8]}"
 
 
-def build_manifest(kind: str, params: dict, assumptions: dict | None,
-                   seed: int | None, data_lineage: dict,
-                   app_version: str = "0.1.0") -> dict:
+def build_manifest(
+    kind: str,
+    params: dict,
+    assumptions: dict | None,
+    seed: int | None,
+    data_lineage: dict,
+    app_version: str = "0.1.0",
+) -> dict:
     """Manifest per concept: data hash + parameters + seed + code version +
     disclaimer profile. The manifest IS the reproducibility contract.
     """
@@ -35,8 +41,9 @@ def build_manifest(kind: str, params: dict, assumptions: dict | None,
         "seed": seed,
         "reporting_currency": data_lineage.get("reporting_currency", "EUR"),
         "disclaimer_profile": "research-only-v1",
-        "input_hash": sha256_obj({"params": params, "seed": seed,
-                                  "data": data_lineage}),
+        "input_hash": sha256_obj(
+            {"params": params, "seed": seed, "data": data_lineage}
+        ),
     }
 
 

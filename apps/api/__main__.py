@@ -1,4 +1,5 @@
 """API server entry point: `python -m apps.api` to start."""
+
 import os
 
 import uvicorn

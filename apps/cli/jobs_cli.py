@@ -9,6 +9,7 @@
 Exit codes: 0 on succeeded/OK; non-zero on failed/cancelled/timeout/not_found.
 No API keys, tokens, or portfolio contents are printed.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,8 +28,12 @@ def _client(api: str) -> JobsClient:
 
 
 _STATUS_COLOR = {
-    "queued": "dim", "running": "amber", "cancelling": "amber",
-    "cancelled": "red", "succeeded": "green", "failed": "red",
+    "queued": "dim",
+    "running": "amber",
+    "cancelling": "amber",
+    "cancelled": "red",
+    "succeeded": "green",
+    "failed": "red",
 }
 
 
@@ -49,12 +54,16 @@ def list_jobs(api: str = API_OPT, json_out: bool = JSON_OPT):
     if not jobs:
         typer.echo("no jobs")
         return
-    typer.echo(f"{'JOB_ID':<14} {'TYPE':<14} {'STATUS':<11} {'PROG':>6}  {'PHASE':<11} {'RT':>7}")
+    typer.echo(
+        f"{'JOB_ID':<14} {'TYPE':<14} {'STATUS':<11} {'PROG':>6}  {'PHASE':<11} {'RT':>7}"
+    )
     for j in jobs:
         rt = runtime_seconds(j) if isinstance(j, dict) else None
-        typer.echo(f"{str(j['job_id']):<14} {str(j['job_type']):<14} "
-                   f"{j['status']:<11} {j['progress']*100:>5.0f}%  "
-                   f"{j['phase']:<11} {str(rt):>7}")
+        typer.echo(
+            f"{str(j['job_id']):<14} {str(j['job_type']):<14} "
+            f"{j['status']:<11} {j['progress']*100:>5.0f}%  "
+            f"{j['phase']:<11} {str(rt):>7}"
+        )
 
 
 @jobs_app.command("status")
@@ -100,9 +109,11 @@ def cancel_job(job_id: str, api: str = API_OPT):
 
 
 @jobs_app.command("wait")
-def wait_job(job_id: str, timeout: float = typer.Option(300.0, "--timeout",
-                                                         help="Max seconds to wait."),
-             api: str = API_OPT):
+def wait_job(
+    job_id: str,
+    timeout: float = typer.Option(300.0, "--timeout", help="Max seconds to wait."),
+    api: str = API_OPT,
+):
     """Poll until terminal status. Exit 0 on succeeded; non-zero otherwise."""
     res = _client(api).wait(job_id, timeout=timeout)
     if not isinstance(res, dict) or "error" in res:
@@ -123,9 +134,13 @@ def wait_job(job_id: str, timeout: float = typer.Option(300.0, "--timeout",
 
 
 @jobs_app.command("artifact")
-def artifact_job(job_id: str, api: str = API_OPT,
-                open_file: bool = typer.Option(False, "--open",
-                                               help="Open artifact in default viewer.")):
+def artifact_job(
+    job_id: str,
+    api: str = API_OPT,
+    open_file: bool = typer.Option(
+        False, "--open", help="Open artifact in default viewer."
+    ),
+):
     """Fetch and print the result artifact of a SUCCEEDED job only."""
     job = _client(api).get(job_id)
     if not isinstance(job, dict) or "error" in job:
@@ -133,8 +148,11 @@ def artifact_job(job_id: str, api: str = API_OPT,
         typer.echo(f"error: {err}", err=True)
         raise typer.Exit(1)
     if job["status"] != "succeeded":
-        typer.echo(f"error: job {job_id} is '{job['status']}', not 'succeeded' "
-                   f"— no artifact available", err=True)
+        typer.echo(
+            f"error: job {job_id} is '{job['status']}', not 'succeeded' "
+            f"— no artifact available",
+            err=True,
+        )
         raise typer.Exit(5)
     result = job.get("result")
     if result is None:

@@ -1,4 +1,5 @@
 """Tests for the in-process job queue (v1.0 P1.1 + P1.3)."""
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ def system(tmp_path):
 class TestStateMachine:
     def test_valid_transitions(self):
         from packages.jobs.models import can_transition
+
         assert can_transition(JobStatus.QUEUED, JobStatus.RUNNING)
         assert can_transition(JobStatus.RUNNING, JobStatus.SUCCEEDED)
         assert not can_transition(JobStatus.SUCCEEDED, JobStatus.RUNNING)  # terminal
@@ -61,6 +63,7 @@ class TestExecution:
     def test_unknown_kind_rejected(self, system):
         _, worker = system
         from packages.jobs import UnknownJobKind
+
         with pytest.raises(UnknownJobKind):
             worker.submit("nuke_the_market", {})
 
@@ -139,13 +142,15 @@ class TestBuiltins:
 
     def test_monte_carlo_executor(self, system):
         store, worker = system
-        job = worker.submit("monte_carlo", {
-            "weights": {"IWDA": 1.0}, "runs": 200, "seed": 42,
-            "horizon_days": 63})
+        job = worker.submit(
+            "monte_carlo",
+            {"weights": {"IWDA": 1.0}, "runs": 200, "seed": 42, "horizon_days": 63},
+        )
         done = worker.wait(job.id, timeout=60)
         assert done.status == JobStatus.SUCCEEDED
-        payload = json.loads((store.db_path.parent / "results" / f"{job.id}.json")
-                             .read_text())
+        payload = json.loads(
+            (store.db_path.parent / "results" / f"{job.id}.json").read_text()
+        )
         assert "p01" in payload["metrics"]
 
     def test_stress_executor(self, system):
@@ -159,20 +164,24 @@ class TestBuiltins:
 # API endpoints (additive; sync paths untouched)
 # ---------------------------------------------------------------------------
 
+
 class TestJobApi:
     @pytest.fixture()
     def client(self, tmp_path, monkeypatch):
         from fastapi.testclient import TestClient
         from apps.api import main as api_main
+
         monkeypatch.setattr(
-            api_main.app.state, "jobs_db", str(tmp_path / "api_jobs.db"),
-            raising=False)
+            api_main.app.state, "jobs_db", str(tmp_path / "api_jobs.db"), raising=False
+        )
         api_main.app.state.jobs_db = str(tmp_path / "api_jobs.db")
         return TestClient(api_main.app)
 
     def test_full_cycle_via_api(self, client):
-        r = client.post("/api/v1/jobs", json={
-            "kind": "demo_sleep", "params": {"steps": 3, "delay": 0.01}})
+        r = client.post(
+            "/api/v1/jobs",
+            json={"kind": "demo_sleep", "params": {"steps": 3, "delay": 0.01}},
+        )
         assert r.status_code == 200
         job_id = r.json()["job_id"]
 
@@ -192,8 +201,10 @@ class TestJobApi:
         assert r.status_code == 400
 
     def test_cancel_via_api(self, client):
-        r = client.post("/api/v1/jobs", json={
-            "kind": "demo_sleep", "params": {"steps": 100, "delay": 0.05}})
+        r = client.post(
+            "/api/v1/jobs",
+            json={"kind": "demo_sleep", "params": {"steps": 100, "delay": 0.05}},
+        )
         job_id = r.json()["job_id"]
         time.sleep(0.2)  # let it start
         d = client.delete(f"/api/v1/jobs/{job_id}")

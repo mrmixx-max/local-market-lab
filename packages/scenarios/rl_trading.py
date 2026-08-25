@@ -2,6 +2,7 @@
 Algorithms: q_learning_trading, dqn_trading, policy_gradient, rl_forecast.
 Action space: {Buy, Sell, Hold}.  Reward: P&L per step.
 """
+
 from __future__ import annotations
 
 import random
@@ -25,13 +26,17 @@ def _disc(ret: float, n: int = 5, clip: float = 0.03) -> int:
 
 def _svec(t: int, pos: int, rets: np.ndarray) -> np.ndarray:
     """State vector: one-hot position(3) + normalised return + momentum."""
-    mom = np.mean(rets[max(0, t - 4):t + 1]) if t > 0 else 0.0
+    mom = np.mean(rets[max(0, t - 4) : t + 1]) if t > 0 else 0.0
     return np.array([float(i == pos) for i in range(3)] + [rets[t] * 10, mom * 10])
 
 
-def q_learning_trading(data: list[float], episodes: int = 500,
-                       alpha: float = 0.1, gamma: float = 0.95,
-                       epsilon: float = 0.1) -> dict:
+def q_learning_trading(
+    data: list[float],
+    episodes: int = 500,
+    alpha: float = 0.1,
+    gamma: float = 0.95,
+    epsilon: float = 0.1,
+) -> dict:
     """Tabular Q-Learning: state=(pos, market-bin), reward=P&L."""
     prices = np.array(data, dtype=float)
     rets = _returns(prices)
@@ -47,7 +52,11 @@ def q_learning_trading(data: list[float], episodes: int = 500,
         for t in range(n - 1):
             mkt = _disc(rets[t], nb)
             st = pos * nb + mkt
-            act = rng.randrange(N_ACT) if rng.random() < epsilon else int(np.argmax(Q[st]))
+            act = (
+                rng.randrange(N_ACT)
+                if rng.random() < epsilon
+                else int(np.argmax(Q[st]))
+            )
             new_pos = 1 if act == 0 else (2 if act == 1 else pos)
             r = (1 if new_pos == 1 else (-1 if new_pos == 2 else 0)) * rets[t + 1]
             ep_r += r
@@ -56,14 +65,16 @@ def q_learning_trading(data: list[float], episodes: int = 500,
             Q[st, act] += alpha * (r + gamma * np.max(Q[ns]) - Q[st, act])
             pos = new_pos
         rewards.append(ep_r)
-    return {"algorithm": "q_learning", "episodes": episodes,
-            "final_reward": round(rewards[-1], 4),
-            "avg_reward": round(sum(rewards) / len(rewards), 4),
-            "forecast": rl_forecast(data, min(30, n))}
+    return {
+        "algorithm": "q_learning",
+        "episodes": episodes,
+        "final_reward": round(rewards[-1], 4),
+        "avg_reward": round(sum(rewards) / len(rewards), 4),
+        "forecast": rl_forecast(data, min(30, n)),
+    }
 
 
-def dqn_trading(data: list[float], episodes: int = 500,
-                hidden_size: int = 64) -> dict:
+def dqn_trading(data: list[float], episodes: int = 500, hidden_size: int = 64) -> dict:
     """Deep Q-Network w/ experience replay + target network."""
     prices = np.array(data, dtype=float)
     rets = _returns(prices)
@@ -87,7 +98,11 @@ def dqn_trading(data: list[float], episodes: int = 500,
         pos, ep_r = random.randrange(3), 0.0
         for t in range(n - 1):
             s = _svec(t, pos, rets)
-            act = random.randrange(N_ACT) if random.random() < eps else int(np.argmax(fw(s, W1, b1, W2, b2)[0]))
+            act = (
+                random.randrange(N_ACT)
+                if random.random() < eps
+                else int(np.argmax(fw(s, W1, b1, W2, b2)[0]))
+            )
             new_pos = act if act < 2 else pos
             r = (1 if new_pos == 1 else (-1 if new_pos == 2 else 0)) * rets[t + 1]
             ep_r += r
@@ -100,15 +115,20 @@ def dqn_trading(data: list[float], episodes: int = 500,
                 dq = qp.copy()
                 dq[act] = 2 * (qp[act] - tgt)
                 dh = (dq @ W2.T) * (h > 0).astype(float)
-                W1 -= lr * np.outer(s, dh); b1 -= lr * dh
-                W2 -= lr * np.outer(h, dq); b2 -= lr * dq
+                W1 -= lr * np.outer(s, dh)
+                b1 -= lr * dh
+                W2 -= lr * np.outer(h, dq)
+                b2 -= lr * dq
         if ep % 50 == 0:
             W1t, b1t, W2t, b2t = W1.copy(), b1.copy(), W2.copy(), b2.copy()
         rewards.append(ep_r)
-    return {"algorithm": "dqn", "episodes": episodes,
-            "final_reward": round(rewards[-1], 4),
-            "avg_reward": round(sum(rewards) / len(rewards), 4),
-            "forecast": rl_forecast(data, min(30, n))}
+    return {
+        "algorithm": "dqn",
+        "episodes": episodes,
+        "final_reward": round(rewards[-1], 4),
+        "avg_reward": round(sum(rewards) / len(rewards), 4),
+        "forecast": rl_forecast(data, min(30, n)),
+    }
 
 
 def policy_gradient(data: list[float], episodes: int = 500) -> dict:
@@ -154,13 +174,18 @@ def policy_gradient(data: list[float], episodes: int = 500) -> dict:
             dlog[act] += 1.0
             dlog *= g
             dh = (dlog @ W2.T) * (h > 0).astype(float)
-            W1 += lr * np.outer(s, dh); b1 += lr * dh
-            W2 += lr * np.outer(h, dlog); b2 += lr * dlog
+            W1 += lr * np.outer(s, dh)
+            b1 += lr * dh
+            W2 += lr * np.outer(h, dlog)
+            b2 += lr * dlog
         rewards.append(sum(r for _, _, r in traj))
-    return {"algorithm": "policy_gradient", "episodes": episodes,
-            "final_reward": round(rewards[-1], 4),
-            "avg_reward": round(sum(rewards) / len(rewards), 4),
-            "forecast": rl_forecast(data, min(30, n))}
+    return {
+        "algorithm": "policy_gradient",
+        "episodes": episodes,
+        "final_reward": round(rewards[-1], 4),
+        "avg_reward": round(sum(rewards) / len(rewards), 4),
+        "forecast": rl_forecast(data, min(30, n)),
+    }
 
 
 def rl_forecast(data: list[float], horizon: int = 30) -> dict:
@@ -193,7 +218,9 @@ def rl_forecast(data: list[float], horizon: int = 30) -> dict:
         actions.append(ACTIONS[act])
         equity.append(equity[-1] * (1 + r))
         pos = new_pos
-    return {"actions": actions,
-            "equity_curve": [float(round(v, 4)) for v in equity],
-            "final_position": ACTIONS[pos] if pos < 2 else "Hold",
-            "horizon": h}
+    return {
+        "actions": actions,
+        "equity_curve": [float(round(v, 4)) for v in equity],
+        "final_position": ACTIONS[pos] if pos < 2 else "Hold",
+        "horizon": h,
+    }

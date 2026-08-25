@@ -2,6 +2,7 @@
 
 Prefix: /api/v1/ollama
 """
+
 from __future__ import annotations
 
 import json
@@ -16,6 +17,7 @@ ollama_router = APIRouter(prefix="/api/v1/ollama", tags=["ollama"])
 
 def _ollama_host() -> str:
     import os
+
     host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     if not host.startswith("http"):
         host = f"http://{host}"
@@ -33,12 +35,14 @@ async def list_models():
         data = r.json()
         models = []
         for m in data.get("models", []):
-            models.append({
-                "model": m.get("model") or m.get("name"),
-                "size_gb": round(m.get("size", 0) / 1e9, 1),
-                "parameter_size": m.get("details", {}).get("parameter_size", "?"),
-                "quantization": m.get("details", {}).get("quantization_level", "?"),
-            })
+            models.append(
+                {
+                    "model": m.get("model") or m.get("name"),
+                    "size_gb": round(m.get("size", 0) / 1e9, 1),
+                    "parameter_size": m.get("details", {}).get("parameter_size", "?"),
+                    "quantization": m.get("details", {}).get("quantization_level", "?"),
+                }
+            )
         return {"models": models, "host": _ollama_host()}
     except Exception as exc:
         return {"models": [], "host": _ollama_host(), "error": str(exc)}
@@ -109,14 +113,12 @@ async def optimize_prompt(payload: dict):
 - If the user asks "will X go up?", answer: "I don't predict prices. Instead, let's look at the risk if you're wrong."
 - Be {style}. Use bullet points. Keep responses under 200 words unless asked for depth.
 - Remind the user that paper-trading results do not guarantee live-trading outcomes.""",
-
         "strategy explainer": f"""You are a quantitative strategy explainer. Your role:
 - Given a strategy description, break it into: (1) signal logic, (2) execution rules, (3) risk controls, (4) known failure modes.
 - Always stress-test the strategy against: high-volatility regimes, low-liquidity environments, and black-swan events.
 - If a strategy lacks an explicit stop-loss or position limit, call that out immediately.
 - Use precise language. {style} delivery.
 - You do NOT predict whether a strategy will be profitable in the future.""",
-
         "risk auditor": f"""You are a portfolio risk auditor. Your role:
 - Given a portfolio composition (list of positions with weights), identify: concentration risk, sector/currency exposure, tail-risk contributions.
 - Flag any single position above 10% of total, any sector above 30%, any currency exposure above 20%.

@@ -6,6 +6,7 @@ Four functions:
   3. drift_detection           — concept-drift detection + weight reset
   4. online_forecast           — main entry point combining all three
 """
+
 from __future__ import annotations
 import numpy as np
 
@@ -54,7 +55,11 @@ def _momentum_forecast(d: np.ndarray, h: int) -> np.ndarray:
     return d[-1] + momentum * np.arange(1, h + 1, dtype=float)
 
 
-_MODEL_FUNCS = {"linear": _linear_forecast, "exp": _exp_forecast, "momentum": _momentum_forecast}
+_MODEL_FUNCS = {
+    "linear": _linear_forecast,
+    "exp": _exp_forecast,
+    "momentum": _momentum_forecast,
+}
 
 
 def online_weighted_ensemble(data, horizon=30, models=None) -> dict:
@@ -146,14 +151,17 @@ def drift_detection(data, window=63) -> dict:
         window = arr.size // 2
     if window < 5:
         return {
-            "drift_detected": False, "drift_score": 0.0,
-            "mean_score": 0.0, "var_score": 0.0,
-            "window": window, "reset_weights": False,
+            "drift_detected": False,
+            "drift_score": 0.0,
+            "mean_score": 0.0,
+            "var_score": 0.0,
+            "window": window,
+            "reset_weights": False,
             "mean_recent": round(float(np.mean(arr)), 4),
             "mean_historical": round(float(np.mean(arr)), 4),
         }
     recent = arr[-window:]
-    historical = arr[-2 * window:-window]
+    historical = arr[-2 * window : -window]
     # Mean component (t-test-like)
     mean_diff = abs(np.mean(recent) - np.mean(historical))
     pooled_std = np.sqrt((np.var(recent) + np.var(historical)) / 2.0)
@@ -182,7 +190,7 @@ def online_forecast(data, horizon=30) -> dict:
     """Full pipeline: drift detection → adaptive decay → weighted ensemble."""
     arr = _validate(data, horizon)
     drift = drift_detection(arr)
-    arr_used = arr[-max(10, drift["window"]):] if drift["drift_detected"] else arr
+    arr_used = arr[-max(10, drift["window"]) :] if drift["drift_detected"] else arr
     result = adaptive_decay(arr_used, horizon)
     result["drift"] = drift
     result["model"] = "online_forecast"

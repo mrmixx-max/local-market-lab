@@ -4,6 +4,7 @@ Configuration via environment variables:
   LML_CACHE_TTL_HOURS (default 24) — cache entry lifetime
   LML_CACHE_DB_PATH (default ~/.local-market-lab/cache/market.db)
 """
+
 from __future__ import annotations
 
 import json
@@ -79,8 +80,14 @@ class MarketDataCache:
                 return None
             return json.loads(row["data"])
 
-    def put(self, symbol: str, interval: str, source: str,
-            bars: list[dict], quality_status: str = "unknown") -> None:
+    def put(
+        self,
+        symbol: str,
+        interval: str,
+        source: str,
+        bars: list[dict],
+        quality_status: str = "unknown",
+    ) -> None:
         """Store bars in cache with quality status."""
         key = self._make_key(symbol, interval, source)
         payload = json.dumps(bars)
@@ -100,8 +107,9 @@ class MarketDataCache:
 
     # ---------- versioned entries (schema-aware) ----------
 
-    def put_versioned(self, key: str, bars: list[dict],
-                      quality_status: str = "unchecked") -> None:
+    def put_versioned(
+        self, key: str, bars: list[dict], quality_status: str = "unchecked"
+    ) -> None:
         """Store bars under a fully versioned composite key."""
         with self._conn() as conn:
             conn.execute(
@@ -139,7 +147,9 @@ class MarketDataCache:
         Called on demand after a CACHE_SCHEMA_VERSION bump; not automatic."""
         with self._conn() as conn:
             cur = conn.execute("SELECT key FROM cache")
-            stale = [r["key"] for r in cur if f"schema={schema_version}|" not in r["key"]]
+            stale = [
+                r["key"] for r in cur if f"schema={schema_version}|" not in r["key"]
+            ]
             for k in stale:
                 conn.execute("DELETE FROM cache WHERE key=?", (k,))
             return len(stale)
@@ -154,7 +164,9 @@ class MarketDataCache:
                 cur = conn.execute("DELETE FROM cache WHERE key LIKE ?", (pattern,))
             return cur.rowcount or 0
 
-    def invalidate_on_quality_error(self, symbol: str, source: str, interval: str) -> None:
+    def invalidate_on_quality_error(
+        self, symbol: str, source: str, interval: str
+    ) -> None:
         """Invalidate cache when quality check fails (forces re-fetch)."""
         key = self._make_key(symbol, interval, source)
         with self._conn() as conn:

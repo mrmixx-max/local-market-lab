@@ -1,4 +1,5 @@
 """Core package tests."""
+
 from decimal import Decimal
 
 import pytest

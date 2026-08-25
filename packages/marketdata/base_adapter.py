@@ -13,6 +13,7 @@ alpha_vantage_adapter.py:
 
 Provider-specific logic stays in the concrete adapters.
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,8 +32,19 @@ CACHE_SCHEMA_VERSION = "2"
 
 # Currencies quoted with symbol suffix on Yahoo (e.g. BTC-EUR -> EUR).
 _SUFFIX_CURRENCIES = (
-    "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "SEK", "NOK", "DKK",
-    "PLN", "CZK", "TRY",
+    "EUR",
+    "USD",
+    "GBP",
+    "CHF",
+    "JPY",
+    "CAD",
+    "AUD",
+    "SEK",
+    "NOK",
+    "DKK",
+    "PLN",
+    "CZK",
+    "TRY",
 )
 
 
@@ -123,8 +135,9 @@ class BaseAdapter:
 
     # ---------- retry ----------
 
-    def request_with_retry(self, url: str, headers: dict | None = None,
-                           timeout: int = 30) -> bytes:
+    def request_with_retry(
+        self, url: str, headers: dict | None = None, timeout: int = 30
+    ) -> bytes:
         """GET with exponential backoff. Raises RateLimitError/AdapterError."""
         hdrs = {"User-Agent": "LocalMarketLab/0.9.1"}
         if headers:
@@ -138,20 +151,29 @@ class BaseAdapter:
             except urllib.error.HTTPError as exc:
                 last_exc = exc
                 if exc.code == 429:
-                    delay = self.retry_base_delay * (2 ** attempt)
-                    log.warning("rate limited, retry in %.0fs (%d/%d)",
-                                delay, attempt + 1, self.max_retries)
+                    delay = self.retry_base_delay * (2**attempt)
+                    log.warning(
+                        "rate limited, retry in %.0fs (%d/%d)",
+                        delay,
+                        attempt + 1,
+                        self.max_retries,
+                    )
                     time.sleep(delay)
                     continue
                 raise AdapterError(f"provider HTTP error {exc.code}") from exc
             except urllib.error.URLError as exc:
                 last_exc = exc
-                delay = self.retry_base_delay * (2 ** attempt)
-                log.warning("network error, retry in %.0fs (%d/%d)",
-                            delay, attempt + 1, self.max_retries)
+                delay = self.retry_base_delay * (2**attempt)
+                log.warning(
+                    "network error, retry in %.0fs (%d/%d)",
+                    delay,
+                    attempt + 1,
+                    self.max_retries,
+                )
                 time.sleep(delay)
         raise RateLimitError(
-            f"provider failed after {self.max_retries} attempts: {last_exc}")
+            f"provider failed after {self.max_retries} attempts: {last_exc}"
+        )
 
     # ---------- helpers ----------
 
@@ -159,8 +181,9 @@ class BaseAdapter:
     def bars_from_dicts(data: list[dict]) -> list[PriceBar]:
         return [PriceBar(d["date"], d["close"], d.get("volume")) for d in data]
 
-    def make_series(self, symbol: str, bars: list[PriceBar],
-                    currency: str) -> PriceSeries:
+    def make_series(
+        self, symbol: str, bars: list[PriceBar], currency: str
+    ) -> PriceSeries:
         """Build a PriceSeries; unknown currency stays 'unknown' — the
         FxPolicy will report it as INCOMPLETE at conversion time."""
         return PriceSeries(symbol.upper(), currency.upper(), bars).sorted()

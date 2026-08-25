@@ -3,6 +3,7 @@
 Reads OLLAMA_HOST from env (default: http://localhost:11434).
 Streams chat completions via the /api/chat endpoint (Ollama ≥ 0.1.17).
 """
+
 from __future__ import annotations
 
 import json
@@ -39,14 +40,19 @@ class OllamaClient:
             for m in data.get("models", [])
         ]
 
-    def chat(self, model: str, messages: list[dict],
-             system: str | None = None,
-             temperature: float = 0.4,
-             stream: bool = False):
+    def chat(
+        self,
+        model: str,
+        messages: list[dict],
+        system: str | None = None,
+        temperature: float = 0.4,
+        stream: bool = False,
+    ):
         """Single-shot chat. Returns the message dict."""
         payload = {
             "model": model,
-            "messages": ([{"role": "system", "content": system}] if system else []) + messages,
+            "messages": ([{"role": "system", "content": system}] if system else [])
+            + messages,
             "stream": stream,
             "options": {"temperature": temperature, "num_ctx": 8192},
         }
@@ -59,16 +65,25 @@ class OllamaClient:
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 resp = json.load(r)
-                return {"role": "assistant", "content": resp.get("message", {}).get("content", "")}
+                return {
+                    "role": "assistant",
+                    "content": resp.get("message", {}).get("content", ""),
+                }
         except Exception as exc:
             return {"role": "error", "content": f"Ollama error: {exc}"}
 
-    def chat_stream(self, model: str, messages: list[dict],
-                    system: str | None = None, temperature: float = 0.4):
+    def chat_stream(
+        self,
+        model: str,
+        messages: list[dict],
+        system: str | None = None,
+        temperature: float = 0.4,
+    ):
         """Generator yielding partial tokens as strings."""
         payload = {
             "model": model,
-            "messages": ([{"role": "system", "content": system}] if system else []) + messages,
+            "messages": ([{"role": "system", "content": system}] if system else [])
+            + messages,
             "stream": True,
             "options": {"temperature": temperature, "num_ctx": 8192},
         }

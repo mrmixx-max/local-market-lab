@@ -1,4 +1,5 @@
 """Tests for determinism: same seed + same data hash = same results."""
+
 from __future__ import annotations
 
 import hashlib
@@ -14,10 +15,10 @@ from packages.scenarios.predict import linear_trend_forecast, ensemble_forecast
 from packages.scenarios.deep_learning import lstm_forecast
 from packages.core.hashing import sha256_obj
 
-
 # ---------------------------------------------------------------------------
 # Data hash helpers
 # ---------------------------------------------------------------------------
+
 
 def _data_hash(data: list[float]) -> str:
     """Compute a stable hash of a price series."""
@@ -27,6 +28,7 @@ def _data_hash(data: list[float]) -> str:
 # ---------------------------------------------------------------------------
 # Walk-Forward determinism
 # ---------------------------------------------------------------------------
+
 
 class TestWalkForwardDeterminism:
     def test_same_data_same_result(self):
@@ -78,6 +80,7 @@ class TestWalkForwardDeterminism:
 # Monte Carlo determinism
 # ---------------------------------------------------------------------------
 
+
 class TestMonteCarloDeterminism:
     def test_same_seed_same_finals(self):
         positions = {"AAPL": 0.6, "MSFT": 0.3, "GLD": 0.1}
@@ -106,6 +109,7 @@ class TestMonteCarloDeterminism:
 # Forecast determinism
 # ---------------------------------------------------------------------------
 
+
 class TestForecastDeterminism:
     def test_linear_trend_same_data(self):
         np.random.seed(42)
@@ -125,6 +129,7 @@ class TestForecastDeterminism:
 # ---------------------------------------------------------------------------
 # Content hashing determinism
 # ---------------------------------------------------------------------------
+
 
 class TestContentHashing:
     def test_sha256_obj_stable(self):

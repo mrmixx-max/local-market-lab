@@ -2,6 +2,7 @@
 
 Quality checks are mandatory per concept: gaps reported, never silently filled.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -14,11 +15,12 @@ class MissingPriceError(KeyError):
 
 
 def get_series(ws, symbol: str) -> PriceSeries:
-    bars = [PriceBar(date=r["date"], close=r["close"], volume=r["volume"])
-            for r in ws.price_series(symbol)]
+    bars = [
+        PriceBar(date=r["date"], close=r["close"], volume=r["volume"])
+        for r in ws.price_series(symbol)
+    ]
     if not bars:
-        raise MissingPriceError(
-            f"no price data for {symbol!r} — import prices first")
+        raise MissingPriceError(f"no price data for {symbol!r} — import prices first")
     return PriceSeries(symbol.upper(), ws.instrument_currency(symbol), bars).sorted()
 
 

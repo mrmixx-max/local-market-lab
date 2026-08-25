@@ -1,4 +1,5 @@
 """Local Market Lab — Windows App Entry Point."""
+
 from __future__ import annotations
 
 import sys
@@ -36,6 +37,7 @@ def _check_api() -> bool:
     """Check if the API is reachable."""
     try:
         import requests
+
         r = requests.get(f"{API_URL}/api/v1/health", timeout=2)
         return r.status_code == 200
     except Exception:
@@ -61,7 +63,9 @@ def main():
 
     # splash
     splash_widget = QWidget()
-    splash_widget.setWindowFlags(Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint)
+    splash_widget.setWindowFlags(
+        Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint
+    )
     splash_widget.setStyleSheet("background: #000;")
     layout = QVBoxLayout(splash_widget)
     label = QLabel("◆ LOCAL MARKET LAB")
@@ -81,6 +85,7 @@ def main():
     api_ok = _check_api()
 
     from windows.src.main_window import MainWindow
+
     window = MainWindow()
     window.show()
     splash_widget.close()

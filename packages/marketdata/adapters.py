@@ -7,6 +7,7 @@ Built-in adapters:
 
 Each adapter returns PriceSeries with full provenance metadata.
 """
+
 from __future__ import annotations
 
 import os
@@ -46,8 +47,13 @@ class SyntheticAdapter:
     def __init__(self, seed: int = 42):
         self.seed = seed
 
-    def fetch(self, symbol: str, days: int = 504, start_price: float = 100.0,
-              vol: float = 0.01) -> FetchResult:
+    def fetch(
+        self,
+        symbol: str,
+        days: int = 504,
+        start_price: float = 100.0,
+        vol: float = 0.01,
+    ) -> FetchResult:
         rng = self._rng(symbol)
         px = start_price
         d0 = date.today() - timedelta(days=days)
@@ -62,6 +68,7 @@ class SyntheticAdapter:
 
     def _rng(self, symbol: str):
         import random
+
         return random.Random(hash(symbol) % 2**31 + self.seed)
 
 
@@ -86,13 +93,19 @@ class YahooAdapter:
         end = date.today()
         start = end - timedelta(days=int(days * 1.5))  # buffer for weekends
         ticker = yf.Ticker(symbol.upper())
-        hist = ticker.history(start=start.isoformat(), end=end.isoformat(), auto_adjust=True)
+        hist = ticker.history(
+            start=start.isoformat(), end=end.isoformat(), auto_adjust=True
+        )
         if hist.empty:
             raise ValueError(f"no data returned for {symbol!r}")
 
         bars = []
         for idx, row in hist.iterrows():
-            d = idx.date() if hasattr(idx, "date") else date.fromisoformat(str(idx)[:10])
+            d = (
+                idx.date()
+                if hasattr(idx, "date")
+                else date.fromisoformat(str(idx)[:10])
+            )
             bars.append(PriceBar(date=d.isoformat(), close=float(row["Close"])))
 
         series = PriceSeries(symbol.upper(), "EUR", bars).sorted()
@@ -114,6 +127,7 @@ class AlphaVantageAdapter:
 
     def fetch(self, symbol: str) -> FetchResult:
         import urllib.request
+
         api_key = os.environ.get("ALPHAVANTAGE_KEY")
         if not api_key:
             raise ValueError("ALPHAVANTAGE_KEY not set")
@@ -145,10 +159,14 @@ ADAPTERS: dict[str, type] = {
 }
 
 
-def get_adapter(name: str = "synthetic", **kwargs) -> SyntheticAdapter | YahooAdapter | AlphaVantageAdapter:
+def get_adapter(
+    name: str = "synthetic", **kwargs
+) -> SyntheticAdapter | YahooAdapter | AlphaVantageAdapter:
     cls = ADAPTERS.get(name)
     if cls is None:
-        raise ValueError(f"unknown adapter {name!r}. available: {list(ADAPTERS.keys())}")
+        raise ValueError(
+            f"unknown adapter {name!r}. available: {list(ADAPTERS.keys())}"
+        )
     return cls(**kwargs)
 
 

@@ -4,6 +4,7 @@ Supports grid search and randomized search over parameter combinations
 with configurable metric optimization and full result tracking.
 Results use unified ValidationResult format with data provenance tracking.
 """
+
 from __future__ import annotations
 
 import os
@@ -15,7 +16,6 @@ from typing import Any
 
 from packages.domain.decorators import experimental
 from packages.metrics.risk import sharpe_ratio
-
 
 # ---------------------------------------------------------------------------
 # Configuration constants (override via .env)
@@ -29,6 +29,7 @@ DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
 @dataclass
 class TrialResult:
     """Result of a single hyperparameter trial."""
+
     trial: int
     params: dict[str, Any]
     metric_value: float
@@ -38,6 +39,7 @@ class TrialResult:
 @dataclass
 class TuneResult:
     """Aggregated hyperparameter tuning result."""
+
     trials: list[TrialResult]
     best_params: dict[str, Any]
     best_metric: float
@@ -67,7 +69,9 @@ class TuneResult:
         }
 
 
-def _sample_params(param_grid: dict[str, list[Any]], rng: random.Random) -> dict[str, Any]:
+def _sample_params(
+    param_grid: dict[str, list[Any]], rng: random.Random
+) -> dict[str, Any]:
     """Sample one parameter combination from the grid."""
     return {k: rng.choice(v) for k, v in param_grid.items()}
 
@@ -80,7 +84,10 @@ def _grid_params(param_grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
 
 
 def _evaluate_params(
-    model_fn, data: list[float], params: dict[str, Any], metric: str,
+    model_fn,
+    data: list[float],
+    params: dict[str, Any],
+    metric: str,
 ) -> float:
     """Evaluate a single parameter set by running model_fn on data.
 
@@ -91,7 +98,7 @@ def _evaluate_params(
     test_data = data[split:]
     predictions = model_fn(train_data, test_data, **params)
     if len(predictions) != len(test_data):
-        predictions = predictions[:len(test_data)]
+        predictions = predictions[: len(test_data)]
     test_returns = [
         test_data[j] / test_data[j - 1] - 1 if j > 0 else 0.0
         for j in range(len(test_data))
@@ -172,6 +179,11 @@ def hyperparameter_tune(
         t.rank = rank
     best = sorted_trials[0]
     return TuneResult(
-        trials=sorted_trials, best_params=best.params, best_metric=best.metric_value,
-        metric=metric, n_trials=len(trials), seed=seed, method=method,
+        trials=sorted_trials,
+        best_params=best.params,
+        best_metric=best.metric_value,
+        metric=metric,
+        n_trials=len(trials),
+        seed=seed,
+        method=method,
     )

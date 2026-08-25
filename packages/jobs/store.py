@@ -1,4 +1,5 @@
 """Persistent job state in SQLite (WAL mode)."""
+
 from __future__ import annotations
 
 import json
@@ -93,15 +94,28 @@ class JobStore:
         """Persist job fields. When expect_status is given, the write only
         happens if the stored status still matches (optimistic guard for
         cancel races); returns False otherwise."""
-        sets = ["status=?", "progress=?", "result_ref=?", "error=?",
-                "started_at=?", "finished_at=?"]
-        vals = [job.status.value, job.progress, job.result_ref, job.error,
-                job.started_at, job.finished_at]
+        sets = [
+            "status=?",
+            "progress=?",
+            "result_ref=?",
+            "error=?",
+            "started_at=?",
+            "finished_at=?",
+        ]
+        vals = [
+            job.status.value,
+            job.progress,
+            job.result_ref,
+            job.error,
+            job.started_at,
+            job.finished_at,
+        ]
         if expect_status is not None:
             with self._tx() as c:
                 cur = c.execute(
                     f"UPDATE jobs SET {', '.join(sets)} WHERE id=? AND status=?",
-                    (*vals, job.id, expect_status.value))
+                    (*vals, job.id, expect_status.value),
+                )
                 return cur.rowcount > 0
         with self._tx() as c:
             c.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id=?", (*vals, job.id))
@@ -109,8 +123,9 @@ class JobStore:
 
     # ---------- helpers ----------
 
-    def transition(self, job_id: str, new_status: JobStatus,
-                   expect: JobStatus | None = None) -> Job | None:
+    def transition(
+        self, job_id: str, new_status: JobStatus, expect: JobStatus | None = None
+    ) -> Job | None:
         """Apply a guarded state transition; returns updated Job or None."""
         job = self.get(job_id)
         if job is None or not can_transition(job.status, new_status):
@@ -126,10 +141,15 @@ class JobStore:
     @staticmethod
     def _row_to_job(r) -> Job:
         return Job(
-            id=r["id"], kind=r["kind"], params=json.loads(r["params_json"]),
-            status=JobStatus(r["status"]), progress=r["progress"],
-            result_ref=r["result_ref"], error=r["error"],
-            created_at=r["created_at"], started_at=r["started_at"],
+            id=r["id"],
+            kind=r["kind"],
+            params=json.loads(r["params_json"]),
+            status=JobStatus(r["status"]),
+            progress=r["progress"],
+            result_ref=r["result_ref"],
+            error=r["error"],
+            created_at=r["created_at"],
+            started_at=r["started_at"],
             finished_at=r["finished_at"],
         )
 

@@ -1,4 +1,5 @@
 """CLI: `lml manifests` and `lml rerun` (v1.0 P1.4)."""
+
 from __future__ import annotations
 
 import json
@@ -28,9 +29,11 @@ def list_cmd(json_out: bool = JSON_OPT):
     typer.echo(f"{'MANIFEST_ID':<28} {'TYPE':<14} {'VERSION':<10} {'CREATED':<21}")
     for m in items:
         ca = str(m.get("created_at") or "")[:19].replace("T", " ")
-        typer.echo(f"{str(m.get('manifest_id')):<28} "
-                   f"{str(m.get('job_type')):<14} "
-                   f"{str(m.get('system_version')):<10} {ca}")
+        typer.echo(
+            f"{str(m.get('manifest_id')):<28} "
+            f"{str(m.get('job_type')):<14} "
+            f"{str(m.get('system_version')):<10} {ca}"
+        )
 
 
 @manifests_app.command("show")
@@ -78,19 +81,20 @@ from packages.artifacts.run_manifest import _env_hash, _system_version
 
 
 @manifests_app.command("rerun")
-def rerun_cmd(manifest_id: str,
-              async_mode: bool = typer.Option(False, "--async",
-                                               help="Run via job queue."),
-              json_out: bool = typer.Option(False, "--json"),
-              allow_data_drift: bool = typer.Option(False, "--allow-data-drift"),
-              allow_environment_drift: bool = typer.Option(
-                  False, "--allow-environment-drift")):
+def rerun_cmd(
+    manifest_id: str,
+    async_mode: bool = typer.Option(False, "--async", help="Run via job queue."),
+    json_out: bool = typer.Option(False, "--json"),
+    allow_data_drift: bool = typer.Option(False, "--allow-data-drift"),
+    allow_environment_drift: bool = typer.Option(False, "--allow-environment-drift"),
+):
     """Re-execute a stored manifest and compare result hashes.
 
     Requires the caller to provide an executor via the job registry; for the
     CLI we use the registered rerun executors keyed by job_type.
     """
     from packages.artifacts.rerun_cli_helpers import get_executor
+
     try:
         executor = get_executor()
     except Exception as exc:
@@ -100,10 +104,16 @@ def rerun_cmd(manifest_id: str,
     # async path → submit to job queue
     if async_mode:
         from apps.cli.jobs_client import JobsClient
+
         c = JobsClient()
-        resp = c.submit("rerun", {"manifest_id": manifest_id,
-                                  "allow_data_drift": allow_data_drift,
-                                  "allow_environment_drift": allow_environment_drift})
+        resp = c.submit(
+            "rerun",
+            {
+                "manifest_id": manifest_id,
+                "allow_data_drift": allow_data_drift,
+                "allow_environment_drift": allow_environment_drift,
+            },
+        )
         if not isinstance(resp, dict) or "job_id" not in resp:
             typer.echo(f"error: async submit failed: {resp}", err=True)
             raise typer.Exit(1)
@@ -114,9 +124,14 @@ def rerun_cmd(manifest_id: str,
     cur_ver = _system_version()
     cur_env, _ = _env_hash()
     try:
-        report = rerun_manifest(manifest_id, executor, cur_ver, cur_env,
-                                allow_data_drift=allow_data_drift,
-                                allow_environment_drift=allow_environment_drift)
+        report = rerun_manifest(
+            manifest_id,
+            executor,
+            cur_ver,
+            cur_env,
+            allow_data_drift=allow_data_drift,
+            allow_environment_drift=allow_environment_drift,
+        )
     except FileNotFoundError:
         typer.echo(f"error: manifest {manifest_id} not found", err=True)
         raise typer.Exit(1)

@@ -3,6 +3,7 @@
 Covers domain entity StressTestResult format, scenario names, and fat-tail
 Monte Carlo with data_hash and timeline.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -100,18 +101,21 @@ class TestMonteCarloFatTail:
         eq = {"IWDA": 1.0}
         # Single-day horizon: the innovation tail passes through 1:1 into the
         # return distribution, so the df-effect is measurable above MC noise.
-        r3 = monte_carlo_fat_tail(eq, runs=20000, seed=42, df=3,
-                                  annual_vol=0.20, horizon_days=1)
-        r30 = monte_carlo_fat_tail(eq, runs=20000, seed=42, df=30,
-                                   annual_vol=0.20, horizon_days=1)
+        r3 = monte_carlo_fat_tail(
+            eq, runs=20000, seed=42, df=3, annual_vol=0.20, horizon_days=1
+        )
+        r30 = monte_carlo_fat_tail(
+            eq, runs=20000, seed=42, df=30, annual_vol=0.20, horizon_days=1
+        )
         # sanity
         assert r3["p01"] <= r3["p05"] <= r3["median"] <= r3["p95"]
         # NOTE: with unit-variance standardization the MODERATE tail (p05/VaR95)
         # of a low-df Student-t sits CLOSER to the center than for high df —
         # mass shifts beyond it into the extreme tail. The monotone fat-tail
         # marker is therefore the extreme quantile p01.
-        assert r3["p01"] <= r30["p01"], (
-            f"df=3 extreme tail {r3['p01']} must be <= df=30 {r30['p01']}")
+        assert (
+            r3["p01"] <= r30["p01"]
+        ), f"df=3 extreme tail {r3['p01']} must be <= df=30 {r30['p01']}"
         # variance standardization holds regardless of df
         assert r3["df"] == 3 and r30["df"] == 30
 

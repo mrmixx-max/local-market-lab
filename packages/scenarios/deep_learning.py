@@ -5,6 +5,7 @@ Functions:
   - gru_forecast       : GRU with update/reset gates + BPTT
   - train_test_split_ts: chronological split (no shuffling)
 """
+
 from __future__ import annotations
 import numpy as np
 
@@ -25,14 +26,14 @@ def _adam_step(params, grads, m, v, t, lr=1e-3, b1=0.9, b2=0.999, eps=1e-8):
     for i in range(len(params)):
         m[i] = b1 * m[i] + (1 - b1) * grads[i]
         v[i] = b2 * v[i] + (1 - b2) * grads[i] ** 2
-        mh = m[i] / (1 - b1 ** t)
-        vh = v[i] / (1 - b2 ** t)
+        mh = m[i] / (1 - b1**t)
+        vh = v[i] / (1 - b2**t)
         params[i] -= lr * mh / (np.sqrt(vh) + eps)
 
 
 def _clip_grads(grads, max_norm=1.0):
     """Gradient clipping by global norm — prevents exploding gradients."""
-    total = np.sqrt(sum(np.sum(g ** 2) for g in grads))
+    total = np.sqrt(sum(np.sum(g**2) for g in grads))
     if total > max_norm:
         for g in grads:
             g *= max_norm / total
@@ -95,15 +96,19 @@ def lstm_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42
             grads[9] += dp
             dh += dp * Wo_out
             do = dh * np.tanh(c) * o * (1 - o)
-            grads[3] += np.outer(do, con); grads[7] += do
+            grads[3] += np.outer(do, con)
+            grads[7] += do
             dc += dh * o * (1 - np.tanh(c) ** 2)
-            dcc = dc * i * (1 - cc ** 2)
-            grads[2] += np.outer(dcc, con); grads[6] += dcc
+            dcc = dc * i * (1 - cc**2)
+            grads[2] += np.outer(dcc, con)
+            grads[6] += dcc
             di = dc * cc * i * (1 - i)
-            grads[1] += np.outer(di, con); grads[5] += di
+            grads[1] += np.outer(di, con)
+            grads[5] += di
             c_prev = cache[t - 1][4] if t > 0 else np.zeros(H)
             df = dc * c_prev * f * (1 - f)
-            grads[0] += np.outer(df, con); grads[4] += df
+            grads[0] += np.outer(df, con)
+            grads[4] += df
             dcon = Wf.T @ df + Wi.T @ di + Wc.T @ dcc + Wo.T @ do
             dh = dcon[:H]
             dc = dc * f
@@ -112,20 +117,33 @@ def lstm_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42
     h, c = np.zeros(H), np.zeros(H)
     for t in range(seq):
         con = np.concatenate([h, [norm[t]]])
-        f = _sigmoid(Wf @ con + bf); i = _sigmoid(Wi @ con + bi)
-        cc = np.tanh(Wc @ con + bc); c = f * c + i * cc
-        o = _sigmoid(Wo @ con + bo); h = o * np.tanh(c)
+        f = _sigmoid(Wf @ con + bf)
+        i = _sigmoid(Wi @ con + bi)
+        cc = np.tanh(Wc @ con + bc)
+        c = f * c + i * cc
+        o = _sigmoid(Wo @ con + bo)
+        h = o * np.tanh(c)
     lv = norm[-1]
     fc = []
     for _ in range(horizon):
-        con = np.concatenate([h, [lv]]); f = _sigmoid(Wf @ con + bf)
-        i = _sigmoid(Wi @ con + bi); cc = np.tanh(Wc @ con + bc)
-        c = f * c + i * cc; o = _sigmoid(Wo @ con + bo)
-        h = o * np.tanh(c); lv = (Wo_out @ h + bo_out)[0]; fc.append(lv)
+        con = np.concatenate([h, [lv]])
+        f = _sigmoid(Wf @ con + bf)
+        i = _sigmoid(Wi @ con + bi)
+        cc = np.tanh(Wc @ con + bc)
+        c = f * c + i * cc
+        o = _sigmoid(Wo @ con + bo)
+        h = o * np.tanh(c)
+        lv = (Wo_out @ h + bo_out)[0]
+        fc.append(lv)
     fc = np.array(fc) * scale + dmin
-    return {"model": "lstm", "forecast": [round(float(x), 4) for x in fc],
-            "last": round(float(data[-1]), 4), "horizon": horizon,
-            "hidden_size": hidden_size, "epochs": epochs}
+    return {
+        "model": "lstm",
+        "forecast": [round(float(x), 4) for x in fc],
+        "last": round(float(data[-1]), 4),
+        "horizon": horizon,
+        "hidden_size": hidden_size,
+        "epochs": epochs,
+    }
 
 
 def gru_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42):
@@ -174,15 +192,19 @@ def gru_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42)
             tgt = np.array([norm[t + 1]])
             pred = Wo_out @ ht + bo_out
             dp = 2.0 * (pred - tgt) / seq
-            grads[6] += dp * ht; grads[7] += dp
+            grads[6] += dp * ht
+            grads[7] += dp
             dh += dp * Wo_out
             dz = dh * (hc - hp) * z * (1 - z)
-            grads[0] += np.outer(dz, con); grads[3] += dz
-            dhc = dh * z * (1 - hc ** 2)
-            grads[2] += np.outer(dhc, con_r); grads[5] += dhc
+            grads[0] += np.outer(dz, con)
+            grads[3] += dz
+            dhc = dh * z * (1 - hc**2)
+            grads[2] += np.outer(dhc, con_r)
+            grads[5] += dhc
             dcr = Wh.T @ dhc
             dr = dcr[:H] * hp * r * (1 - r)
-            grads[1] += np.outer(dr, con); grads[4] += dr
+            grads[1] += np.outer(dr, con)
+            grads[4] += dr
             dcon = Wz.T @ dz + Wr.T @ dr
             dh = dcon[:H] + dh * (1 - z) + dcr[:H] * r
         _clip_grads(grads)
@@ -190,19 +212,31 @@ def gru_forecast(data, horizon=30, hidden_size=32, epochs=100, lr=1e-3, seed=42)
     h = np.zeros(H)
     for t in range(seq):
         con = np.concatenate([h, [norm[t]]])
-        z = _sigmoid(Wz @ con + bz); r = _sigmoid(Wr @ con + br)
+        z = _sigmoid(Wz @ con + bz)
+        r = _sigmoid(Wr @ con + br)
         con_r = np.concatenate([r * h, [norm[t]]])
-        hc = np.tanh(Wh @ con_r + bh); h = (1 - z) * h + z * hc
-    lv = norm[-1]; fc = []
+        hc = np.tanh(Wh @ con_r + bh)
+        h = (1 - z) * h + z * hc
+    lv = norm[-1]
+    fc = []
     for _ in range(horizon):
-        con = np.concatenate([h, [lv]]); z = _sigmoid(Wz @ con + bz)
-        r = _sigmoid(Wr @ con + br); con_r = np.concatenate([r * h, [lv]])
-        hc = np.tanh(Wh @ con_r + bh); h = (1 - z) * h + z * hc
-        lv = (Wo_out @ h + bo_out)[0]; fc.append(lv)
+        con = np.concatenate([h, [lv]])
+        z = _sigmoid(Wz @ con + bz)
+        r = _sigmoid(Wr @ con + br)
+        con_r = np.concatenate([r * h, [lv]])
+        hc = np.tanh(Wh @ con_r + bh)
+        h = (1 - z) * h + z * hc
+        lv = (Wo_out @ h + bo_out)[0]
+        fc.append(lv)
     fc = np.array(fc) * scale + dmin
-    return {"model": "gru", "forecast": [round(float(x), 4) for x in fc],
-            "last": round(float(data[-1]), 4), "horizon": horizon,
-            "hidden_size": hidden_size, "epochs": epochs}
+    return {
+        "model": "gru",
+        "forecast": [round(float(x), 4) for x in fc],
+        "last": round(float(data[-1]), 4),
+        "horizon": horizon,
+        "hidden_size": hidden_size,
+        "epochs": epochs,
+    }
 
 
 def walk_forward_validate(model_fn, data, min_train=100, step=20, horizon=5, **kw):
@@ -226,7 +260,7 @@ def walk_forward_validate(model_fn, data, min_train=100, step=20, horizon=5, **k
     predictions, actuals, fold_starts = [], [], []
     for start in range(min_train, len(data) - horizon, step):
         train = data[:start]
-        test = data[start:start + horizon]
+        test = data[start : start + horizon]
         try:
             result = model_fn(train, horizon, **kw)
             predictions.extend(result["forecast"])
@@ -235,10 +269,20 @@ def walk_forward_validate(model_fn, data, min_train=100, step=20, horizon=5, **k
         except Exception:
             continue
     if not predictions:
-        return {"predictions": [], "actuals": [], "rmse": float("nan"),
-                "mae": float("nan"), "n_folds": 0, "fold_starts": []}
+        return {
+            "predictions": [],
+            "actuals": [],
+            "rmse": float("nan"),
+            "mae": float("nan"),
+            "n_folds": 0,
+            "fold_starts": [],
+        }
     p, a = np.array(predictions), np.array(actuals)
-    return {"predictions": p.tolist(), "actuals": a.tolist(),
-            "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
-            "mae": float(np.mean(np.abs(p - a))),
-            "n_folds": len(fold_starts), "fold_starts": fold_starts}
+    return {
+        "predictions": p.tolist(),
+        "actuals": a.tolist(),
+        "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
+        "mae": float(np.mean(np.abs(p - a))),
+        "n_folds": len(fold_starts),
+        "fold_starts": fold_starts,
+    }

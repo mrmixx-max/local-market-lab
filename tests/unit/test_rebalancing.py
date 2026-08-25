@@ -3,6 +3,7 @@
 Verifies that the assistant NEVER executes trades — only RebalancingProposal
 suggestions are generated.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -89,8 +90,9 @@ class TestTaxLossHarvesting:
         current = {"A": 0.5, "B": 0.5}
         target = {"A": 0.5, "B": 0.5}
         tlh = [{"symbol": "B", "unrealized_loss_pct": -15.0, "loss_amount": -7500.0}]
-        result = suggest_rebalance(current, target, threshold=0.05,
-                                    tax_loss_positions=tlh)
+        result = suggest_rebalance(
+            current, target, threshold=0.05, tax_loss_positions=tlh
+        )
         assert len(result.tax_loss_opportunities) == 1
         assert result.tax_loss_opportunities[0]["symbol"] == "B"
         assert "tax_benefit_estimate" in result.tax_loss_opportunities[0]
@@ -99,8 +101,9 @@ class TestTaxLossHarvesting:
         current = {"A": 0.5, "B": 0.5}
         target = {"A": 0.5, "B": 0.5}
         tlh = [{"symbol": "B", "unrealized_loss_pct": -3.0, "loss_amount": -100.0}]
-        result = suggest_rebalance(current, target, threshold=0.05,
-                                    tax_loss_positions=tlh)
+        result = suggest_rebalance(
+            current, target, threshold=0.05, tax_loss_positions=tlh
+        )
         assert len(result.tax_loss_opportunities) == 0
 
     def test_tlh_is_information_only(self):
@@ -108,8 +111,9 @@ class TestTaxLossHarvesting:
         current = {"A": 0.5, "B": 0.5}
         target = {"A": 0.5, "B": 0.5}
         tlh = [{"symbol": "B", "unrealized_loss_pct": -20.0, "loss_amount": -10000.0}]
-        result = suggest_rebalance(current, target, threshold=0.05,
-                                    tax_loss_positions=tlh)
+        result = suggest_rebalance(
+            current, target, threshold=0.05, tax_loss_positions=tlh
+        )
         opp = result.tax_loss_opportunities[0]
         assert "action" in opp
         assert "note" in opp  # includes disclaimer

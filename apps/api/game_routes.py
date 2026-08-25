@@ -2,6 +2,7 @@
 
 Prefix: /api/v1/game
 """
+
 from __future__ import annotations
 
 import asyncio

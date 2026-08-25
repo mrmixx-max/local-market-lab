@@ -8,21 +8,27 @@ os.chdir(r"C:\Users\webma\Projects\local-market-lab")
 
 # Read all images and convert to base64
 images = {}
-for name in ['architecture.png', 'prediction_models.png', 'risk_metrics.png', 'performance.png', 'equity_drawdown.png']:
+for name in [
+    "architecture.png",
+    "prediction_models.png",
+    "risk_metrics.png",
+    "performance.png",
+    "equity_drawdown.png",
+]:
     path = f"docs/images/{name}"
     if os.path.exists(path):
-        with open(path, 'rb') as f:
-            images[name] = base64.b64encode(f.read()).decode('utf-8')
+        with open(path, "rb") as f:
+            images[name] = base64.b64encode(f.read()).decode("utf-8")
         print(f"Loaded {name}")
 
 # Read markdown files
-with open("docs/documentation_de.md", 'r', encoding='utf-8') as f:
+with open("docs/documentation_de.md", "r", encoding="utf-8") as f:
     doc_de = f.read()
-with open("docs/documentation_en.md", 'r', encoding='utf-8') as f:
+with open("docs/documentation_en.md", "r", encoding="utf-8") as f:
     doc_en = f.read()
-with open("docs/brochure_de.md", 'r', encoding='utf-8') as f:
+with open("docs/brochure_de.md", "r", encoding="utf-8") as f:
     broch_de = f.read()
-with open("docs/brochure_en.md", 'r', encoding='utf-8') as f:
+with open("docs/brochure_en.md", "r", encoding="utf-8") as f:
     broch_en = f.read()
 
 css = """
@@ -44,23 +50,39 @@ strong { color: #FFA028; }
 </style>
 """
 
+
 def md_to_html(md, title, imgs):
-    html = markdown2.markdown(md, extras=['tables', 'fenced-code-blocks'])
+    html = markdown2.markdown(md, extras=["tables", "fenced-code-blocks"])
     for name, b64 in imgs.items():
-        html = html.replace(f'src="images/{name}"', f'src="data:image/png;base64,{b64}"')
+        html = html.replace(
+            f'src="images/{name}"', f'src="data:image/png;base64,{b64}"'
+        )
     return f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>{title}</title>{css}</head>
 <body>{html}</body></html>"""
 
+
 files = [
-    ("Documentation_DE.html", md_to_html(doc_de, "Local Market Lab — Technische Dokumentation DE", images)),
-    ("Documentation_EN.html", md_to_html(doc_en, "Local Market Lab — Technical Documentation EN", images)),
-    ("Broschuere_DE.html", md_to_html(broch_de, "Local Market Lab — Werbebroschüre DE", images)),
-    ("Broschuere_EN.html", md_to_html(broch_en, "Local Market Lab — Sales Brochure EN", images)),
+    (
+        "Documentation_DE.html",
+        md_to_html(doc_de, "Local Market Lab — Technische Dokumentation DE", images),
+    ),
+    (
+        "Documentation_EN.html",
+        md_to_html(doc_en, "Local Market Lab — Technical Documentation EN", images),
+    ),
+    (
+        "Broschuere_DE.html",
+        md_to_html(broch_de, "Local Market Lab — Werbebroschüre DE", images),
+    ),
+    (
+        "Broschuere_EN.html",
+        md_to_html(broch_en, "Local Market Lab — Sales Brochure EN", images),
+    ),
 ]
 
 for fname, content in files:
-    with open(fname, 'w', encoding='utf-8') as f:
+    with open(fname, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"{fname} created ({len(content)} bytes)")
 

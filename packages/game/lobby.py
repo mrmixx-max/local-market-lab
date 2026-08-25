@@ -20,6 +20,7 @@ Protocol (JSON over WS):
     {"type": "event", "event": "game_over", "winner": "...", "scores": {...}}
     {"type": "chat", "player": "...", "message": "...", "timestamp": "..."}
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -85,31 +86,42 @@ class MultiplayerLobby:
         for r in self.rooms.values():
             if not include_private and r.visibility == "private":
                 continue
-            result.append({
-                "room_id": r.room_id,
-                "host": r.host,
-                "players": list(r.players.keys()),
-                "spectators": list(r.spectators.keys()),
-                "started": r.started,
-                "symbols": r.symbols,
-                "days": r.days,
-                "visibility": r.visibility,
-                "has_password": r.password is not None,
-            })
+            result.append(
+                {
+                    "room_id": r.room_id,
+                    "host": r.host,
+                    "players": list(r.players.keys()),
+                    "spectators": list(r.spectators.keys()),
+                    "started": r.started,
+                    "symbols": r.symbols,
+                    "days": r.days,
+                    "visibility": r.visibility,
+                    "has_password": r.password is not None,
+                }
+            )
         return result
 
-    def create_room(self, host: str, visibility: str = "public",
-                    password: str | None = None) -> Room:
+    def create_room(
+        self, host: str, visibility: str = "public", password: str | None = None
+    ) -> Room:
         room_id = f"room_{uuid.uuid4().hex[:6]}"
         room = Room(
-            room_id=room_id, host=host,
-            visibility=visibility, password=password if visibility == "private" else None,
+            room_id=room_id,
+            host=host,
+            visibility=visibility,
+            password=password if visibility == "private" else None,
         )
         self.rooms[room_id] = room
         return room
 
-    def join_room(self, room_id: str, player: str, ws,
-                  role: str = "player", password: str | None = None) -> Room | None:
+    def join_room(
+        self,
+        room_id: str,
+        player: str,
+        ws,
+        role: str = "player",
+        password: str | None = None,
+    ) -> Room | None:
         room = self.rooms.get(room_id)
         if room is None:
             return None
@@ -123,7 +135,9 @@ class MultiplayerLobby:
         elif player in room.spectators:
             room.spectators[player].ws = ws
         elif role == "spectator":
-            room.spectators[player] = PlayerSession(player=player, ws=ws, role="spectator")
+            room.spectators[player] = PlayerSession(
+                player=player, ws=ws, role="spectator"
+            )
         else:
             room.players[player] = PlayerSession(player=player, ws=ws, role="player")
         self._player_room[player] = room_id
@@ -178,8 +192,9 @@ class MultiplayerLobby:
             raise KeyError(f"room {room_id!r} not found")
         return room.lock
 
-    async def place_order(self, player: str, symbol: str, side: str,
-                          quantity: float) -> dict | None:
+    async def place_order(
+        self, player: str, symbol: str, side: str, quantity: float
+    ) -> dict | None:
         room_id = self._player_room.get(player)
         if room_id is None:
             return None

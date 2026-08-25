@@ -1,4 +1,5 @@
 """Local Market Lab — Windows Desktop Main Window."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,10 +11,23 @@ import requests
 from PyQt6.QtCore import Qt, QTimer, QTime
 from PyQt6.QtGui import QColor, QIcon, QPen
 from PyQt6.QtWidgets import (
-    QApplication, QComboBox, QDoubleSpinBox, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton,
-    QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem, QTextEdit,
-    QVBoxLayout, QWidget,
+    QApplication,
+    QComboBox,
+    QDoubleSpinBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPushButton,
+    QStatusBar,
+    QTabWidget,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 API_BASE = "http://127.0.0.1:8322"
@@ -63,7 +77,9 @@ class ApiClient:
 
     def post(self, path: str, json: dict = None):
         try:
-            r = self.session.post(f"{self.base}{path}", json=json or {}, timeout=self.timeout)
+            r = self.session.post(
+                f"{self.base}{path}", json=json or {}, timeout=self.timeout
+            )
             r.raise_for_status()
             return r.json()
         except Exception:
@@ -82,11 +98,14 @@ class MainWindow(QMainWindow):
         # Frozen (PyInstaller): icon must ship as data file next to the EXE or
         # be extracted from _MEIPASS; in dev builds it lives at project root.
         import sys
+
         candidates = []
         if getattr(sys, "frozen", False):
             base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
-            candidates = [base / "lml-icon.ico",
-                          Path(sys.executable).parent / "lml-icon.ico"]
+            candidates = [
+                base / "lml-icon.ico",
+                Path(sys.executable).parent / "lml-icon.ico",
+            ]
         else:
             candidates = [Path(__file__).parent.parent.parent / "lml-icon.ico"]
         for icon_path in candidates:
@@ -182,12 +201,29 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.mk_symbol = QComboBox()
-        self.mk_symbol.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.mk_symbol.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         self.mk_symbol.currentTextChanged.connect(self._load_market_data)
         top.addWidget(self.mk_symbol)
         top.addStretch()
         self.mk_price = QLabel("--")
-        self.mk_price.setStyleSheet(f"color: {C_AMBER}; font-size: 18px; font-weight: bold;")
+        self.mk_price.setStyleSheet(
+            f"color: {C_AMBER}; font-size: 18px; font-weight: bold;"
+        )
         top.addWidget(self.mk_price)
         self.mk_chg = QLabel("--")
         top.addWidget(self.mk_chg)
@@ -211,11 +247,33 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.bt_symbol = QComboBox()
-        self.bt_symbol.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.bt_symbol.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         top.addWidget(self.bt_symbol)
         top.addWidget(QLabel("Strategie:"))
         self.bt_strategy = QComboBox()
-        self.bt_strategy.addItems(["buy_and_hold", "periodic_rebalance_63", "momentum_20", "mean_reversion_20"])
+        self.bt_strategy.addItems(
+            [
+                "buy_and_hold",
+                "periodic_rebalance_63",
+                "momentum_20",
+                "mean_reversion_20",
+            ]
+        )
         top.addWidget(self.bt_strategy)
         top.addWidget(QLabel("Fees:"))
         self.bt_fees = QDoubleSpinBox()
@@ -247,11 +305,34 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.sc_symbol = QComboBox()
-        self.sc_symbol.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.sc_symbol.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         top.addWidget(self.sc_symbol)
         top.addWidget(QLabel("Methode:"))
         self.sc_method = QComboBox()
-        self.sc_method.addItems(["crash_30pct", "covid_crash", "2008_financial_crisis", "monte_carlo", "block_bootstrap"])
+        self.sc_method.addItems(
+            [
+                "crash_30pct",
+                "covid_crash",
+                "2008_financial_crisis",
+                "monte_carlo",
+                "block_bootstrap",
+            ]
+        )
         top.addWidget(self.sc_method)
         top.addStretch()
         run_btn = QPushButton("▶ Run")
@@ -273,7 +354,22 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.val_symbol = QComboBox()
-        self.val_symbol.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.val_symbol.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         top.addWidget(self.val_symbol)
         top.addWidget(QLabel("Train:"))
         self.val_train = QLineEdit("100")
@@ -306,7 +402,22 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.ex_symbol = QComboBox()
-        self.ex_symbol.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.ex_symbol.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         top.addWidget(self.ex_symbol)
         top.addStretch()
         load_btn = QPushButton("Load")
@@ -332,7 +443,9 @@ class MainWindow(QMainWindow):
         top.addWidget(load_btn)
         lo.addLayout(top)
         self.rb_result = QTableWidget(0, 6)
-        self.rb_result.setHorizontalHeaderLabels(["Symbol", "Current%", "Target%", "Drift%", "Action", "Est. Cost"])
+        self.rb_result.setHorizontalHeaderLabels(
+            ["Symbol", "Current%", "Target%", "Drift%", "Action", "Est. Cost"]
+        )
         lo.addWidget(self.rb_result)
         note = QLabel("⚠ NUR VORSCHLÄG — keine Ausführung!")
         note.setStyleSheet(f"color: {C_AMBER};")
@@ -345,7 +458,22 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Symbol:"))
         self.ex_port = QComboBox()
-        self.ex_port.addItems(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"])
+        self.ex_port.addItems(
+            [
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "TSLA",
+                "NVDA",
+                "META",
+                "BTC-USD",
+                "ETH-USD",
+                "SPY",
+                "QQQ",
+                "IWDA",
+            ]
+        )
         top.addWidget(self.ex_port)
         top.addStretch()
         pdf_btn = QPushButton("PDF")
@@ -419,7 +547,16 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Challenge:"))
         self.game_challenge = QComboBox()
-        self.game_challenge.addItems(["beat_market", "low_volatility", "income_generator", "max_sharpe", "min_volatility", "beat_benchmark_by_5pct"])
+        self.game_challenge.addItems(
+            [
+                "beat_market",
+                "low_volatility",
+                "income_generator",
+                "max_sharpe",
+                "min_volatility",
+                "beat_benchmark_by_5pct",
+            ]
+        )
         top.addWidget(self.game_challenge)
         top.addStretch()
         create_btn = QPushButton("Create")
@@ -430,7 +567,9 @@ class MainWindow(QMainWindow):
         top.addWidget(lb_btn)
         lo.addLayout(top)
         self.game_result = QTableWidget(0, 4)
-        self.game_result.setHorizontalHeaderLabels(["Rank", "Player", "Score", "Challenge"])
+        self.game_result.setHorizontalHeaderLabels(
+            ["Rank", "Player", "Score", "Challenge"]
+        )
         lo.addWidget(self.game_result)
         return w
 
@@ -439,7 +578,9 @@ class MainWindow(QMainWindow):
     def _load_market_data(self, symbol: str) -> None:
         if not symbol:
             return
-        data = self.api.get(f"/api/v1/market/data/{symbol}?source=yahoo&interval=1d&years=2")
+        data = self.api.get(
+            f"/api/v1/market/data/{symbol}?source=yahoo&interval=1d&years=2"
+        )
         if not data or "bars" not in data:
             return
         bars = data["bars"]
@@ -453,8 +594,12 @@ class MainWindow(QMainWindow):
             o, h, l, c = bar["open"], bar["high"], bar["low"], bar["close"]
             color = C_GREEN if c >= o else C_RED
             self.mk_chart.plot([i, i], [l, h], pen=pg.mkPen(color=color, width=1))
-            self.mk_chart.plot([i-0.3, i+0.3], [o, o], pen=pg.mkPen(color=color, width=2))
-            self.mk_chart.plot([i-0.3, i+0.3], [c, c], pen=pg.mkPen(color=color, width=2))
+            self.mk_chart.plot(
+                [i - 0.3, i + 0.3], [o, o], pen=pg.mkPen(color=color, width=2)
+            )
+            self.mk_chart.plot(
+                [i - 0.3, i + 0.3], [c, c], pen=pg.mkPen(color=color, width=2)
+            )
         # Price display
         last = closes[-1]
         prev = closes[-2] if len(closes) > 1 else last
@@ -467,7 +612,9 @@ class MainWindow(QMainWindow):
         symbol = self.mk_symbol.currentText()
         if not symbol:
             return
-        data = self.api.post(f"/api/v1/market/indicators/{symbol}", {"indicator": name, "period": 20})
+        data = self.api.post(
+            f"/api/v1/market/indicators/{symbol}", {"indicator": name, "period": 20}
+        )
         if not data:
             return
         # Overlay on chart
@@ -475,21 +622,26 @@ class MainWindow(QMainWindow):
         self._load_market_data(symbol)
         values = data.get("values", [])
         if values:
-            self.mk_chart.plot(list(range(len(values))), values, pen=pg.mkPen(color=C_AMBER, width=2))
+            self.mk_chart.plot(
+                list(range(len(values))), values, pen=pg.mkPen(color=C_AMBER, width=2)
+            )
 
     def _run_backtest(self) -> None:
         symbol = self.bt_symbol.currentText()
         strategy = self.bt_strategy.currentText()
         fees = self.bt_fees.value()
         slip = self.bt_slip.value()
-        data = self.api.post(f"/api/v1/backtest", {
-            "symbol": symbol,
-            "strategy": strategy,
-            "fees_bps": fees,
-            "slippage_bps": slip,
-            "spread_bps": 2,
-            "seed": 42
-        })
+        data = self.api.post(
+            f"/api/v1/backtest",
+            {
+                "symbol": symbol,
+                "strategy": strategy,
+                "fees_bps": fees,
+                "slippage_bps": slip,
+                "spread_bps": 2,
+                "seed": 42,
+            },
+        )
         if not data:
             return
         self.bt_result.setRowCount(0)
@@ -503,15 +655,23 @@ class MainWindow(QMainWindow):
         curve = data.get("equity_curve", [])
         if curve:
             self.bt_chart.clear()
-            self.bt_chart.plot(list(range(len(curve))), curve, pen=pg.mkPen(color=C_AMBER, width=2))
+            self.bt_chart.plot(
+                list(range(len(curve))), curve, pen=pg.mkPen(color=C_AMBER, width=2)
+            )
 
     def _run_scenario(self) -> None:
         symbol = self.sc_symbol.currentText()
         method = self.sc_method.currentText()
         if method in ["crash_30pct", "covid_crash", "2008_financial_crisis"]:
-            data = self.api.post(f"/api/v1/scenario/stress", {"symbol": symbol, "source": "yahoo", "scenario": method, "seed": 42})
+            data = self.api.post(
+                f"/api/v1/scenario/stress",
+                {"symbol": symbol, "source": "yahoo", "scenario": method, "seed": 42},
+            )
         else:
-            data = self.api.post(f"/api/v1/scenario", {"symbol": symbol, "method": method, "n_sims": 1000, "seed": 42})
+            data = self.api.post(
+                f"/api/v1/scenario",
+                {"symbol": symbol, "method": method, "n_sims": 1000, "seed": 42},
+            )
         if not data:
             return
         self.sc_result.setRowCount(0)
@@ -526,7 +686,9 @@ class MainWindow(QMainWindow):
         if timeline:
             self.sc_chart.clear()
             y, x = np.histogram(timeline, bins=30)
-            self.sc_chart.plot(x[:-1], y, stepMode=True, fillLevel=0, brush=(255, 160, 40, 80))
+            self.sc_chart.plot(
+                x[:-1], y, stepMode=True, fillLevel=0, brush=(255, 160, 40, 80)
+            )
 
     def _run_walk_forward(self) -> None:
         symbol = self.val_symbol.currentText()
@@ -536,10 +698,17 @@ class MainWindow(QMainWindow):
             step = int(self.val_step.text())
         except ValueError:
             return
-        data = self.api.post(f"/api/v1/validation/walk-forward", {
-            "symbol": symbol, "source": "yahoo",
-            "train_window": train, "test_window": test, "step": step, "seed": 42
-        })
+        data = self.api.post(
+            f"/api/v1/validation/walk-forward",
+            {
+                "symbol": symbol,
+                "source": "yahoo",
+                "train_window": train,
+                "test_window": test,
+                "step": step,
+                "seed": 42,
+            },
+        )
         if not data:
             return
         self.val_result.setRowCount(0)
@@ -551,9 +720,16 @@ class MainWindow(QMainWindow):
 
     def _run_hyperparameter(self) -> None:
         symbol = self.val_symbol.currentText()
-        data = self.api.post(f"/api/v1/validation/hyperparameter", {
-            "symbol": symbol, "source": "yahoo", "metric": "sharpe", "n_trials": 10, "seed": 42
-        })
+        data = self.api.post(
+            f"/api/v1/validation/hyperparameter",
+            {
+                "symbol": symbol,
+                "source": "yahoo",
+                "metric": "sharpe",
+                "n_trials": 10,
+                "seed": 42,
+            },
+        )
         if not data:
             return
         self.val_result.setRowCount(0)
@@ -565,7 +741,9 @@ class MainWindow(QMainWindow):
 
     def _load_explainability(self) -> None:
         symbol = self.ex_symbol.currentText()
-        data = self.api.get(f"/api/v1/explainability/importance?symbol={symbol}&source=yahoo")
+        data = self.api.get(
+            f"/api/v1/explainability/importance?symbol={symbol}&source=yahoo"
+        )
         if not data:
             return
         self.ex_result.setRowCount(0)
@@ -573,7 +751,9 @@ class MainWindow(QMainWindow):
             row = self.ex_result.rowCount()
             self.ex_result.insertRow(row)
             self.ex_result.setItem(row, 0, QTableWidgetItem(f.get("feature", "")))
-            self.ex_result.setItem(row, 1, QTableWidgetItem(str(f.get("importance", ""))))
+            self.ex_result.setItem(
+                row, 1, QTableWidgetItem(str(f.get("importance", "")))
+            )
             self.ex_result.setItem(row, 2, QTableWidgetItem(str(f.get("std", ""))))
 
     def _load_rebalancing(self) -> None:
@@ -586,15 +766,23 @@ class MainWindow(QMainWindow):
             row = self.rb_result.rowCount()
             self.rb_result.insertRow(row)
             self.rb_result.setItem(row, 0, QTableWidgetItem(p.get("symbol", "")))
-            self.rb_result.setItem(row, 1, QTableWidgetItem(f"{p.get('current_weight', 0):.2%}"))
-            self.rb_result.setItem(row, 2, QTableWidgetItem(f"{p.get('target_weight', 0):.2%}"))
+            self.rb_result.setItem(
+                row, 1, QTableWidgetItem(f"{p.get('current_weight', 0):.2%}")
+            )
+            self.rb_result.setItem(
+                row, 2, QTableWidgetItem(f"{p.get('target_weight', 0):.2%}")
+            )
             self.rb_result.setItem(row, 3, QTableWidgetItem(f"{p.get('drift', 0):.2%}"))
             self.rb_result.setItem(row, 4, QTableWidgetItem(p.get("action", "")))
-            self.rb_result.setItem(row, 5, QTableWidgetItem(str(p.get("estimated_cost", ""))))
+            self.rb_result.setItem(
+                row, 5, QTableWidgetItem(str(p.get("estimated_cost", "")))
+            )
 
     def _run_export(self, kind: str) -> None:
         symbol = self.ex_port.currentText()
-        data = self.api.post(f"/api/v1/export/{kind}", {"symbol": symbol, "source": "yahoo"})
+        data = self.api.post(
+            f"/api/v1/export/{kind}", {"symbol": symbol, "source": "yahoo"}
+        )
         if not data:
             self.export_status.setText(f"❌ Export {kind} fehlgeschlagen")
             return
@@ -617,7 +805,9 @@ class MainWindow(QMainWindow):
         dd = data.get("drawdown_series", [])
         if dd:
             self.risk_chart.clear()
-            self.risk_chart.plot(list(range(len(dd))), dd, pen=pg.mkPen(color=C_RED, width=2))
+            self.risk_chart.plot(
+                list(range(len(dd))), dd, pen=pg.mkPen(color=C_RED, width=2)
+            )
 
     def _send_chat(self) -> None:
         text = self.ol_input.text().strip()
@@ -626,9 +816,14 @@ class MainWindow(QMainWindow):
         model = self.ol_model.currentData() or self.ol_model.currentText()
         self.ol_chat.append(f"<b>Du:</b> {text}")
         self.ol_input.clear()
-        result = self.api.post("/api/v1/ollama/chat", {"model": model, "messages": [{"role": "user", "content": text}]})
+        result = self.api.post(
+            "/api/v1/ollama/chat",
+            {"model": model, "messages": [{"role": "user", "content": text}]},
+        )
         if result:
-            self.ol_chat.append(f"<b>KI:</b> {result.get('content', result.get('response', 'Keine Antwort'))}")
+            self.ol_chat.append(
+                f"<b>KI:</b> {result.get('content', result.get('response', 'Keine Antwort'))}"
+            )
 
     def _create_game(self) -> None:
         challenge = self.game_challenge.currentText()
@@ -653,13 +848,30 @@ class MainWindow(QMainWindow):
             self.game_result.insertRow(row)
             self.game_result.setItem(row, 0, QTableWidgetItem(str(i + 1)))
             self.game_result.setItem(row, 1, QTableWidgetItem(entry.get("player", "")))
-            self.game_result.setItem(row, 2, QTableWidgetItem(str(entry.get("score", ""))))
-            self.game_result.setItem(row, 3, QTableWidgetItem(entry.get("challenge", "")))
+            self.game_result.setItem(
+                row, 2, QTableWidgetItem(str(entry.get("score", "")))
+            )
+            self.game_result.setItem(
+                row, 3, QTableWidgetItem(entry.get("challenge", ""))
+            )
 
     # ─── Watchlist & Timers ──────────────────────────────────────────
 
     def _init_watchlist(self) -> None:
-        defaults = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "BTC-USD", "ETH-USD", "SPY", "QQQ", "IWDA"]
+        defaults = [
+            "AAPL",
+            "MSFT",
+            "GOOGL",
+            "AMZN",
+            "TSLA",
+            "NVDA",
+            "META",
+            "BTC-USD",
+            "ETH-USD",
+            "SPY",
+            "QQQ",
+            "IWDA",
+        ]
         for symbol in defaults:
             if symbol not in self._symbols:
                 self._symbols.append(symbol)
@@ -703,8 +915,7 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         top.addWidget(QLabel("Run analysis job:"))
         self.jobs_kind = QComboBox()
-        self.jobs_kind.addItems(["monte_carlo", "walk_forward", "tuning",
-                                 "stress"])
+        self.jobs_kind.addItems(["monte_carlo", "walk_forward", "tuning", "stress"])
         top.addWidget(self.jobs_kind)
         submit_btn = QPushButton("Submit")
         submit_btn.clicked.connect(self._jobs_submit)
@@ -717,10 +928,9 @@ class MainWindow(QMainWindow):
 
         self.jobs_table = QTableWidget(0, 7)
         self.jobs_table.setHorizontalHeaderLabels(
-            ["Job ID", "Type", "Status", "Progress", "Phase",
-             "Runtime", "Created"])
-        self.jobs_table.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows)
+            ["Job ID", "Type", "Status", "Progress", "Phase", "Runtime", "Created"]
+        )
+        self.jobs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.jobs_table.setColumnWidth(0, 120)
         self.jobs_table.setColumnWidth(1, 120)
         self.jobs_table.setColumnWidth(3, 90)
@@ -750,8 +960,12 @@ class MainWindow(QMainWindow):
         # Demo params; real params would come from form inputs. The queue is
         # analysis-only — no execution, no broker.
         params = {
-            "monte_carlo": {"weights": {"IWDA": 1.0}, "runs": 500, "seed": 42,
-                            "horizon_days": 63},
+            "monte_carlo": {
+                "weights": {"IWDA": 1.0},
+                "runs": 500,
+                "seed": 42,
+                "horizon_days": 63,
+            },
             "walk_forward": {"prices": [1.0] * 260, "seed": 42},
             "tuning": {"grid": [{"w": 1.0}], "prices": [1.0] * 260, "seed": 42},
             "stress": {"weights": {"IWDA": 1.0}, "seed": 42},
@@ -784,30 +998,49 @@ class MainWindow(QMainWindow):
             runtime = ""
             if started:
                 import time as _t
+
                 rt = round((finished or _t.time()) - started, 1)
                 runtime = f"{rt}s"
             created = raw.get("created_at")
             created_s = ""
             if created:
                 created_s = str(created)[:19].replace("T", " ")
-            values = [str(raw.get("id", "")), str(raw.get("kind", "")), status,
-                      f"{progress*100:.0f}%", self._jobs_phase(raw), runtime,
-                      created_s]
+            values = [
+                str(raw.get("id", "")),
+                str(raw.get("kind", "")),
+                status,
+                f"{progress*100:.0f}%",
+                self._jobs_phase(raw),
+                runtime,
+                created_s,
+            ]
             for col, val in enumerate(values):
                 item = QTableWidgetItem(val)
-                item.setForeground(QColor(
-                    {"succeeded": C_GREEN, "failed": C_RED,
-                     "cancelled": C_RED, "running": C_AMBER,
-                     "cancelling": C_AMBER}.get(status, C_WHITE)))
+                item.setForeground(
+                    QColor(
+                        {
+                            "succeeded": C_GREEN,
+                            "failed": C_RED,
+                            "cancelled": C_RED,
+                            "running": C_AMBER,
+                            "cancelling": C_AMBER,
+                        }.get(status, C_WHITE)
+                    )
+                )
                 self.jobs_table.setItem(i, col, item)
             self._jobs_cache[str(raw.get("id"))] = status
 
     @staticmethod
     def _jobs_phase(raw: dict) -> str:
         s = raw.get("status")
-        return {"queued": "queued", "running": "execution",
-                "cancelling": "cancelling", "cancelled": "cancelled",
-                "succeeded": "done", "failed": "error"}.get(s, "queued")
+        return {
+            "queued": "queued",
+            "running": "execution",
+            "cancelling": "cancelling",
+            "cancelled": "cancelled",
+            "succeeded": "done",
+            "failed": "error",
+        }.get(s, "queued")
 
     def _jobs_cancel_selected(self) -> None:
         row = self.jobs_table.currentRow()
@@ -833,13 +1066,15 @@ class MainWindow(QMainWindow):
         job_id = self.jobs_table.item(row, 0).text()
         status = self.jobs_table.item(row, 2).text()
         if status != "succeeded":
-            self.jobs_msg.setText(f"{job_id}: status '{status}' — "
-                                  f"no artifact available")
+            self.jobs_msg.setText(
+                f"{job_id}: status '{status}' — " f"no artifact available"
+            )
             return
         resp = self.api.get(f"/api/v1/jobs/{job_id}")
         if isinstance(resp, dict) and "result" in resp:
-            self.jobs_msg.setText(f"artifact {job_id}: "
-                                  f"{json.dumps(resp['result'])[:160]}")
+            self.jobs_msg.setText(
+                f"artifact {job_id}: " f"{json.dumps(resp['result'])[:160]}"
+            )
         else:
             self.jobs_msg.setText(f"artifact fetch failed: {resp}")
 

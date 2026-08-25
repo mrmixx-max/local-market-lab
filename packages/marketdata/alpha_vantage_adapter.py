@@ -7,6 +7,7 @@ Security: the API key is sent ONLY via the ``apikey`` HTTP header —
 never in the URL query string, never logged, never embedded in error
 messages or exported metadata.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,7 +16,12 @@ import os
 
 from packages.domain.entities import PriceBar
 
-from .base_adapter import AdapterError, BaseAdapter, RateLimitError, detect_currency  # noqa: F401
+from .base_adapter import (
+    AdapterError,
+    BaseAdapter,
+    RateLimitError,
+    detect_currency,
+)  # noqa: F401
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +48,9 @@ class AlphaVantageAdapter(BaseAdapter):
         super().__init__(cache_path=cache_path, **kwargs)
         self._last_request_ts = 0.0
 
-    def fetch(self, symbol: str, output_size: str = "full",
-              offline: bool = False) -> "PriceSeries":
+    def fetch(
+        self, symbol: str, output_size: str = "full", offline: bool = False
+    ) -> "PriceSeries":
         """Fetch daily adjusted OHLCV from Alpha Vantage.
 
         Args:
@@ -99,6 +106,7 @@ class AlphaVantageAdapter(BaseAdapter):
 
     def _throttled_get(self, url: str) -> bytes:
         import time as _t
+
         elapsed = _t.time() - self._last_request_ts
         if elapsed < REQUEST_SPACING:
             wait = REQUEST_SPACING - elapsed

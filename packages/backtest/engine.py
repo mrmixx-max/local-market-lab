@@ -3,6 +3,7 @@
 Strategies are rule-based and explicit. Every run records fees, slippage,
 benchmark, seed (if any), and data lineage in its artifact.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,9 +15,9 @@ from packages.metrics.risk import all_metrics
 # ---------- assumptions ----------
 @dataclass
 class Assumptions:
-    fees_bps: float = 10.0          # per trade, basis points of trade value
-    slippage_bps: float = 5.0       # per trade
-    rebalance_frequency: str = "none"   # none|quarterly|annual
+    fees_bps: float = 10.0  # per trade, basis points of trade value
+    slippage_bps: float = 5.0  # per trade
+    rebalance_frequency: str = "none"  # none|quarterly|annual
     reporting_currency: str = "EUR"
 
     def trade_cost_fraction(self) -> float:
@@ -26,15 +27,22 @@ class Assumptions:
 # ---------- strategies ----------
 class Strategy:
     """Base class. decide(weights, i, prices, value) -> target weights dict."""
+
     name: str = "base"
 
-    def weights(self, i: int, prices: dict[str, list[float]], symbols: list[str],
-                current: dict[str, float]) -> dict[str, float]:
+    def weights(
+        self,
+        i: int,
+        prices: dict[str, list[float]],
+        symbols: list[str],
+        current: dict[str, float],
+    ) -> dict[str, float]:
         raise NotImplementedError
 
 
 class BuyAndHold(Strategy):
     """Equal weight at t0, never touched again."""
+
     name = "buy-and-hold"
 
     def weights(self, i, prices, symbols, current):
@@ -46,6 +54,7 @@ class BuyAndHold(Strategy):
 
 class PeriodicRebalance(Strategy):
     """Equal weight rebalanced every N trading days."""
+
     def __init__(self, every_days: int = 63):
         self.every_days = every_days
         self.name = f"rebalance-{every_days}d"
@@ -57,10 +66,12 @@ class PeriodicRebalance(Strategy):
 
 
 # ---------- engine ----------
-def run_backtest(prices: dict[str, list[float]],
-                 strategy: Strategy,
-                 assumptions: Assumptions | None = None,
-                 start_value: float = 100.0) -> dict:
+def run_backtest(
+    prices: dict[str, list[float]],
+    strategy: Strategy,
+    assumptions: Assumptions | None = None,
+    start_value: float = 100.0,
+) -> dict:
     assumptions = assumptions or Assumptions()
     symbols = sorted(prices.keys())
     n = min(len(p) for p in prices.values())
@@ -75,16 +86,19 @@ def run_backtest(prices: dict[str, list[float]],
         px = {s: prices[s][i] for s in symbols}
         total = cash + sum(units[s] * px[s] for s in symbols)
 
-        target_w = strategy.weights(i, prices, symbols,
-                                    {s: units[s] * px[s] / total if total else 0.0
-                                     for s in symbols})
+        target_w = strategy.weights(
+            i,
+            prices,
+            symbols,
+            {s: units[s] * px[s] / total if total else 0.0 for s in symbols},
+        )
         # drift-normalize current weights
         cur_w = {s: (units[s] * px[s]) / total if total else 0.0 for s in symbols}
 
         # trade toward target when deviation exceeds a small band (avoids churn)
         for s in symbols:
             delta_w = target_w.get(s, 0.0) - cur_w.get(s, 0.0)
-            if abs(delta_w) * total < total * 0.001:   # <0.1% of portfolio: skip
+            if abs(delta_w) * total < total * 0.001:  # <0.1% of portfolio: skip
                 continue
             trade_value = delta_w * total
             cost = abs(trade_value) * cost_frac
@@ -107,7 +121,8 @@ def run_backtest(prices: dict[str, list[float]],
         "benchmark_curve": benchmark,
         "benchmark_metrics": all_metrics(benchmark),
         "assumptions": {
-            "fees_bps": assumptions.fees_bps, "slippage_bps": assumptions.slippage_bps,
+            "fees_bps": assumptions.fees_bps,
+            "slippage_bps": assumptions.slippage_bps,
             "rebalance_frequency": assumptions.rebalance_frequency,
             "start_value": start_value,
         },
@@ -125,9 +140,11 @@ def _equal_weight_index(prices: dict[str, list[float]], n: int) -> list[float]:
     return out
 
 
-def backtest_from_workspace(ws, portfolio: str, strategy: Strategy,
-                            assumptions: Assumptions | None = None) -> dict:
+def backtest_from_workspace(
+    ws, portfolio: str, strategy: Strategy, assumptions: Assumptions | None = None
+) -> dict:
     from packages.ingest.csv_import import _pick  # noqa: F401 (import guard)
+
     txns = ws.transactions_for(portfolio)
     if not txns:
         raise ValueError(f"portfolio {portfolio!r} has no transactions")

@@ -1,6 +1,7 @@
 """In-process job queue: persistent status, cooperative cancellation,
 artifact result references. No external infrastructure, no broker, no
 trade execution — analysis jobs only."""
+
 from __future__ import annotations
 
 import threading
@@ -16,8 +17,9 @@ _default: tuple[JobStore, Worker] | None = None
 _default_lock = threading.Lock()
 
 
-def get_job_system(db_path: str | Path = "~/.local-market-lab/jobs.db",
-                   autostart: bool = True) -> tuple[JobStore, Worker]:
+def get_job_system(
+    db_path: str | Path = "~/.local-market-lab/jobs.db", autostart: bool = True
+) -> tuple[JobStore, Worker]:
     """Process-wide singleton (store + started worker)."""
     global _default
     with _default_lock:
@@ -31,7 +33,15 @@ def get_job_system(db_path: str | Path = "~/.local-market-lab/jobs.db",
 
 
 __all__ = [
-    "Job", "JobStatus", "JobStore", "Worker", "can_transition",
-    "get_job_system", "known_kinds", "register", "InvalidTransition",
-    "JobNotFound", "UnknownJobKind",
+    "Job",
+    "JobStatus",
+    "JobStore",
+    "Worker",
+    "can_transition",
+    "get_job_system",
+    "known_kinds",
+    "register",
+    "InvalidTransition",
+    "JobNotFound",
+    "UnknownJobKind",
 ]

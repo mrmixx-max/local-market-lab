@@ -1,4 +1,5 @@
 """Tests for explainability: importance + comparison."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -39,9 +40,14 @@ class TestPermutationImportance:
         X = rng.standard_normal((200, 4))
         y = X[:, 1] * 5 + rng.standard_normal(200) * 0.5
         predict = lambda X: X[:, 1] * 5
-        result = permutation_importance(predict, X, y,
-                                        feature_names=["a", "b", "c", "d"],
-                                        n_repeats=10, data_quality=dq)
+        result = permutation_importance(
+            predict,
+            X,
+            y,
+            feature_names=["a", "b", "c", "d"],
+            n_repeats=10,
+            data_quality=dq,
+        )
         means = [f.importance for f in result.feature_importance]
         assert means[1] == max(means)
 
@@ -50,8 +56,9 @@ class TestPermutationImportance:
         X = rng.standard_normal((50, 2))
         y = X[:, 0] + rng.standard_normal(50) * 0.1
         predict = lambda X: X[:, 0]
-        result = permutation_importance(predict, X, y, metric="mae", n_repeats=3,
-                                        data_quality=dq)
+        result = permutation_importance(
+            predict, X, y, metric="mae", n_repeats=3, data_quality=dq
+        )
         assert result.model == "model"
 
 
@@ -121,16 +128,56 @@ class TestWalkForwardTable:
 class TestCompareModels:
     def test_compare_basic(self, dq):
         a = [
-            WalkForwardResult(1, 0, 100, 100, 130, "a", 0.01, 0.08,
-                              predictions=[1.0, 2.0], actuals=[1.1, 2.1]),
-            WalkForwardResult(2, 0, 120, 120, 150, "a", 0.02, 0.10,
-                              predictions=[3.0, 4.0], actuals=[3.1, 4.1]),
+            WalkForwardResult(
+                1,
+                0,
+                100,
+                100,
+                130,
+                "a",
+                0.01,
+                0.08,
+                predictions=[1.0, 2.0],
+                actuals=[1.1, 2.1],
+            ),
+            WalkForwardResult(
+                2,
+                0,
+                120,
+                120,
+                150,
+                "a",
+                0.02,
+                0.10,
+                predictions=[3.0, 4.0],
+                actuals=[3.1, 4.1],
+            ),
         ]
         b = [
-            WalkForwardResult(1, 0, 100, 100, 130, "b", 0.015, 0.09,
-                              predictions=[1.2, 2.2], actuals=[1.1, 2.1]),
-            WalkForwardResult(2, 0, 120, 120, 150, "b", 0.025, 0.11,
-                              predictions=[3.2, 4.2], actuals=[3.1, 4.1]),
+            WalkForwardResult(
+                1,
+                0,
+                100,
+                100,
+                130,
+                "b",
+                0.015,
+                0.09,
+                predictions=[1.2, 2.2],
+                actuals=[1.1, 2.1],
+            ),
+            WalkForwardResult(
+                2,
+                0,
+                120,
+                120,
+                150,
+                "b",
+                0.025,
+                0.11,
+                predictions=[3.2, 4.2],
+                actuals=[3.1, 4.1],
+            ),
         ]
         result = compare_models(a, b, dq)
         assert result.run_id

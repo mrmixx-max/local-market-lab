@@ -3,6 +3,7 @@
 The language guard blocks signal/advice phrasing in reports — per concept
 this is a product feature, not a footnote.
 """
+
 from __future__ import annotations
 
 import re
@@ -23,17 +24,22 @@ SCENARIO_DISCLAIMER = (
 
 WARN_PROFILES = {
     "research-only-v1": RESEARCH_DISCLAIMER,
-    "crypto-risk-v1": RESEARCH_DISCLAIMER +
-        " Crypto assets are highly volatile and can lose most or all of their value.",
+    "crypto-risk-v1": RESEARCH_DISCLAIMER
+    + " Crypto assets are highly volatile and can lose most or all of their value.",
 }
 
 # phrases that must never appear in generated output
 BLOCKED_PATTERNS = [
-    r"\bkaufsignal(e|en)?\b", r"\bverkaufssignal(e|en)?\b",
-    r"\bbuy signal\b", r"\bsell signal\b",
-    r"\bgarantiert(e|er|es)?\b", r"\bguaranteed?\b",
-    r"\bsichere rendite\b", r"\bsafe return\b",
-    r"\bbeste anlage\b", r"\bbest investment\b",
+    r"\bkaufsignal(e|en)?\b",
+    r"\bverkaufssignal(e|en)?\b",
+    r"\bbuy signal\b",
+    r"\bsell signal\b",
+    r"\bgarantiert(e|er|es)?\b",
+    r"\bguaranteed?\b",
+    r"\bsichere rendite\b",
+    r"\bsafe return\b",
+    r"\bbeste anlage\b",
+    r"\bbest investment\b",
     r"\bempfehlung:\s*(kaufen|verkaufen)\b",
     r"\brecommend (buying|selling)\b",
 ]
@@ -53,6 +59,5 @@ def assert_clean(text: str) -> str:
     """Raise when the text violates the language guard; else return it."""
     result = check_language(text)
     if not result["clean"]:
-        raise ValueError(
-            f"language guard violation: {result['violations']}")
+        raise ValueError(f"language guard violation: {result['violations']}")
     return text

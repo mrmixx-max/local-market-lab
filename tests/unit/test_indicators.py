@@ -1,4 +1,5 @@
 """Unit tests for pure technical indicator functions."""
+
 import math
 import pytest
 

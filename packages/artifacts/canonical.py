@@ -13,6 +13,7 @@ Time-dependent or random fields are EXCLUDED by the caller (e.g. created_at
 is stored but never fed into the result_hash). This module only makes the
 serialization deterministic.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -79,9 +80,14 @@ def _preprocess(o: Any):
 
 def canonical(obj: Any) -> str:
     """Deterministic JSON string with sorted keys and stable encoding."""
-    return json.dumps(_preprocess(obj), sort_keys=True, ensure_ascii=True,
-                      default=_default, allow_nan=False,
-                      separators=(",", ":"))
+    return json.dumps(
+        _preprocess(obj),
+        sort_keys=True,
+        ensure_ascii=True,
+        default=_default,
+        allow_nan=False,
+        separators=(",", ":"),
+    )
 
 
 def canonical_bytes(obj: Any) -> bytes:
@@ -91,6 +97,7 @@ def canonical_bytes(obj: Any) -> bytes:
 def stable_hash(obj: Any) -> str:
     """sha256 of the canonical form. Used for parameters/data/model/result."""
     import hashlib
+
     return "sha256:" + hashlib.sha256(canonical_bytes(obj)).hexdigest()
 
 
@@ -101,9 +108,19 @@ def redact_secrets(obj: Any) -> Any:
         out = {}
         for k, v in obj.items():
             if isinstance(k, str) and any(
-                s in k.lower() for s in (
-                    "key", "token", "secret", "password", "passwd", "api_key",
-                    "auth", "credential", "private")):
+                s in k.lower()
+                for s in (
+                    "key",
+                    "token",
+                    "secret",
+                    "password",
+                    "passwd",
+                    "api_key",
+                    "auth",
+                    "credential",
+                    "private",
+                )
+            ):
                 out[k] = _redact_value(v)
             else:
                 out[k] = redact_secrets(v)

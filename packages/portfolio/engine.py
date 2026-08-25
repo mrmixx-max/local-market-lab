@@ -2,6 +2,7 @@
 
 Handles corporate actions (splits, cash dividends) in chronological order.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from packages.marketdata.fx import FxPolicy
 class Lot:
     date: str
     quantity: float
-    price: float          # per unit incl. allocated fees
+    price: float  # per unit incl. allocated fees
 
 
 @dataclass
@@ -27,7 +28,9 @@ class Position:
     fees_paid: float = 0.0
 
 
-def build_positions(ws, portfolio: str, up_to: str | None = None) -> dict[str, Position]:
+def build_positions(
+    ws, portfolio: str, up_to: str | None = None
+) -> dict[str, Position]:
     """Derive positions from the append-only transaction log, applying
     corporate actions chronologically.
     """
@@ -65,11 +68,11 @@ def build_positions(ws, portfolio: str, up_to: str | None = None) -> dict[str, P
             _consume_lots(p, sell_qty)
             p.fees_paid += fees
         elif ttype == "dividend":
-            p.dividends_received += qty * price   # here 'qty' = shares entitled
+            p.dividends_received += qty * price  # here 'qty' = shares entitled
         elif ttype == "fee":
-            p.fees_paid += price                  # flat fee stored in price field
+            p.fees_paid += price  # flat fee stored in price field
         elif ttype in ("deposit", "withdrawal"):
-            continue                              # cash flows — not instrument positions
+            continue  # cash flows — not instrument positions
         elif ttype == "split":
             # handled through corporate_actions table; direct split txns ignored
             pass
@@ -104,13 +107,14 @@ def _apply_action(p: Position, ca) -> None:
         ratio = ca["ratio"]
         p.quantity *= ratio
         for lot in p.lots:
-            lot.price /= ratio          # cost basis per share scales inversely
+            lot.price /= ratio  # cost basis per share scales inversely
     # cash dividends are handled as dividend transactions by ingest;
     # lifecycle-only entries here don't change quantities.
 
 
-def value_portfolio(ws, portfolio: str, fx: FxPolicy | None = None,
-                    as_of: str | None = None) -> dict:
+def value_portfolio(
+    ws, portfolio: str, fx: FxPolicy | None = None, as_of: str | None = None
+) -> dict:
     """Value all positions at last available close per symbol.
 
     Missing FX rates produce an explicit 'incomplete' marker, never silent 1:1.
@@ -147,13 +151,19 @@ def value_portfolio(ws, portfolio: str, fx: FxPolicy | None = None,
         total_div += fx.require(p.dividends_received, cur) if fx.known(cur) else 0.0
 
         pl = value_rep - cost_rep
-        lines.append({
-            "symbol": sym, "quantity": round(p.quantity, 6),
-            "avg_cost": round(cost_local / p.quantity, 4) if p.quantity else 0.0,
-            "last_price": last_close, "currency": cur,
-            "value": round(value_rep, 2), "cost": round(cost_rep, 2),
-            "pl": round(pl, 2), "pl_pct": round(pl / cost_rep * 100, 2) if cost_rep else None,
-        })
+        lines.append(
+            {
+                "symbol": sym,
+                "quantity": round(p.quantity, 6),
+                "avg_cost": round(cost_local / p.quantity, 4) if p.quantity else 0.0,
+                "last_price": last_close,
+                "currency": cur,
+                "value": round(value_rep, 2),
+                "cost": round(cost_rep, 2),
+                "pl": round(pl, 2),
+                "pl_pct": round(pl / cost_rep * 100, 2) if cost_rep else None,
+            }
+        )
 
     return {
         "portfolio": portfolio,
@@ -174,10 +184,14 @@ def value_portfolio(ws, portfolio: str, fx: FxPolicy | None = None,
 # Institutional-grade analytics: benchmark, allocation, risk contribution
 # ---------------------------------------------------------------------------
 
+
 def _daily_returns(closes: list[float]) -> list[float]:
     """Simple return series from a list of closes; empty if <2 points."""
-    return [closes[i] / closes[i - 1] - 1 for i in range(1, len(closes))
-            if closes[i - 1] > 0]
+    return [
+        closes[i] / closes[i - 1] - 1
+        for i in range(1, len(closes))
+        if closes[i - 1] > 0
+    ]
 
 
 def _annual_factor(returns: list[float]) -> float:
@@ -187,8 +201,9 @@ def _annual_factor(returns: list[float]) -> float:
     return 252.0  # portfolio bars are daily closes
 
 
-def benchmark_comparison(ws, portfolio_returns: list[float],
-                         benchmark_symbol: str) -> dict:
+def benchmark_comparison(
+    ws, portfolio_returns: list[float], benchmark_symbol: str
+) -> dict:
     """Compute Beta, Alpha, Tracking Error, Information Ratio vs a benchmark.
 
     Beta      = cov(port, bench) / var(bench)
@@ -198,8 +213,10 @@ def benchmark_comparison(ws, portfolio_returns: list[float],
     """
     out = {
         "benchmark": benchmark_symbol,
-        "beta": None, "alpha": None,
-        "tracking_error": None, "information_ratio": None,
+        "beta": None,
+        "alpha": None,
+        "tracking_error": None,
+        "information_ratio": None,
     }
     try:
         bench_series = get_series(ws, benchmark_symbol)
@@ -227,7 +244,7 @@ def benchmark_comparison(ws, portfolio_returns: list[float],
     excess = [pr[i] - br[i] for i in range(n)]
     mean_ex = sum(excess) / n
     alpha = mean_ex * f
-    te = (sum((x - mean_ex) ** 2 for x in excess) / (n - 1)) ** 0.5 * f ** 0.5
+    te = (sum((x - mean_ex) ** 2 for x in excess) / (n - 1)) ** 0.5 * f**0.5
     ir = alpha / te if te > 0 else None
 
     return {
@@ -296,8 +313,7 @@ def allocation_breakdown(ws, valued: dict) -> list[dict]:
         total = 1.0  # avoid division by zero; weights will be zero-valued
 
     breakdown = [
-        {"asset_class": k, "value": round(v, 2),
-         "weight": round(v / total, 4)}
+        {"asset_class": k, "value": round(v, 2), "weight": round(v / total, 4)}
         for k, v in sorted(buckets.items(), key=lambda x: -x[1])
     ]
     return breakdown
@@ -347,27 +363,38 @@ def risk_contribution(ws, valued: dict, fx) -> list[dict]:
 
     # Covariance matrix (sample)
     def _cov(a: str, b: str) -> float:
-        return sum((aligned[a][i] - means[a]) * (aligned[b][i] - means[b])
-                   for i in range(n)) / (n - 1) if n > 1 else 0.0
+        return (
+            sum(
+                (aligned[a][i] - means[a]) * (aligned[b][i] - means[b])
+                for i in range(n)
+            )
+            / (n - 1)
+            if n > 1
+            else 0.0
+        )
 
     # Portfolio variance: w^T Σ w
     port_var = 0.0
     for si in syms:
         for sj in syms:
             port_var += weights[si] * weights[sj] * _cov(si, sj)
-    port_vol = port_var ** 0.5 if port_var > 0 else 0.0
+    port_vol = port_var**0.5 if port_var > 0 else 0.0
 
     # Marginal contribution: (Σ w)_i → RC_i = w_i * marginal_i
     result = []
     for si in syms:
         marginal = sum(weights[sj] * _cov(si, sj) for sj in syms)
         rc = weights[si] * marginal
-        result.append({
-            "symbol": si,
-            "weight": round(weights[si], 4),
-            "marginal_risk": round(marginal, 6),
-            "risk_contribution": round(rc, 6),
-            "risk_share_pct": round(rc / port_vol * 100, 2) if port_vol > 0 else 0.0,
-        })
+        result.append(
+            {
+                "symbol": si,
+                "weight": round(weights[si], 4),
+                "marginal_risk": round(marginal, 6),
+                "risk_contribution": round(rc, 6),
+                "risk_share_pct": (
+                    round(rc / port_vol * 100, 2) if port_vol > 0 else 0.0
+                ),
+            }
+        )
     result.sort(key=lambda x: abs(x["risk_contribution"]), reverse=True)
     return result

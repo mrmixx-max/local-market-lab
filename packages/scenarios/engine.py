@@ -3,6 +3,7 @@
 Scenarios are NOT predictions. Every run is seeded, records its method,
 and outputs percentiles + loss probability with explicit limitations.
 """
+
 from __future__ import annotations
 
 import random
@@ -28,11 +29,11 @@ class ScenarioResult:
             "runs": self.runs,
             "horizon_days": self.horizon_days,
             "seed": self.seed,
-            "p05": round(s[int(.05 * len(s))], 4),
-            "p25": round(s[int(.25 * len(s))], 4),
-            "median": round(s[int(.50 * len(s))], 4),
-            "p75": round(s[int(.75 * len(s))], 4),
-            "p95": round(s[int(.95 * len(s))], 4),
+            "p05": round(s[int(0.05 * len(s))], 4),
+            "p25": round(s[int(0.25 * len(s))], 4),
+            "median": round(s[int(0.50 * len(s))], 4),
+            "p75": round(s[int(0.75 * len(s))], 4),
+            "p95": round(s[int(0.95 * len(s))], 4),
             "prob_loss_pct": self.prob_loss_pct,
             "limitations": [
                 "Simulations assume the past return distribution persists.",
@@ -47,8 +48,9 @@ def _daily_returns(closes: list[float]) -> list[float]:
     return [b / a - 1 for a, b in zip(closes, closes[1:])]
 
 
-def monte_carlo_iid(ws, symbol: str, horizon_days: int = 252, runs: int = 2000,
-                    seed: int = 42) -> ScenarioResult:
+def monte_carlo_iid(
+    ws, symbol: str, horizon_days: int = 252, runs: int = 2000, seed: int = 42
+) -> ScenarioResult:
     """i.i.d. resampling of daily returns."""
     closes = get_series(ws, symbol).closes()
     rets = _daily_returns(closes)
@@ -61,13 +63,24 @@ def monte_carlo_iid(ws, symbol: str, horizon_days: int = 252, runs: int = 2000,
         finals.append(v)
     sorted(finals)
     return ScenarioResult(
-        method="monte-carlo-iid", runs=runs, horizon_days=horizon_days, seed=seed,
-        finals=finals, percentiles={}, prob_loss_pct=round(
-            sum(1 for x in finals if x < 1) / len(finals) * 100, 1))
+        method="monte-carlo-iid",
+        runs=runs,
+        horizon_days=horizon_days,
+        seed=seed,
+        finals=finals,
+        percentiles={},
+        prob_loss_pct=round(sum(1 for x in finals if x < 1) / len(finals) * 100, 1),
+    )
 
 
-def block_bootstrap(ws, symbol: str, horizon_days: int = 252, runs: int = 2000,
-                    seed: int = 42, block_size: int = 20) -> ScenarioResult:
+def block_bootstrap(
+    ws,
+    symbol: str,
+    horizon_days: int = 252,
+    runs: int = 2000,
+    seed: int = 42,
+    block_size: int = 20,
+) -> ScenarioResult:
     """Block bootstrap — preserves short-range autocorrelation; robust default."""
     closes = get_series(ws, symbol).closes()
     rets = _daily_returns(closes)
@@ -78,7 +91,7 @@ def block_bootstrap(ws, symbol: str, horizon_days: int = 252, runs: int = 2000,
         placed = 0
         while placed < horizon_days:
             start = rng.randrange(max(1, len(rets) - block_size))
-            block = rets[start:start + block_size]
+            block = rets[start : start + block_size]
             for r in block:
                 if placed >= horizon_days:
                     break
@@ -87,23 +100,32 @@ def block_bootstrap(ws, symbol: str, horizon_days: int = 252, runs: int = 2000,
         finals.append(v)
     sorted(finals)
     return ScenarioResult(
-        method=f"block-bootstrap-{block_size}d", runs=runs, horizon_days=horizon_days,
-        seed=seed, finals=finals, percentiles={}, prob_loss_pct=round(
-            sum(1 for x in finals if x < 1) / len(finals) * 100, 1))
+        method=f"block-bootstrap-{block_size}d",
+        runs=runs,
+        horizon_days=horizon_days,
+        seed=seed,
+        finals=finals,
+        percentiles={},
+        prob_loss_pct=round(sum(1 for x in finals if x < 1) / len(finals) * 100, 1),
+    )
 
 
-def historical_replay(ws, symbols: list[str], window_years: int | None = None,
-                      seed: int | None = None) -> dict:
+def historical_replay(
+    ws, symbols: list[str], window_years: int | None = None, seed: int | None = None
+) -> dict:
     """Replay actual history: equal-weight index with metrics per stress window.
 
     Deterministic by nature (no randomness). Reports known stress windows.
     """
     from packages.marketdata.series import aligned_closes
     from packages.metrics.risk import all_metrics
+
     dates, prices = aligned_closes(ws, symbols)
     n = len(dates)
-    index = [sum(prices[s][i] / prices[s][0] for s in symbols) / len(symbols) * 100
-             for i in range(n)]
+    index = [
+        sum(prices[s][i] / prices[s][0] for s in symbols) / len(symbols) * 100
+        for i in range(n)
+    ]
 
     # find worst drawdown windows descriptively
     peak, mdd, trough_i, peak_i = index[0], 0.0, 0, 0
@@ -118,11 +140,13 @@ def historical_replay(ws, symbols: list[str], window_years: int | None = None,
     out = {
         "method": "historical-replay",
         "symbols": symbols,
-        "start": dates[0], "end": dates[-1],
+        "start": dates[0],
+        "end": dates[-1],
         "metrics": all_metrics(index),
         "max_drawdown": {
             "pct": round(mdd * 100, 2),
-            "peak_date": dates[peak_i], "trough_date": dates[trough_i],
+            "peak_date": dates[peak_i],
+            "trough_date": dates[trough_i],
         },
         "stress_windows": {
             "2020-covid-if-in-sample": None,  # filled when data covers it
@@ -136,9 +160,10 @@ def historical_replay(ws, symbols: list[str], window_years: int | None = None,
     # mark covid window if covered
     cov = [d for d in dates if "2020-02-15" <= d <= "2020-04-30"]
     if cov:
-        seg = index[dates.index(cov[0]):dates.index(cov[-1]) + 1]
+        seg = index[dates.index(cov[0]) : dates.index(cov[-1]) + 1]
         out["stress_windows"]["2020-covid-if-in-sample"] = {
-            "return_pct": round((seg[-1] / seg[0] - 1) * 100, 2)}
+            "return_pct": round((seg[-1] / seg[0] - 1) * 100, 2)
+        }
     else:
         out["stress_windows"].pop("2020-covid-if-in-sample")
     return out

@@ -3,6 +3,7 @@
 Implements purged cross-validation where a gap is enforced between
 train and test folds to prevent information leakage in time series.
 """
+
 from __future__ import annotations
 
 import os
@@ -21,6 +22,7 @@ DEFAULT_SEED = int(os.environ.get("LML_SEED", "42"))
 @dataclass
 class CVFold:
     """Result of a single CV fold."""
+
     fold: int
     train_indices: list[int]
     test_indices: list[int]
@@ -30,6 +32,7 @@ class CVFold:
 @dataclass
 class CVResult:
     """Aggregated cross-validation result."""
+
     folds: list[CVFold]
     n_splits: int
     gap: int
@@ -59,7 +62,9 @@ class CVResult:
         }
 
 
-def _purged_kfold_indices(n: int, n_splits: int, gap: int) -> list[tuple[list[int], list[int]]]:
+def _purged_kfold_indices(
+    n: int, n_splits: int, gap: int
+) -> list[tuple[list[int], list[int]]]:
     """Generate purged K-Fold train/test index pairs. Gap prevents leakage."""
     fold_size = n // n_splits
     if fold_size <= gap:
@@ -136,7 +141,9 @@ def time_series_cv(
     """
     n = len(data)
     if n < n_splits * (gap + 2):
-        raise ValueError(f"data length {n} too small for {n_splits} splits with gap {gap}")
+        raise ValueError(
+            f"data length {n} too small for {n_splits} splits with gap {gap}"
+        )
     fold_indices = _purged_kfold_indices(n, n_splits, gap)
     folds: list[CVFold] = []
     for k, (train_idx, test_idx) in enumerate(fold_indices):
@@ -156,16 +163,29 @@ def time_series_cv(
         for r in pnl:
             curve.append(curve[-1] * (1 + r))
         fold_metric = _compute_metric(curve, metric)
-        folds.append(CVFold(
-            fold=k, train_indices=train_idx, test_indices=test_idx,
-            metrics={metric: fold_metric},
-        ))
+        folds.append(
+            CVFold(
+                fold=k,
+                train_indices=train_idx,
+                test_indices=test_idx,
+                metrics={metric: fold_metric},
+            )
+        )
     metrics_list = [f.metrics[metric] for f in folds]
     avg_m = sum(metrics_list) / len(metrics_list)
-    std_m = sqrt(
-        sum((m - avg_m) ** 2 for m in metrics_list) / max(1, len(metrics_list) - 1)
-    ) if len(metrics_list) > 1 else 0.0
+    std_m = (
+        sqrt(
+            sum((m - avg_m) ** 2 for m in metrics_list) / max(1, len(metrics_list) - 1)
+        )
+        if len(metrics_list) > 1
+        else 0.0
+    )
     return CVResult(
-        folds=folds, n_splits=n_splits, gap=gap, avg_metric=avg_m,
-        std_metric=std_m, metric_name=metric, seed=seed,
+        folds=folds,
+        n_splits=n_splits,
+        gap=gap,
+        avg_metric=avg_m,
+        std_metric=std_m,
+        metric_name=metric,
+        seed=seed,
     )

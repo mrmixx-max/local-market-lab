@@ -2,6 +2,7 @@
 
 Only synthetic data is committed to the repo (fixture policy).
 """
+
 from __future__ import annotations
 
 import csv
@@ -51,10 +52,38 @@ def generate_transactions(out_path: str | Path) -> Path:
     rows = [
         ["date", "symbol", "type", "quantity", "price", "fees"],
         [start.isoformat(), "IWDA", "buy", "60", "71.20", "9.95"],
-        [(start + timedelta(days=1)).isoformat(), "EIMI", "buy", "150", "24.80", "9.95"],
-        [(start + timedelta(days=2)).isoformat(), "AGGH", "buy", "100", "49.90", "9.95"],
-        [(start + timedelta(days=365)).isoformat(), "CASH", "deposit", "1", "5000", "0"],
-        [(start + timedelta(days=366)).isoformat(), "IWDA", "buy", "25", "76.40", "9.95"],
+        [
+            (start + timedelta(days=1)).isoformat(),
+            "EIMI",
+            "buy",
+            "150",
+            "24.80",
+            "9.95",
+        ],
+        [
+            (start + timedelta(days=2)).isoformat(),
+            "AGGH",
+            "buy",
+            "100",
+            "49.90",
+            "9.95",
+        ],
+        [
+            (start + timedelta(days=365)).isoformat(),
+            "CASH",
+            "deposit",
+            "1",
+            "5000",
+            "0",
+        ],
+        [
+            (start + timedelta(days=366)).isoformat(),
+            "IWDA",
+            "buy",
+            "25",
+            "76.40",
+            "9.95",
+        ],
     ]
     with out.open("w", encoding="utf-8", newline="") as f:
         csv.writer(f).writerows(rows)
@@ -63,14 +92,18 @@ def generate_transactions(out_path: str | Path) -> Path:
 
 def load_demo(ws, workspace_dir: str = "./data") -> dict:
     """Full onboarding: instruments, prices, transactions into 'demo' portfolio."""
-    report = {"prices": {}, }
+    report = {
+        "prices": {},
+    }
     for symbol, name, cls, ccy in DEMO_PORTFOLIO:
         ws.ensure_instrument(symbol, name, cls, ccy)
         p = generate_prices(f"{workspace_dir}/cache", symbol)
-        r = __import__("packages.ingest.csv_import", fromlist=["import_prices"]) \
-            .import_prices(ws, p, symbol, source="synthetic-fixture")
+        r = __import__(
+            "packages.ingest.csv_import", fromlist=["import_prices"]
+        ).import_prices(ws, p, symbol, source="synthetic-fixture")
         report["prices"][symbol] = r["upserted"]
     txn_path = generate_transactions(f"{workspace_dir}/demo-transactions.csv")
     from packages.ingest.csv_import import import_transactions
+
     report["transactions"] = import_transactions(ws, txn_path, portfolio="demo")
     return report

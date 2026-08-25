@@ -4,6 +4,7 @@ Provides injectable dependencies so routes can declare what they need
 instead of calling factory functions directly. Keeps the singleton
 behavior from packages.storage.state but exposes it via Depends().
 """
+
 from __future__ import annotations
 
 from fastapi import Depends

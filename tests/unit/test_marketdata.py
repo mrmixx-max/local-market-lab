@@ -1,4 +1,5 @@
 """Tests for market data adapters and cache."""
+
 from __future__ import annotations
 
 import time
@@ -95,7 +96,15 @@ class TestMarketDataCache:
 # ---------------------------------------------------------------------------
 class TestPriceBarFormat:
     def test_to_ohlcv_complete(self):
-        bar = PriceBar("2024-01-01", 100.0, open=99.0, high=101.0, low=98.5, volume=1000, currency="USD")
+        bar = PriceBar(
+            "2024-01-01",
+            100.0,
+            open=99.0,
+            high=101.0,
+            low=98.5,
+            volume=1000,
+            currency="USD",
+        )
         d = bar.to_ohlcv()
         assert d["open"] == 99.0
         assert d["high"] == 101.0

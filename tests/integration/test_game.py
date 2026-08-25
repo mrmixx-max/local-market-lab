@@ -1,7 +1,8 @@
 """Trading Game engine tests."""
+
 import pytest
 
-from packages.game.engine import (CHALLENGES, TradingGame, GameStatus)
+from packages.game.engine import CHALLENGES, TradingGame, GameStatus
 from packages.ingest.fixtures import load_demo
 from packages.storage.workspace import Workspace
 

@@ -3,6 +3,7 @@
 Pure numpy. Results include run_id, data_hash, and splits_used
 to align with walk-forward validation (packages/domain/constants.py).
 """
+
 from __future__ import annotations
 
 import uuid
@@ -18,6 +19,7 @@ from ._shared import _data_hash, _splits_str
 @dataclass
 class WalkForwardResult:
     """Single walk-forward window result."""
+
     window: int
     train_start: int
     train_end: int
@@ -35,12 +37,16 @@ def walkforward_table(results: list[WalkForwardResult]) -> dict:
     headers = ["Window", "Model", "Train", "Test", "MSE", "MAE"]
     rows = []
     for r in results:
-        rows.append({
-            "Window": r.window, "Model": r.model_name,
-            "Train": f"{r.train_start}:{r.train_end}",
-            "Test": f"{r.test_start}:{r.test_end}",
-            "MSE": round(r.mse, 6), "MAE": round(r.mae, 6),
-        })
+        rows.append(
+            {
+                "Window": r.window,
+                "Model": r.model_name,
+                "Train": f"{r.train_start}:{r.train_end}",
+                "Test": f"{r.test_start}:{r.test_end}",
+                "MSE": round(r.mse, 6),
+                "MAE": round(r.mae, 6),
+            }
+        )
     models = sorted({r.model_name for r in results})
     summary = {}
     for m in models:
@@ -55,9 +61,13 @@ def walkforward_table(results: list[WalkForwardResult]) -> dict:
     return {"headers": headers, "rows": rows, "summary": summary}
 
 
-def diebold_mariano(pred1: list[float], pred2: list[float],
-                    actual: list[float], loss: str = "mse",
-                    h: int = 1) -> dict:
+def diebold_mariano(
+    pred1: list[float],
+    pred2: list[float],
+    actual: list[float],
+    loss: str = "mse",
+    h: int = 1,
+) -> dict:
     """Diebold-Mariano test for equal forecast accuracy (normal approximation)."""
     a = np.asarray(actual, dtype=float)
     p1 = np.asarray(pred1, dtype=float)
@@ -78,27 +88,42 @@ def diebold_mariano(pred1: list[float], pred2: list[float],
         var_d += 2 * w * gamma_l
     if var_d <= 0:
         better = "model1" if mean_d < 0 else "model2" if mean_d > 0 else "tie"
-        return {"dm_stat": 0.0, "p_value": 1.0, "better_model": better,
-                "significant": False, "loss": loss, "h": h, "n_obs": n,
-                "note": "zero variance in loss differential"}
+        return {
+            "dm_stat": 0.0,
+            "p_value": 1.0,
+            "better_model": better,
+            "significant": False,
+            "loss": loss,
+            "h": h,
+            "n_obs": n,
+            "note": "zero variance in loss differential",
+        }
     dm_stat = mean_d / np.sqrt(var_d / n)
     p_value = 2 * (1 - _norm_cdf(abs(dm_stat)))
     sig = p_value < 0.05
     better = "model1" if mean_d < 0 else "model2" if mean_d > 0 else "tie"
     return {
-        "dm_stat": round(float(dm_stat), 4), "p_value": round(float(p_value), 4),
-        "better_model": better, "significant": sig, "loss": loss, "h": h, "n_obs": n,
+        "dm_stat": round(float(dm_stat), 4),
+        "p_value": round(float(p_value), 4),
+        "better_model": better,
+        "significant": sig,
+        "loss": loss,
+        "h": h,
+        "n_obs": n,
     }
 
 
 def _norm_cdf(x: float) -> float:
     import math
+
     return 0.5 * (1 + math.erf(x / math.sqrt(2)))
 
 
-def compare_models(results_a: list[WalkForwardResult],
-                   results_b: list[WalkForwardResult],
-                   data_quality: ExportQuality | None = None) -> ModelComparison:
+def compare_models(
+    results_a: list[WalkForwardResult],
+    results_b: list[WalkForwardResult],
+    data_quality: ExportQuality | None = None,
+) -> ModelComparison:
     """Compare two models across matched walk-forward windows. Returns ModelComparison."""
     map_a = {r.window: r for r in results_a}
     map_b = {r.window: r for r in results_b}
@@ -107,10 +132,14 @@ def compare_models(results_a: list[WalkForwardResult],
     all_p1, all_p2, all_act = [], [], []
     for w in common:
         a, b = map_a[w], map_b[w]
-        per_window.append({
-            "window": w, "mse_a": round(a.mse, 6),
-            "mse_b": round(b.mse, 6), "delta_mse": round(a.mse - b.mse, 6),
-        })
+        per_window.append(
+            {
+                "window": w,
+                "mse_a": round(a.mse, 6),
+                "mse_b": round(b.mse, 6),
+                "delta_mse": round(a.mse - b.mse, 6),
+            }
+        )
         all_p1.extend(a.predictions)
         all_p2.extend(b.predictions)
         all_act.extend(a.actuals)

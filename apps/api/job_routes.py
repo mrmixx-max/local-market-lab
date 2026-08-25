@@ -3,6 +3,7 @@
 Long-running analysis (monte_carlo, walk_forward, tuning, stress) runs in
 the in-process worker; API stays responsive. No trade execution.
 """
+
 from __future__ import annotations
 
 import json
@@ -34,8 +35,7 @@ def submit_job(body: JobSubmit, request: Request):
         job = worker.submit(body.kind, body.params)
     except Exception as exc:  # UnknownJobKind etc.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"job_id": job.id, "status": job.status.value,
-            "known_kinds": known_kinds()}
+    return {"job_id": job.id, "status": job.status.value, "known_kinds": known_kinds()}
 
 
 @router.get("/{job_id}")

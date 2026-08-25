@@ -1,14 +1,15 @@
 """Tests for FX data handling: missing rates, wrong currencies, explicit conversion."""
+
 from __future__ import annotations
 
 import pytest
 
 from packages.marketdata.fx import FxPolicy
 
-
 # ---------------------------------------------------------------------------
 # Missing FX rates
 # ---------------------------------------------------------------------------
+
 
 class TestMissingFxRates:
     def test_unknown_currency_returns_none(self):
@@ -40,6 +41,7 @@ class TestMissingFxRates:
 # ---------------------------------------------------------------------------
 # Wrong FX data
 # ---------------------------------------------------------------------------
+
 
 class TestWrongFxData:
     def test_zero_rate_rejected(self):
@@ -76,6 +78,7 @@ class TestWrongFxData:
 # Multi-currency scenarios
 # ---------------------------------------------------------------------------
 
+
 class TestMultiCurrency:
     def test_multiple_rates(self):
         fx = FxPolicy("EUR", {"USD": 1.08, "GBP": 0.85, "CHF": 0.95})
@@ -100,6 +103,7 @@ class TestMultiCurrency:
 # Integration with portfolio valuation
 # ---------------------------------------------------------------------------
 
+
 class TestFxPortfolioIntegration:
     def test_incomplete_fx_markers(self, tmp_path):
         """When FX is missing, portfolio valuation must mark incomplete."""
@@ -115,11 +119,19 @@ class TestFxPortfolioIntegration:
             for i in range(10):
                 f.write(f"2024-01-{i+1:02d},100.0\n")
         import_prices(ws, p, "AAPL", "test")
-        ws.add_transaction({
-            "portfolio": "p1", "symbol": "AAPL", "txn_type": "buy",
-            "date": "2024-01-01", "quantity": 10, "price": 100,
-            "fees": 0, "currency": "USD", "note": "",
-        })
+        ws.add_transaction(
+            {
+                "portfolio": "p1",
+                "symbol": "AAPL",
+                "txn_type": "buy",
+                "date": "2024-01-01",
+                "quantity": 10,
+                "price": 100,
+                "fees": 0,
+                "currency": "USD",
+                "note": "",
+            }
+        )
         # No USD rate set → incomplete
         val = value_portfolio(ws, "p1", FxPolicy("EUR"))
         assert len(val["incomplete_fx"]) > 0
@@ -139,11 +151,19 @@ class TestFxPortfolioIntegration:
             for i in range(10):
                 f.write(f"2024-01-{i+1:02d},100.0\n")
         import_prices(ws, p, "AAPL", "test")
-        ws.add_transaction({
-            "portfolio": "p1", "symbol": "AAPL", "txn_type": "buy",
-            "date": "2024-01-01", "quantity": 10, "price": 100,
-            "fees": 0, "currency": "USD", "note": "",
-        })
+        ws.add_transaction(
+            {
+                "portfolio": "p1",
+                "symbol": "AAPL",
+                "txn_type": "buy",
+                "date": "2024-01-01",
+                "quantity": 10,
+                "price": 100,
+                "fees": 0,
+                "currency": "USD",
+                "note": "",
+            }
+        )
         fx = FxPolicy("EUR", {"USD": 0.92})
         val = value_portfolio(ws, "p1", fx)
         assert len(val["incomplete_fx"]) == 0

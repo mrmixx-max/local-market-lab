@@ -3,6 +3,7 @@
 Provides rate limiting, request ID tracing, and catch-all exception handling.
 All middleware is self-contained (no extra dependencies beyond FastAPI/Starlette).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +31,11 @@ if not logger.handlers:
 
 def log_json(level: str, **fields) -> None:
     """Emit a single JSON-line log entry to stderr."""
-    entry = {"level": level, "timestamp": datetime.now(timezone.utc).isoformat(), **fields}
+    entry = {
+        "level": level,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        **fields,
+    }
     logger.log(getattr(logging, level.upper(), 20), json.dumps(entry, default=str))
 
 
@@ -95,8 +100,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         client_ip = request.client.host if request.client else "unknown"
         if await _rate_limiter.is_rate_limited(client_ip):
-            log_json("warning", request_id=getattr(request.state, "request_id", None),
-                     client_ip=client_ip, event="rate_limited")
+            log_json(
+                "warning",
+                request_id=getattr(request.state, "request_id", None),
+                client_ip=client_ip,
+                event="rate_limited",
+            )
             return JSONResponse(
                 status_code=429,
                 content={"error": "rate_limit_exceeded", "retry_after_seconds": 60},

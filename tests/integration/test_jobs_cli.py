@@ -1,4 +1,5 @@
 """Tests for P1.3 client binding: CLI jobs + shared normalize_job model."""
+
 from __future__ import annotations
 
 import json
@@ -20,9 +21,17 @@ def _run_cli(*args):
 
 class TestNormalizeModel:
     def test_maps_backend_to_unified(self):
-        raw = {"id": "abc123", "kind": "monte_carlo", "status": "running",
-               "progress": 0.42, "result_ref": None, "error": None,
-               "created_at": 1.0, "started_at": 2.0, "finished_at": None}
+        raw = {
+            "id": "abc123",
+            "kind": "monte_carlo",
+            "status": "running",
+            "progress": 0.42,
+            "result_ref": None,
+            "error": None,
+            "created_at": 1.0,
+            "started_at": 2.0,
+            "finished_at": None,
+        }
         n = normalize_job(raw)
         assert n["job_id"] == "abc123"
         assert n["job_type"] == "monte_carlo"
@@ -34,17 +43,32 @@ class TestNormalizeModel:
         assert n["cancel_requested"] is False
 
     def test_succeeded_has_artifact(self):
-        raw = {"id": "x", "kind": "stress", "status": "succeeded",
-               "progress": 1.0, "result_ref": "jobs/x/result", "error": None,
-               "created_at": 0, "started_at": 0, "finished_at": 1}
+        raw = {
+            "id": "x",
+            "kind": "stress",
+            "status": "succeeded",
+            "progress": 1.0,
+            "result_ref": "jobs/x/result",
+            "error": None,
+            "created_at": 0,
+            "started_at": 0,
+            "finished_at": 1,
+        }
         n = normalize_job(raw)
         assert n["artifact_id"] == "jobs/x/result"
         assert n["phase"] == "done"
 
     def test_failed_sets_error_fields(self):
-        raw = {"id": "x", "kind": "tuning", "status": "failed", "progress": 0.3,
-               "error": "boom", "created_at": 0, "started_at": 0,
-               "finished_at": 1}
+        raw = {
+            "id": "x",
+            "kind": "tuning",
+            "status": "failed",
+            "progress": 0.3,
+            "error": "boom",
+            "created_at": 0,
+            "started_at": 0,
+            "finished_at": 1,
+        }
         n = normalize_job(raw)
         assert n["error_code"] == "EXECUTION_ERROR"
         assert n["error_message"] == "boom"
@@ -52,6 +76,7 @@ class TestNormalizeModel:
 
 class TestCliJobsLive:
     """Requires the API server running. Skips if unreachable."""
+
     @pytest.fixture(autouse=True)
     def _api(self):
         base = os.environ.get("LML_API", "http://127.0.0.1:8322")
@@ -82,6 +107,7 @@ class TestCliJobsLive:
         resp = _api.submit("demo_sleep", {"steps": 100, "delay": 0.05})
         jid = resp["job_id"]
         import time
+
         time.sleep(0.2)
         c1 = _run_cli("jobs", "cancel", jid)
         assert c1.returncode == 0

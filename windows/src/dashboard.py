@@ -1,14 +1,29 @@
 """Dashboard-Widgets: MetricsPanel, PositionsTable, OrderEntry, GamePanel, OllamaChat."""
+
 from __future__ import annotations
 from typing import Any
 import requests
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (QComboBox, QFrame, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QListWidget, QPushButton, QSpinBox, QTextEdit,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 API = "http://127.0.0.1:8322/api/v1"
+
 
 def _get(path: str, **kw: Any) -> dict | list:
     try:
@@ -18,6 +33,7 @@ def _get(path: str, **kw: Any) -> dict | list:
     except Exception:
         return {}
 
+
 def _post(path: str, payload: dict | None = None) -> dict:
     try:
         r = requests.post(f"{API}{path}", json=payload or {}, timeout=10)
@@ -26,17 +42,36 @@ def _post(path: str, payload: dict | None = None) -> dict:
     except Exception:
         return {}
 
+
 def _fmt(val: float | None, suffix: str = "", digits: int = 2) -> str:
     return "—" if val is None else f"{val:,.{digits}f}{suffix}"
 
+
 def _color(val: float | None):
-    return None if val is None else (Qt.GlobalColor.darkGreen if val >= 0 else Qt.GlobalColor.red)
+    return (
+        None
+        if val is None
+        else (Qt.GlobalColor.darkGreen if val >= 0 else Qt.GlobalColor.red)
+    )
+
 
 class MetricsPanel(QFrame):
-    KEYS = ["total_value", "unrealized_pl", "volatility_pct",
-            "max_drawdown_pct", "var_95", "sharpe"]
-    LABELS = [("Value", " €"), ("P/L", " €"), ("Vol", "%"),
-              ("MaxDD", "%"), ("VaR", " €"), ("Sharpe", "")]
+    KEYS = [
+        "total_value",
+        "unrealized_pl",
+        "volatility_pct",
+        "max_drawdown_pct",
+        "var_95",
+        "sharpe",
+    ]
+    LABELS = [
+        ("Value", " €"),
+        ("P/L", " €"),
+        ("Vol", "%"),
+        ("MaxDD", "%"),
+        ("VaR", " €"),
+        ("Sharpe", ""),
+    ]
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -67,6 +102,7 @@ class MetricsPanel(QFrame):
             for (lbl, sfx), key in zip(self.LABELS, self.KEYS):
                 self._tiles[lbl].setText(_fmt(d.get(key), sfx))
 
+
 class PositionsTable(QFrame):
     HEADERS = ["Symbol", "Qty", "Avg Cost", "Last", "P/L", "P/L %"]
 
@@ -96,9 +132,14 @@ class PositionsTable(QFrame):
         pos = d.get("positions", [])
         self._tbl.setRowCount(len(pos))
         for r, p in enumerate(pos):
-            vals = [p.get("symbol", ""), _fmt(p.get("quantity"), "", 4),
-                    _fmt(p.get("avg_cost"), " €"), _fmt(p.get("last_price"), " €"),
-                    _fmt(p.get("pl"), " €"), _fmt(p.get("pl_pct"), "%")]
+            vals = [
+                p.get("symbol", ""),
+                _fmt(p.get("quantity"), "", 4),
+                _fmt(p.get("avg_cost"), " €"),
+                _fmt(p.get("last_price"), " €"),
+                _fmt(p.get("pl"), " €"),
+                _fmt(p.get("pl_pct"), "%"),
+            ]
             for c, txt in enumerate(vals):
                 it = QTableWidgetItem(txt)
                 if c in (4, 5):
@@ -108,6 +149,7 @@ class PositionsTable(QFrame):
                         it.setForeground(col)
                 self._tbl.setItem(r, c, it)
         self._tbl.resizeColumnsToContents()
+
 
 class OrderEntry(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -151,7 +193,10 @@ class OrderEntry(QFrame):
         if not sym:
             self._status.setText("⚠ Kein Symbol.")
             return
-        self._status.setText(f"ℹ {side.upper()} {self._sp.value()} {sym} (Game erforderlich)")
+        self._status.setText(
+            f"ℹ {side.upper()} {self._sp.value()} {sym} (Game erforderlich)"
+        )
+
 
 class GamePanel(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -190,9 +235,15 @@ class GamePanel(QFrame):
         self._timer.start(8_000)
 
     def _create(self) -> None:
-        r = _post("/game/create", {"player": "trader",
-                                    "symbols": ["IWDA", "EIMI", "AGGH"],
-                                    "days": 63, "challenge": "beat_market"})
+        r = _post(
+            "/game/create",
+            {
+                "player": "trader",
+                "symbols": ["IWDA", "EIMI", "AGGH"],
+                "days": 63,
+                "challenge": "beat_market",
+            },
+        )
         if r and "game_id" in r:
             self._game_id = r["game_id"]
             self._btn_tick.setEnabled(True)
@@ -215,15 +266,18 @@ class GamePanel(QFrame):
         if isinstance(chs, list):
             for c in chs:
                 self._ch_list.addItem(
-                    f"{c.get('name', c.get('challenge', ''))}: {c.get('description', '')}")
+                    f"{c.get('name', c.get('challenge', ''))}: {c.get('description', '')}"
+                )
         self._lb_list.clear()
         lb = _get("/game/leaderboard")
         if isinstance(lb, list):
             for e in lb[:10]:
                 self._lb_list.addItem(
-                    f"{e.get('player', '?')}: {e.get('score', 0):.2f} ({e.get('status', '')})")
+                    f"{e.get('player', '?')}: {e.get('score', 0):.2f} ({e.get('status', '')})"
+                )
         if self._game_id and self._auto.currentText() != "Off":
             self._tick()
+
 
 class OllamaChat(QFrame):
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -261,8 +315,9 @@ class OllamaChat(QFrame):
         d = _get("/ollama/models")
         models = d.get("models", []) if isinstance(d, dict) else []
         for m in models:
-            self._cb.addItem(f"{m.get('model', '')} ({m.get('size_gb', 0)} GB)",
-                             m.get("model", ""))
+            self._cb.addItem(
+                f"{m.get('model', '')} ({m.get('size_gb', 0)} GB)", m.get("model", "")
+            )
         if not models:
             self._cb.addItem("— keine Modelle —", "")
 
@@ -274,16 +329,27 @@ class OllamaChat(QFrame):
         self._view.append(f"<b>Du:</b> {text}")
         self._inp.clear()
         self._view.append("<i>⏳ Denke nach …</i>")
-        r = _post("/ollama/chat", {"model": model,
-                                   "messages": [{"role": "user", "content": text}],
-                                   "temperature": 0.4})
-        content = r.get("content", "[Keine Antwort]") if isinstance(r, dict) else "[Fehler]"
+        r = _post(
+            "/ollama/chat",
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": text}],
+                "temperature": 0.4,
+            },
+        )
+        content = (
+            r.get("content", "[Keine Antwort]") if isinstance(r, dict) else "[Fehler]"
+        )
         self._view.append(f"<b>Ollama:</b>{content}")
-        self._view.verticalScrollBar().setValue(self._view.verticalScrollBar().maximum())
+        self._view.verticalScrollBar().setValue(
+            self._view.verticalScrollBar().maximum()
+        )
+
 
 if __name__ == "__main__":
     import sys
     from PyQt6.QtWidgets import QApplication, QTabWidget
+
     app = QApplication(sys.argv)
     tw = QTabWidget()
     tw.addTab(MetricsPanel(), "📊 Metrics")

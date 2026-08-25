@@ -1,4 +1,5 @@
 """Shared workspace + game engine singletons for the API layer."""
+
 from __future__ import annotations
 
 import os
@@ -26,5 +27,6 @@ def get_game_engine():
     global _game_engine
     if _game_engine is None:
         from packages.game.engine import TradingGame
+
         _game_engine = TradingGame(get_ws())
     return _game_engine

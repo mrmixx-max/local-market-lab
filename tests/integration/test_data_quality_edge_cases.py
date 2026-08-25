@@ -1,4 +1,5 @@
 """Tests for data quality edge cases: missing values, duplicates, timezones, weekends, incomplete series."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -14,12 +15,14 @@ from packages.quality.checks import (
     run_quality_check,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _daily_series(symbol: str, start: date, n_days: int, step: float = 1.0) -> PriceSeries:
+
+def _daily_series(
+    symbol: str, start: date, n_days: int, step: float = 1.0
+) -> PriceSeries:
     """Generate a daily series skipping weekends."""
     bars = []
     d = start
@@ -34,6 +37,7 @@ def _daily_series(symbol: str, start: date, n_days: int, step: float = 1.0) -> P
 # ---------------------------------------------------------------------------
 # Weekend handling
 # ---------------------------------------------------------------------------
+
 
 class TestWeekendHandling:
     def test_weekend_gap_not_flagged(self):
@@ -69,6 +73,7 @@ class TestWeekendHandling:
 # ---------------------------------------------------------------------------
 # Missing values
 # ---------------------------------------------------------------------------
+
 
 class TestMissingValues:
     def test_empty_series(self):
@@ -107,6 +112,7 @@ class TestMissingValues:
 # Duplicate timestamps
 # ---------------------------------------------------------------------------
 
+
 class TestDuplicateTimestamps:
     def test_single_duplicate(self):
         bars = [
@@ -143,6 +149,7 @@ class TestDuplicateTimestamps:
 # Incomplete price series
 # ---------------------------------------------------------------------------
 
+
 class TestIncompleteSeries:
     def test_very_short_series(self):
         """A series with < 3 bars should still be processable."""
@@ -177,6 +184,7 @@ class TestIncompleteSeries:
 # ---------------------------------------------------------------------------
 # Timezone / date format edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestTimezoneAndDateFormat:
     def test_iso_format_accepted(self):
@@ -214,6 +222,7 @@ class TestTimezoneAndDateFormat:
 # ---------------------------------------------------------------------------
 # Stale data detection
 # ---------------------------------------------------------------------------
+
 
 class TestStaleData:
     def test_very_recent_not_stale(self):

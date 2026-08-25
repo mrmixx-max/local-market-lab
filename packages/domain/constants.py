@@ -3,6 +3,7 @@
 Central configuration for validation windows, export paths, and quality
 thresholds. All modules import from here to ensure consistency.
 """
+
 from __future__ import annotations
 
 import os

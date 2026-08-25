@@ -1,4 +1,5 @@
 """Tests for the PyQt6 Jobs-panel logic (no real GUI — mock ApiClient)."""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +11,7 @@ import pytest
 qt_available = False
 try:
     from PyQt6.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
+
     qt_available = True
 except Exception:
     qt_available = False
@@ -19,11 +21,14 @@ pytestmark = pytest.mark.skipif(not qt_available, reason="PyQt6 not available")
 try:
     from windows.src.main_window import MainWindow  # noqa: E402
 except ModuleNotFoundError:
-    pytestmark = pytest.mark.skip(reason="windows package not available on this platform")
+    pytestmark = pytest.mark.skip(
+        reason="windows package not available on this platform"
+    )
 
 
 class _FakeApi:
     """Records calls; returns canned job lists/statuses."""
+
     def __init__(self, jobs=None):
         self.jobs = jobs or []
         self.calls = []
@@ -58,8 +63,7 @@ def _make_window(monkeypatch, jobs):
     w = MainWindow.__new__(MainWindow)  # bypass __init__ (GUI building)
     w.api = _FakeApi(jobs)
     w.jobs_table = QTableWidget(0, 7)
-    w.jobs_table.setSelectionBehavior(
-        QTableWidget.SelectionBehavior.SelectRows)
+    w.jobs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
     w.jobs_msg = types.SimpleNamespace(setText=lambda x: None)
     w._jobs_cache = {}
     return w, app
@@ -67,12 +71,27 @@ def _make_window(monkeypatch, jobs):
 
 class TestDesktopJobs:
     def test_refresh_populates_table(self, monkeypatch):
-        jobs = [{"id": "a1", "kind": "monte_carlo", "status": "running",
-                 "progress": 0.5, "created_at": 1.0, "started_at": 2.0,
-                 "finished_at": None},
-                {"id": "b2", "kind": "stress", "status": "succeeded",
-                 "progress": 1.0, "created_at": 0, "started_at": 0,
-                 "finished_at": 1, "result_ref": "jobs/b2/result"}]
+        jobs = [
+            {
+                "id": "a1",
+                "kind": "monte_carlo",
+                "status": "running",
+                "progress": 0.5,
+                "created_at": 1.0,
+                "started_at": 2.0,
+                "finished_at": None,
+            },
+            {
+                "id": "b2",
+                "kind": "stress",
+                "status": "succeeded",
+                "progress": 1.0,
+                "created_at": 0,
+                "started_at": 0,
+                "finished_at": 1,
+                "result_ref": "jobs/b2/result",
+            },
+        ]
         w, app = _make_window(monkeypatch, jobs)
         w._jobs_refresh()
         assert w.jobs_table.rowCount() == 2
@@ -89,9 +108,17 @@ class TestDesktopJobs:
         assert "unreachable" in captured["msg"]
 
     def test_cancel_uses_real_endpoint(self, monkeypatch):
-        jobs = [{"id": "c3", "kind": "tuning", "status": "running",
-                 "progress": 0.1, "created_at": 0, "started_at": 0,
-                 "finished_at": None}]
+        jobs = [
+            {
+                "id": "c3",
+                "kind": "tuning",
+                "status": "running",
+                "progress": 0.1,
+                "created_at": 0,
+                "started_at": 0,
+                "finished_at": None,
+            }
+        ]
         w, app = _make_window(monkeypatch, jobs)
         w.jobs_table.setRowCount(1)
         w.jobs_table.setItem(0, 0, QTableWidgetItem("c3"))
@@ -118,4 +145,5 @@ class TestDesktopJobs:
         w.jobs_kind = types.SimpleNamespace(currentText=lambda: "monte_carlo")
         w._jobs_submit()  # should return immediately, not block
         assert w.api.calls and any(
-            c[0] == "/api/v1/jobs" for c in w.api.calls if isinstance(c, tuple))
+            c[0] == "/api/v1/jobs" for c in w.api.calls if isinstance(c, tuple)
+        )

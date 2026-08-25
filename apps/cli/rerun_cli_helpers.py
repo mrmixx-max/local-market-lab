@@ -7,11 +7,11 @@ result. Each executor must be deterministic given the same manifest.
 If the original data cannot be rehydrated, the executor raises — it must NOT
 silently substitute different data.
 """
+
 from __future__ import annotations
 
 import importlib
 from typing import Callable
-
 
 # registry: job_type -> (module, function_name)
 _EXECUTORS = {
@@ -26,6 +26,7 @@ _EXECUTORS = {
 
 def get_executor() -> Callable[[dict], object]:
     """Return a generic executor that dispatches on manifest job_type."""
+
     def executor(manifest: dict) -> object:
         job_type = manifest.get("job_type")
         spec = _EXECUTORS.get(job_type)
@@ -34,6 +35,7 @@ def get_executor() -> Callable[[dict], object]:
         module = importlib.import_module(spec[0])
         func = getattr(module, spec[1])
         return func(manifest)
+
     return executor
 
 

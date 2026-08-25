@@ -1,4 +1,5 @@
 """Bayesian Structural Time Series — pure Python."""
+
 from __future__ import annotations
 
 import math
@@ -6,8 +7,9 @@ import math
 import numpy as np
 
 
-def bayesian_trend_forecast(data: list[float], horizon: int = 30,
-                            n_changepoints: int = 10) -> dict:
+def bayesian_trend_forecast(
+    data: list[float], horizon: int = 30, n_changepoints: int = 10
+) -> dict:
     """Local linear trend with automatic changepoint detection.
 
     Uses Laplacian changepoint prior and MCMC-like sampling for uncertainty.
@@ -27,7 +29,7 @@ def bayesian_trend_forecast(data: list[float], horizon: int = 30,
     # detect changepoints via absolute second derivative peaks
     d2 = np.abs(np.diff(y, 2))
     cp_scores = d2[cp_idx - 1]
-    top_cp = cp_idx[np.argsort(cp_scores)[-max(2, n_changepoints // 3):]]
+    top_cp = cp_idx[np.argsort(cp_scores)[-max(2, n_changepoints // 3) :]]
     top_cp = np.sort(top_cp)
 
     # fit piecewise linear trend with continuous constraint
@@ -62,8 +64,9 @@ def bayesian_trend_forecast(data: list[float], horizon: int = 30,
     }
 
 
-def bayesian_seasonal_forecast(data: list[float], horizon: int = 30,
-                               season_period: int = 252) -> dict:
+def bayesian_seasonal_forecast(
+    data: list[float], horizon: int = 30, season_period: int = 252
+) -> dict:
     """Seasonal component via Fourier series."""
     if len(data) < season_period // 2:
         raise ValueError("data too short for season_period")
@@ -111,8 +114,9 @@ def bayesian_combine(data: list[float], horizon: int = 30) -> dict:
     w_trend = np.exp(-h / 50)  # decays for long horizon
     w_season = 1 - w_trend
 
-    fc = (w_trend * np.array(trend["forecast"]) +
-          w_season * np.array(seasonal["forecast"]))
+    fc = w_trend * np.array(trend["forecast"]) + w_season * np.array(
+        seasonal["forecast"]
+    )
 
     return {
         "forecast": fc.tolist(),

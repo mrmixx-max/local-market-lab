@@ -1,6 +1,7 @@
 """Evolutionary algorithms for feature selection and hyperparameter tuning.
 Pure numpy: genetic_feature_selection (binary GA), genetic_hyperparameter_tuning
 (discrete GA), differential_evolution (DE/rand/1/bin), nsga2_multi_objective."""
+
 from __future__ import annotations
 import numpy as np
 
@@ -46,20 +47,29 @@ def genetic_feature_selection(data, target, pop_size=50, generations=100, seed=4
         bi = np.argmin(scores)
         if scores[bi] < best_score:
             best_score, best_mask = scores[bi], pop[bi].copy()
-        pop = np.array([pop[a if scores[a] < scores[b] else b].copy()
-                        for _ in range(pop_size)
-                        for a, b in [rng.choice(pop_size, 2, replace=False)]])
+        pop = np.array(
+            [
+                pop[a if scores[a] < scores[b] else b].copy()
+                for _ in range(pop_size)
+                for a, b in [rng.choice(pop_size, 2, replace=False)]
+            ]
+        )
         for i in range(0, pop_size - 1, 2):
             m = rng.random(n_f) < 0.5
             pop[i, m], pop[i + 1, m] = pop[i + 1, m].copy(), pop[i, m].copy()
         pop = np.where(rng.random((pop_size, n_f)) < 0.05, 1 - pop, pop)
     selected = np.where(best_mask == 1)[0].tolist()
-    return {"selected_features": selected, "n_features": len(selected),
-            "rmse": round(best_score, 6), "mask": best_mask.tolist()}
+    return {
+        "selected_features": selected,
+        "n_features": len(selected),
+        "rmse": round(best_score, 6),
+        "mask": best_mask.tolist(),
+    }
 
 
-def genetic_hyperparameter_tuning(data, target, model_fn, param_space,
-                                   pop_size=30, generations=50, seed=42):
+def genetic_hyperparameter_tuning(
+    data, target, model_fn, param_space, pop_size=30, generations=50, seed=42
+):
     """GA over discrete param space. model_fn(X_tr,y_tr,X_va,y_va,**p) -> rmse."""
     rng = np.random.RandomState(seed)
     n_s = len(data)
@@ -67,8 +77,14 @@ def genetic_hyperparameter_tuning(data, target, model_fn, param_space,
 
     def fitness(ind):
         try:
-            return float(np.mean([model_fn(data[tr], target[tr], data[va], target[va], **ind)
-                                  for tr, va in _kfold(n_s, seed=seed)]))
+            return float(
+                np.mean(
+                    [
+                        model_fn(data[tr], target[tr], data[va], target[va], **ind)
+                        for tr, va in _kfold(n_s, seed=seed)
+                    ]
+                )
+            )
         except Exception:
             return float("inf")
 
@@ -79,23 +95,37 @@ def genetic_hyperparameter_tuning(data, target, model_fn, param_space,
         bi = int(np.argmin(scores))
         if scores[bi] < best_score:
             best_score, best_ind = scores[bi], pop[bi].copy()
-        pop = [pop[a].copy() if scores[a] < scores[b] else pop[b].copy()
-               for _ in range(pop_size)
-               for a, b in [rng.choice(pop_size, 2, replace=False)]]
+        pop = [
+            pop[a].copy() if scores[a] < scores[b] else pop[b].copy()
+            for _ in range(pop_size)
+            for a, b in [rng.choice(pop_size, 2, replace=False)]
+        ]
         for i in range(0, pop_size - 1, 2):
             if rng.random() < 0.8:
-                for k in keys[:rng.randint(len(keys)) + 1]:
+                for k in keys[: rng.randint(len(keys)) + 1]:
                     pop[i][k], pop[i + 1][k] = pop[i + 1][k], pop[i][k]
         for ind in pop:
             if rng.random() < 0.15:
                 km = rng.choice(keys)
                 ind[km] = rng.choice(param_space[km])
-    return {"best_params": best_ind, "rmse": round(best_score, 6),
-            "param_space": {k: len(v) for k, v in param_space.items()}}
+    return {
+        "best_params": best_ind,
+        "rmse": round(best_score, 6),
+        "param_space": {k: len(v) for k, v in param_space.items()},
+    }
 
 
-def differential_evolution(data, target, model_fn, param_space,
-                            pop_size=30, generations=50, F=0.8, CR=0.9, seed=42):
+def differential_evolution(
+    data,
+    target,
+    model_fn,
+    param_space,
+    pop_size=30,
+    generations=50,
+    F=0.8,
+    CR=0.9,
+    seed=42,
+):
     """DE/rand/1/bin for continuous params. model_fn(X_tr,y_tr,X_va,y_va,**p) -> rmse."""
     rng = np.random.RandomState(seed)
     n_s = len(data)
@@ -106,8 +136,14 @@ def differential_evolution(data, target, model_fn, param_space,
     def fitness(x):
         params = {k: float(np.clip(x[i], lo[i], hi[i])) for i, k in enumerate(keys)}
         try:
-            return float(np.mean([model_fn(data[tr], target[tr], data[va], target[va], **params)
-                                  for tr, va in _kfold(n_s, seed=seed)]))
+            return float(
+                np.mean(
+                    [
+                        model_fn(data[tr], target[tr], data[va], target[va], **params)
+                        for tr, va in _kfold(n_s, seed=seed)
+                    ]
+                )
+            )
         except Exception:
             return float("inf")
 
@@ -117,7 +153,9 @@ def differential_evolution(data, target, model_fn, param_space,
     best, best_score = pop[bi].copy(), scores[bi]
     for _ in range(generations):
         for i in range(pop_size):
-            a, b, c = pop[rng.choice([j for j in range(pop_size) if j != i], 3, replace=False)]
+            a, b, c = pop[
+                rng.choice([j for j in range(pop_size) if j != i], 3, replace=False)
+            ]
             cross = rng.rand(len(keys)) < CR
             cross[rng.randint(len(keys))] = True
             trial = np.where(cross, np.clip(a + F * (b - c), lo, hi), pop[i])
@@ -126,12 +164,15 @@ def differential_evolution(data, target, model_fn, param_space,
                 pop[i], scores[i] = trial, s
                 if s < best_score:
                     best, best_score = trial.copy(), s
-    return {"best_params": {k: round(float(best[i]), 6) for i, k in enumerate(keys)},
-            "rmse": round(float(best_score), 6)}
+    return {
+        "best_params": {k: round(float(best[i]), 6) for i, k in enumerate(keys)},
+        "rmse": round(float(best_score), 6),
+    }
 
 
-def nsga2_multi_objective(data, target, model_fn, param_space,
-                           pop_size=30, generations=50, seed=42):
+def nsga2_multi_objective(
+    data, target, model_fn, param_space, pop_size=30, generations=50, seed=42
+):
     """NSGA-II minimising (rmse, complexity). model_fn -> (rmse, complexity)."""
     rng = np.random.RandomState(seed)
     n_s = len(data)
@@ -143,9 +184,13 @@ def nsga2_multi_objective(data, target, model_fn, param_space,
     def evaluate(x):
         params = {k: float(np.clip(x[i], lo[i], hi[i])) for i, k in enumerate(keys)}
         try:
-            pairs = [model_fn(data[tr], target[tr], data[va], target[va], **params)
-                     for tr, va in _kfold(n_s, seed=seed)]
-            return float(np.mean([p[0] for p in pairs])), float(np.mean([p[1] for p in pairs]))
+            pairs = [
+                model_fn(data[tr], target[tr], data[va], target[va], **params)
+                for tr, va in _kfold(n_s, seed=seed)
+            ]
+            return float(np.mean([p[0] for p in pairs])), float(
+                np.mean([p[1] for p in pairs])
+            )
         except Exception:
             return float("inf"), float("inf")
 
@@ -159,7 +204,7 @@ def nsga2_multi_objective(data, target, model_fn, param_space,
         # Vectorized dominance check: dom[i,j] = True if i dominates j
         # objs is (n, n_obj)
         le = objs[:, None, :] <= objs[None, :, :]  # (n, n, n_obj)
-        lt = objs[:, None, :] < objs[None, :, :]   # (n, n, n_obj)
+        lt = objs[:, None, :] < objs[None, :, :]  # (n, n, n_obj)
         dom = np.all(le, axis=2) & np.any(lt, axis=2)  # (n, n)
         # S[i] = set of individuals dominated by i
         # n_dom[i] = number of individuals that dominate i
@@ -208,13 +253,23 @@ def nsga2_multi_objective(data, target, model_fn, param_space,
                 new_o.extend(combined_objs[front].tolist())
             else:
                 order = np.argsort(-crowding(combined_objs, front))
-                for t in order[:pop_size - len(new_p)]:
+                for t in order[: pop_size - len(new_p)]:
                     new_p.append(front[t])
                     new_o.append(combined_objs[front[t]].tolist())
                 break
         pop, objs = combined[new_p], np.array(new_o)
     fronts = nds(objs)
-    pf = [{k: round(float(pop[i][j]), 6) for j, k in enumerate(keys)} for i in fronts[0]]
-    return {"pareto_front": [{"params": p, "rmse": round(objs[i][0], 6),
-            "complexity": round(objs[i][1], 6)} for i, p in enumerate(pf)],
-            "n_solutions": len(pf)}
+    pf = [
+        {k: round(float(pop[i][j]), 6) for j, k in enumerate(keys)} for i in fronts[0]
+    ]
+    return {
+        "pareto_front": [
+            {
+                "params": p,
+                "rmse": round(objs[i][0], 6),
+                "complexity": round(objs[i][1], 6),
+            }
+            for i, p in enumerate(pf)
+        ],
+        "n_solutions": len(pf),
+    }

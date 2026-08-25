@@ -13,6 +13,7 @@ the zero-fee scenario when the avoided sells happen to be at unfavorable
 prices. The tests below use manually constructed scenarios to verify cost
 application precisely.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -23,10 +24,10 @@ from packages.backtest.engine import (
     run_backtest,
 )
 
-
 # ---------------------------------------------------------------------------
 # Assumptions
 # ---------------------------------------------------------------------------
+
 
 class TestAssumptions:
     def test_zero_costs(self):
@@ -54,6 +55,7 @@ class TestAssumptions:
 # Manually constructed cost scenarios
 # ---------------------------------------------------------------------------
 
+
 class TestBacktestCosts:
     def test_costs_reduces_final_value(self):
         """A buy-and-hold with fees should end with less value than without fees.
@@ -65,21 +67,31 @@ class TestBacktestCosts:
         """
         prices = {"A": [100.0, 150.0, 200.0]}
 
-        free = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0))
-        costly = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=1000, slippage_bps=0))
+        free = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0)
+        )
+        costly = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=1000, slippage_bps=0)
+        )
 
         # Free: buy 1 share at 100, value at t=2 is 200
         # Costly: buy 0.9 shares at 100 (after 10% fee), value at t=2 = 0.9 * 200 = 180
         free_final = free["curve"][-1]
         costly_final = costly["curve"][-1]
-        assert costly_final < free_final, f"Costly ({costly_final}) should be < Free ({free_final})"
+        assert (
+            costly_final < free_final
+        ), f"Costly ({costly_final}) should be < Free ({free_final})"
 
     def test_higher_fees_lower_return(self):
         """Higher fees should result in lower or equal final portfolio value."""
         prices = {"A": [100.0, 110.0, 120.0, 130.0, 140.0]}
 
-        low_fee = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=10, slippage_bps=0))
-        high_fee = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=500, slippage_bps=0))
+        low_fee = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=10, slippage_bps=0)
+        )
+        high_fee = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=500, slippage_bps=0)
+        )
 
         # Both buy at t=0, hold until t=4
         # Low fee: cost = 1% of trade value
@@ -91,7 +103,9 @@ class TestBacktestCosts:
     def test_zero_fees_maximum_return(self):
         """Zero fees should produce the maximum possible return."""
         prices = {"A": [100.0, 150.0, 200.0]}
-        free = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0))
+        free = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0)
+        )
         # Buy 1 share at 100, value at t=2 is 200
         assert free["curve"][-1] == 200.0
 
@@ -99,8 +113,12 @@ class TestBacktestCosts:
         """Costs should reduce losses when price declines."""
         prices = {"A": [100.0, 75.0, 50.0]}
 
-        free = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0))
-        costly = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=1000, slippage_bps=0))
+        free = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0)
+        )
+        costly = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=1000, slippage_bps=0)
+        )
 
         # Both lose money, but costly loses less because it bought fewer shares
         free_final = free["curve"][-1]
@@ -130,12 +148,17 @@ class TestBacktestCosts:
 # Cost edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestCostEdgeCases:
     def test_very_high_fees(self):
         """Very high fees (50%) should drastically reduce returns."""
         prices = {"A": [100.0, 150.0, 200.0]}
-        free = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0))
-        high = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=5000, slippage_bps=0))
+        free = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0)
+        )
+        high = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=5000, slippage_bps=0)
+        )
 
         # Free: $200 final
         # High fee (50%): buy $50 worth (after $50 fee), final = $100
@@ -144,7 +167,9 @@ class TestCostEdgeCases:
     def test_costs_dont_crash_with_volatile_prices(self):
         """Costs should not cause crashes with volatile prices."""
         prices = {"A": [100.0, 50.0, 200.0, 10.0, 500.0]}
-        result = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=100, slippage_bps=50))
+        result = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=100, slippage_bps=50)
+        )
         assert result["metrics"]["total_return_pct"] is not None
 
     def test_zero_cost_fraction(self):
@@ -155,8 +180,12 @@ class TestCostEdgeCases:
     def test_slippage_only_cost(self):
         """Slippage without fees should still apply costs."""
         prices = {"A": [100.0, 150.0, 200.0]}
-        free = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0))
-        slipped = run_backtest(prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=1000))
+        free = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=0)
+        )
+        slipped = run_backtest(
+            prices, BuyAndHold(), Assumptions(fees_bps=0, slippage_bps=1000)
+        )
 
         # Slippage reduces buying power
         assert slipped["curve"][-1] <= free["curve"][-1]

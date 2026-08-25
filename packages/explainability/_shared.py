@@ -1,4 +1,5 @@
 """Shared helpers for explainability modules."""
+
 from __future__ import annotations
 
 import hashlib
@@ -19,5 +20,7 @@ def _data_hash(arr: np.ndarray) -> str:
 
 def _splits_str() -> str:
     """Return walk-forward split identifier string."""
-    return (f"walk_forward_{WALK_FORWARD_TRAIN_WINDOW}_"
-            f"{WALK_FORWARD_TEST_WINDOW}_{WALK_FORWARD_STEP}")
+    return (
+        f"walk_forward_{WALK_FORWARD_TRAIN_WINDOW}_"
+        f"{WALK_FORWARD_TEST_WINDOW}_{WALK_FORWARD_STEP}"
+    )

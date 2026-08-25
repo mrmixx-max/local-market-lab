@@ -2,6 +2,7 @@
 
 Produces a transparent report. Never silently claims byte-identity.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -46,8 +47,9 @@ class RerunReport:
         }
 
 
-def _compare_field(a, b, name: str, report: RerunReport,
-                   abort_on_mismatch: bool, allow_drift: bool) -> bool:
+def _compare_field(
+    a, b, name: str, report: RerunReport, abort_on_mismatch: bool, allow_drift: bool
+) -> bool:
     """Compare one hash/field. Returns True if match."""
     match = a == b
     status = "match" if match else "mismatch"
@@ -92,15 +94,24 @@ def rerun_manifest(
     report.original_result_hash = manifest.get("result_hash")
 
     # 1. System version drift
-    _compare_field(manifest.get("system_version"), current_version,
-                   "system_version", report, abort_on_mismatch=True,
-                   allow_drift=False)
+    _compare_field(
+        manifest.get("system_version"),
+        current_version,
+        "system_version",
+        report,
+        abort_on_mismatch=True,
+        allow_drift=False,
+    )
 
     # 2. Parameters drift (always abort — core contract)
-    _compare_field(manifest.get("parameters_hash"),
-                   manifest.get("parameters_hash"),
-                   "parameter", report, abort_on_mismatch=True,
-                   allow_drift=False)  # identity; catches reload mismatch
+    _compare_field(
+        manifest.get("parameters_hash"),
+        manifest.get("parameters_hash"),
+        "parameter",
+        report,
+        abort_on_mismatch=True,
+        allow_drift=False,
+    )  # identity; catches reload mismatch
 
     # 3. Data hash drift
     orig_data = manifest.get("data") or []
@@ -152,7 +163,11 @@ def rerun_manifest(
     # comparison is on identical canonical bases (metadata excluded by design).
     if report.original_result_hash in (None, "pending"):
         report.warnings.append("original result_hash was pending/incomplete")
-        report.rerun_status = report.rerun_status if report.rerun_status != "unknown" else "rerun_with_drift"
+        report.rerun_status = (
+            report.rerun_status
+            if report.rerun_status != "unknown"
+            else "rerun_with_drift"
+        )
     elif report.rerun_result_hash == report.original_result_hash:
         if report.rerun_status == "unknown":
             report.rerun_status = "byte_identical"

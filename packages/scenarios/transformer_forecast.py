@@ -1,4 +1,5 @@
 """Encoder-only Transformer for time series forecasting — pure numpy."""
+
 from __future__ import annotations
 
 import math
@@ -183,7 +184,7 @@ def walk_forward_validate(model_fn, data, min_train=60, step=20, horizon=5, **kw
     predictions, actuals, fold_starts = [], [], []
     for start in range(min_train, len(data) - horizon, step):
         train = data[:start]
-        test = data[start:start + horizon]
+        test = data[start : start + horizon]
         try:
             result = model_fn(train, horizon, **kw)
             predictions.extend(result["forecast"])
@@ -192,10 +193,20 @@ def walk_forward_validate(model_fn, data, min_train=60, step=20, horizon=5, **kw
         except Exception:
             continue
     if not predictions:
-        return {"predictions": [], "actuals": [], "rmse": float("nan"),
-                "mae": float("nan"), "n_folds": 0, "fold_starts": []}
+        return {
+            "predictions": [],
+            "actuals": [],
+            "rmse": float("nan"),
+            "mae": float("nan"),
+            "n_folds": 0,
+            "fold_starts": [],
+        }
     p, a = np.array(predictions), np.array(actuals)
-    return {"predictions": p.tolist(), "actuals": a.tolist(),
-            "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
-            "mae": float(np.mean(np.abs(p - a))),
-            "n_folds": len(fold_starts), "fold_starts": fold_starts}
+    return {
+        "predictions": p.tolist(),
+        "actuals": a.tolist(),
+        "rmse": float(np.sqrt(np.mean((p - a) ** 2))),
+        "mae": float(np.mean(np.abs(p - a))),
+        "n_folds": len(fold_starts),
+        "fold_starts": fold_starts,
+    }

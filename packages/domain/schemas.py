@@ -3,6 +3,7 @@
 Provides ValidationSchema as a single source of truth for all
 validation result formats across walk-forward, CV, and hyperparameter tuning.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -38,7 +39,9 @@ def _assess_quality(data: list[float]) -> DataQuality:
     )
 
 
-def make_validation_result(data: list[float], seed: int, config: dict) -> ValidationResult:
+def make_validation_result(
+    data: list[float], seed: int, config: dict
+) -> ValidationResult:
     """Create a ValidationResult with run metadata and data quality."""
     return ValidationResult(
         run_id=str(uuid.uuid4())[:8],
@@ -77,7 +80,9 @@ def make_walk_forward_result(
     ]
     return WalkForwardResult(
         validation=make_validation_result(
-            data, seed, {"train_window": train_window, "test_window": test_window, "step": step}
+            data,
+            seed,
+            {"train_window": train_window, "test_window": test_window, "step": step},
         ),
         n_folds=n_folds,
         train_window=train_window,
@@ -115,7 +120,9 @@ def make_cv_result(
         for d in fold_docs
     ]
     return CVResult(
-        validation=make_validation_result(data, seed, {"n_splits": n_splits, "gap": gap}),
+        validation=make_validation_result(
+            data, seed, {"n_splits": n_splits, "gap": gap}
+        ),
         n_splits=n_splits,
         gap=gap,
         avg_metric=avg_metric,
@@ -138,7 +145,9 @@ def make_hyperparameter_result(
 ) -> HyperparameterResult:
     """Create a HyperparameterResult with unified validation metadata."""
     return HyperparameterResult(
-        validation=make_validation_result(data, seed, {"method": method, "metric": metric}),
+        validation=make_validation_result(
+            data, seed, {"method": method, "metric": metric}
+        ),
         best_params=best_params,
         best_metric=best_metric,
         metric=metric,

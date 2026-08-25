@@ -1,4 +1,5 @@
 """Manifest API endpoints (v1.0 P1.4) — additive."""
+
 from __future__ import annotations
 
 
@@ -54,23 +55,35 @@ def api_rerun_manifest(
     if background:
         # delegate to the job queue (async)
         from apps.api.job_routes import _queue
+
         try:
-            job = _queue.submit("rerun", {
-                "manifest_id": manifest_id,
-                "allow_data_drift": allow_data_drift,
-                "allow_environment_drift": allow_environment_drift,
-            })
+            job = _queue.submit(
+                "rerun",
+                {
+                    "manifest_id": manifest_id,
+                    "allow_data_drift": allow_data_drift,
+                    "allow_environment_drift": allow_environment_drift,
+                },
+            )
         except Exception as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        return {"job_id": job.job_id, "status": job.status.value,
-                "rerun_submitted": True}
+        return {
+            "job_id": job.job_id,
+            "status": job.status.value,
+            "rerun_submitted": True,
+        }
 
     cur_ver = _system_version()
     cur_env, _ = _env_hash()
     try:
-        report = rerun_manifest(manifest_id, get_executor(), cur_ver, cur_env,
-                                allow_data_drift=allow_data_drift,
-                                allow_environment_drift=allow_environment_drift)
+        report = rerun_manifest(
+            manifest_id,
+            get_executor(),
+            cur_ver,
+            cur_env,
+            allow_data_drift=allow_data_drift,
+            allow_environment_drift=allow_environment_drift,
+        )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="manifest not found")
     except DriftError as exc:

@@ -11,11 +11,11 @@ The backend stores: id, kind, params, status, progress, result_ref, error,
 created_at, started_at, finished_at. Fields not present server-side
 (run_id, error_code, warnings) are mapped where sensible and otherwise null.
 """
+
 from __future__ import annotations
 
 import time
 from typing import Any
-
 
 # Canonical status vocabulary across all clients
 STATUSES = ("queued", "running", "cancelling", "cancelled", "succeeded", "failed")
@@ -77,6 +77,7 @@ def normalize_job(raw: dict[str, Any]) -> dict[str, Any]:
 def runtime_seconds(raw: dict[str, Any]) -> float | None:
     """Human-readable runtime: started→finished, or started→now if running."""
     import time as _t
+
     started = raw.get("started_at")
     finished = raw.get("finished_at")
     if not started:
@@ -96,6 +97,7 @@ class JobsClient:
     def _http(self):
         # lazy import so environments without requests can still import module
         import requests
+
         if self._session is None:
             self._session = requests.Session()
         return self._session
@@ -112,8 +114,9 @@ class JobsClient:
 
     def _post(self, path: str, json: dict | None = None) -> dict | None:
         try:
-            r = self._http().post(f"{self.base}{path}", json=json or {},
-                                  timeout=self.timeout)
+            r = self._http().post(
+                f"{self.base}{path}", json=json or {}, timeout=self.timeout
+            )
             r.raise_for_status()
             return r.json()
         except Exception as exc:
@@ -151,7 +154,9 @@ class JobsClient:
             return raw
         return normalize_job(raw)
 
-    def wait(self, job_id: str, timeout: float = 300.0, poll: float = 1.0) -> dict | None:
+    def wait(
+        self, job_id: str, timeout: float = 300.0, poll: float = 1.0
+    ) -> dict | None:
         """Block until terminal status or timeout. Returns normalized job or
         {'error': 'timeout'}."""
         deadline = time.time() + timeout

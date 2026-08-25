@@ -6,6 +6,7 @@ Four models, all pure functions:
   3. arima_like_forecast    — AR(1) on differenced data
   4. ensemble_forecast      — average of the three + confidence intervals
 """
+
 from __future__ import annotations
 
 import math
@@ -64,8 +65,9 @@ def linear_trend_forecast(data: list[float], horizon: int = 30) -> dict:
     }
 
 
-def exp_smooth_forecast(data: list[float], horizon: int = 30,
-                        alpha: float = 0.3, beta: float = 0.1) -> dict:
+def exp_smooth_forecast(
+    data: list[float], horizon: int = 30, alpha: float = 0.3, beta: float = 0.1
+) -> dict:
     """Holt's linear trend (double exponential smoothing).
 
     Args:
@@ -99,16 +101,23 @@ def exp_smooth_forecast(data: list[float], horizon: int = 30,
     return {
         "model": "exp_smooth",
         "forecast": [round(v, 4) for v in forecast],
-        "upper": [round(forecast[h] + 1.96 * sigma * math.sqrt(h + 1), 4) for h in range(horizon)],
-        "lower": [round(forecast[h] - 1.96 * sigma * math.sqrt(h + 1), 4) for h in range(horizon)],
+        "upper": [
+            round(forecast[h] + 1.96 * sigma * math.sqrt(h + 1), 4)
+            for h in range(horizon)
+        ],
+        "lower": [
+            round(forecast[h] - 1.96 * sigma * math.sqrt(h + 1), 4)
+            for h in range(horizon)
+        ],
         "level": round(level, 4),
         "trend": round(trend, 6),
         "last": round(data[-1], 4),
     }
 
 
-def arima_like_forecast(data: list[float], horizon: int = 30,
-                        order: tuple[int, int, int] = (5, 1, 0)) -> dict:
+def arima_like_forecast(
+    data: list[float], horizon: int = 30, order: tuple[int, int, int] = (5, 1, 0)
+) -> dict:
     """AR(p) on differenced data — no statsmodels needed.
 
     Args:
@@ -143,12 +152,25 @@ def arima_like_forecast(data: list[float], horizon: int = 30,
     for v in fcd:
         acc += v
         forecast.append(acc)
-    sigma = math.sqrt(sum((y[i] - (mu + phi * x1[i])) ** 2 for i in range(len(y))) / max(1, len(y) - 1)) if len(y) > 1 else 1.0
+    sigma = (
+        math.sqrt(
+            sum((y[i] - (mu + phi * x1[i])) ** 2 for i in range(len(y)))
+            / max(1, len(y) - 1)
+        )
+        if len(y) > 1
+        else 1.0
+    )
     return {
         "model": "arima_like",
         "forecast": [round(v, 4) for v in forecast],
-        "upper": [round(forecast[h] + 1.96 * sigma * math.sqrt(h + 1), 4) for h in range(horizon)],
-        "lower": [round(forecast[h] - 1.96 * sigma * math.sqrt(h + 1), 4) for h in range(horizon)],
+        "upper": [
+            round(forecast[h] + 1.96 * sigma * math.sqrt(h + 1), 4)
+            for h in range(horizon)
+        ],
+        "lower": [
+            round(forecast[h] - 1.96 * sigma * math.sqrt(h + 1), 4)
+            for h in range(horizon)
+        ],
         "phi": round(phi, 4),
         "d": d,
         "last": round(data[-1], 4),
@@ -173,7 +195,10 @@ def ensemble_forecast(data: list[float], horizon: int = 30) -> dict:
     exp = exp_smooth_forecast(data, horizon)
     ar = arima_like_forecast(data, horizon)
     n = horizon
-    fc = [(lin["forecast"][i] + exp["forecast"][i] + ar["forecast"][i]) / 3 for i in range(n)]
+    fc = [
+        (lin["forecast"][i] + exp["forecast"][i] + ar["forecast"][i]) / 3
+        for i in range(n)
+    ]
     up = [max(lin["upper"][i], exp["upper"][i], ar["upper"][i]) for i in range(n)]
     lo = [min(lin["lower"][i], exp["lower"][i], ar["lower"][i]) for i in range(n)]
     return {

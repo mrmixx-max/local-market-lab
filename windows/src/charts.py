@@ -10,6 +10,7 @@ Widgets
 - HistogramChart   : Monte-Carlo terminal-value distribution
 - DrawdownChart    : Drawdown curve over time
 """
+
 from __future__ import annotations
 
 import pyqtgraph as pg
@@ -44,11 +45,17 @@ def _apply_theme(plot: pg.PlotWidget, title: str) -> None:
     plot.setTitle(title, color=AMBER, size="11pt")
 
 
-def _add_crosshair(plot: pg.PlotWidget) -> tuple[pg.InfiniteLine, pg.InfiniteLine, pg.TextItem]:
+def _add_crosshair(
+    plot: pg.PlotWidget,
+) -> tuple[pg.InfiniteLine, pg.InfiniteLine, pg.TextItem]:
     """Attach a crosshair (vline + hline + label) that follows the cursor."""
     vb = plot.getPlotItem().getViewBox()
-    vline = pg.InfiniteLine(angle=90, pen=pg.mkPen(AMBER, width=1, style=Qt.PenStyle.DashLine))
-    hline = pg.InfiniteLine(angle=0, pen=pg.mkPen(AMBER, width=1, style=Qt.PenStyle.DashLine))
+    vline = pg.InfiniteLine(
+        angle=90, pen=pg.mkPen(AMBER, width=1, style=Qt.PenStyle.DashLine)
+    )
+    hline = pg.InfiniteLine(
+        angle=0, pen=pg.mkPen(AMBER, width=1, style=Qt.PenStyle.DashLine)
+    )
     label = pg.TextItem("", color=AMBER, anchor=(0, 1))
     label.setFont(FONT)
     label.setZValue(10)
@@ -116,8 +123,12 @@ class CandlestickChart(pg.PlotWidget):
             # body (open-close)
             body_low, body_high = sorted((o, c))
             bar = pg.BarGraphItem(
-                x=[i], height=[body_high - body_low], width=w,
-                y0=body_low, pen=pen, brush=color,
+                x=[i],
+                height=[body_high - body_low],
+                width=w,
+                y0=body_low,
+                pen=pen,
+                brush=color,
             )
             self.addItem(bar)
 
@@ -136,8 +147,13 @@ class LineChart(pg.PlotWidget):
     title      : str
     """
 
-    COLORS = [AMBER, QColor(0, 180, 255), QColor(200, 120, 255),
-              QColor(0, 220, 180), QColor(255, 100, 100)]
+    COLORS = [
+        AMBER,
+        QColor(0, 180, 255),
+        QColor(200, 120, 255),
+        QColor(0, 220, 180),
+        QColor(255, 100, 100),
+    ]
 
     def __init__(self, x, series: dict, title: str = "EQUITY", drawdown=None):
         super().__init__()
@@ -199,13 +215,21 @@ class HistogramChart(pg.PlotWidget):
         median = sorted(self._values)[len(self._values) // 2]
         for xi, yi in zip(x_centers, y):
             color = GREEN if xi >= median else RED
-            bar = pg.BarGraphItem(x=[xi], height=[yi], width=width,
-                                  pen=pg.mkPen(color, width=1), brush=color)
+            bar = pg.BarGraphItem(
+                x=[xi],
+                height=[yi],
+                width=width,
+                pen=pg.mkPen(color, width=1),
+                brush=color,
+            )
             self.addItem(bar)
 
         # median line
-        med_line = pg.InfiniteLine(angle=90, pos=median,
-                                   pen=pg.mkPen(AMBER, width=2, style=Qt.PenStyle.DashLine))
+        med_line = pg.InfiniteLine(
+            angle=90,
+            pos=median,
+            pen=pg.mkPen(AMBER, width=2, style=Qt.PenStyle.DashLine),
+        )
         self.addItem(med_line)
         med_label = pg.TextItem(f"  median: {median:,.0f}", color=AMBER, anchor=(0, 1))
         med_label.setFont(FONT_BOLD)

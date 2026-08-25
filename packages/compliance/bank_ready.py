@@ -1,5 +1,6 @@
 """Bank-ready compliance: audit trail, integrity checks, BaFin-style reports,
 GDPR export/deletion. All critical audit events append to an immutable log."""
+
 from __future__ import annotations
 
 import hashlib
@@ -34,8 +35,10 @@ def _audit_tbl(conn: sqlite3.Connection) -> None:
 
 
 def _cs_tbl(conn: sqlite3.Connection) -> None:
-    conn.execute("""CREATE TABLE IF NOT EXISTS table_checksums(
-        table_name TEXT PRIMARY KEY, checksum TEXT NOT NULL, computed_at TEXT NOT NULL)""")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS table_checksums(
+        table_name TEXT PRIMARY KEY, checksum TEXT NOT NULL, computed_at TEXT NOT NULL)"""
+    )
     conn.commit()
 
 
@@ -46,18 +49,33 @@ class AuditLogger:
         self.conn = conn
         _audit_tbl(conn)
 
-    def log(self, user: str, action: str, params: Any = None, result: Any = None) -> int:
-        p = json.dumps(params, sort_keys=True, default=str) if params is not None else None
-        rh = _h(json.dumps(result, sort_keys=True, default=str)) if result is not None else None
+    def log(
+        self, user: str, action: str, params: Any = None, result: Any = None
+    ) -> int:
+        p = (
+            json.dumps(params, sort_keys=True, default=str)
+            if params is not None
+            else None
+        )
+        rh = (
+            _h(json.dumps(result, sort_keys=True, default=str))
+            if result is not None
+            else None
+        )
         cur = self.conn.execute(
             "INSERT INTO audit_log(user,timestamp,action,params,result_hash) VALUES(?,?,?,?,?)",
-            (user, _utc(), action, p, rh))
+            (user, _utc(), action, p, rh),
+        )
         self.conn.commit()
         return cur.lastrowid
 
     def entries(self, limit: int = 100) -> list[dict]:
-        return [dict(r) for r in self.conn.execute(
-            "SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+        return [
+            dict(r)
+            for r in self.conn.execute(
+                "SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        ]
 
     def count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) c FROM audit_log").fetchone()["c"]
@@ -81,14 +99,19 @@ class DataIntegrity:
             result[t] = cs
             self.conn.execute(
                 "INSERT OR REPLACE INTO table_checksums(table_name,checksum,computed_at) VALUES(?,?,?)",
-                (t, cs, _utc()))
+                (t, cs, _utc()),
+            )
         self.conn.commit()
         return result
 
     def verify(self) -> dict[str, bool]:
-        stored = {r["table_name"]: r["checksum"]
-                  for r in self.conn.execute("SELECT * FROM table_checksums").fetchall()}
-        return {t: stored.get(t) == self._tbl_cs(t) for t in CRITICAL_TABLES if t in stored}
+        stored = {
+            r["table_name"]: r["checksum"]
+            for r in self.conn.execute("SELECT * FROM table_checksums").fetchall()
+        }
+        return {
+            t: stored.get(t) == self._tbl_cs(t) for t in CRITICAL_TABLES if t in stored
+        }
 
 
 class ComplianceReport:
@@ -100,13 +123,20 @@ class ComplianceReport:
     def generate(self) -> dict:
         n = self.logger.count()
         ok = self.integrity.verify()
-        flags = (["no_audit_entries"] if n == 0 else []) + \
-                (["data_integrity_mismatch"] if not all(ok.values()) else [])
+        flags = (["no_audit_entries"] if n == 0 else []) + (
+            ["data_integrity_mismatch"] if not all(ok.values()) else []
+        )
         return {
-            "system_version": SYSTEM_VERSION, "generated_at": _utc(),
-            "audit_log_summary": {"total_entries": n,
-                                  "recent_actions": [r["action"] for r in self.logger.entries(5)]},
-            "data_integrity_status": ok, "user_actions_count": n, "risk_flags": flags}
+            "system_version": SYSTEM_VERSION,
+            "generated_at": _utc(),
+            "audit_log_summary": {
+                "total_entries": n,
+                "recent_actions": [r["action"] for r in self.logger.entries(5)],
+            },
+            "data_integrity_status": ok,
+            "user_actions_count": n,
+            "risk_flags": flags,
+        }
 
 
 class DataExport:
@@ -114,10 +144,18 @@ class DataExport:
 
     @staticmethod
     def export_user(conn: sqlite3.Connection, user: str) -> dict:
-        txns = [dict(r) for r in conn.execute(
-            "SELECT * FROM transactions WHERE portfolio=?", (user,)).fetchall()]
-        return {"user": user, "exported_at": _utc(),
-                "data_categories": {"transactions": txns}, "format_version": "1.0"}
+        txns = [
+            dict(r)
+            for r in conn.execute(
+                "SELECT * FROM transactions WHERE portfolio=?", (user,)
+            ).fetchall()
+        ]
+        return {
+            "user": user,
+            "exported_at": _utc(),
+            "data_categories": {"transactions": txns},
+            "format_version": "1.0",
+        }
 
 
 class DataDeletion:
@@ -127,7 +165,9 @@ class DataDeletion:
     def anonymize(conn: sqlite3.Connection, user: str) -> int:
         anon = f"deleted_user_{_h(user)[:8]}"
         cur = conn.execute(
-            "UPDATE transactions SET portfolio=?, note='' WHERE portfolio=?", (anon, user))
+            "UPDATE transactions SET portfolio=?, note='' WHERE portfolio=?",
+            (anon, user),
+        )
         conn.commit()
         return cur.rowcount
 

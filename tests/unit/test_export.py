@@ -1,4 +1,5 @@
 """Tests for export functions: PDF, Excel, CSV."""
+
 from __future__ import annotations
 
 import io
@@ -18,15 +19,32 @@ from packages.domain.entities import ExportQuality
 
 @pytest.fixture
 def dq():
-    return ExportQuality(n_observations=100, missing_pct=0.02, source="yahoo",
-                       start_date="2024-01-01", end_date="2024-12-31")
+    return ExportQuality(
+        n_observations=100,
+        missing_pct=0.02,
+        source="yahoo",
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+    )
 
 
 class TestCsvExports:
     def test_csv_trades_basic(self, dq):
         trades = [
-            {"symbol": "AAPL", "side": "buy", "qty": 10, "price": 150.0, "date": "2026-01-01"},
-            {"symbol": "AAPL", "side": "sell", "qty": 5, "price": 155.0, "date": "2026-01-02"},
+            {
+                "symbol": "AAPL",
+                "side": "buy",
+                "qty": 10,
+                "price": 150.0,
+                "date": "2026-01-01",
+            },
+            {
+                "symbol": "AAPL",
+                "side": "sell",
+                "qty": 5,
+                "price": 155.0,
+                "date": "2026-01-02",
+            },
         ]
         result = csv_trades(trades, dq)
         assert result.format == "csv"
@@ -87,6 +105,7 @@ class TestPdfExport:
 class TestExcelExport:
     def test_excel_report_basic(self, dq):
         from openpyxl import load_workbook
+
         metrics = {"sharpe": 1.2, "cagr": 0.08}
         trades = [{"symbol": "TEST", "side": "buy", "qty": 10, "price": 100}]
         result = excel_report(metrics, trades, dq=dq)
@@ -97,6 +116,7 @@ class TestExcelExport:
 
     def test_excel_report_sheets_content(self, dq):
         from openpyxl import load_workbook
+
         metrics = {"sharpe": 1.5, "volatility": 0.12}
         result = excel_report(metrics, [], dq=dq)
         wb = load_workbook(io.BytesIO(result.file_bytes or b""))
@@ -108,6 +128,7 @@ class TestExcelExport:
 
     def test_excel_report_with_curves(self, dq):
         from openpyxl import load_workbook
+
         curve = [100.0, 101.0, 102.0]
         dd = [0.0, 0.01, 0.02]
         result = excel_report({}, [], curve, dd, dq)

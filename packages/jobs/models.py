@@ -1,4 +1,5 @@
 """Job models and status state machine."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -34,7 +35,7 @@ class Job:
     params: dict[str, Any]
     status: JobStatus = JobStatus.QUEUED
     progress: float = 0.0  # 0.0 .. 1.0
-    result_ref: str | None = None      # artifact manifest id / path reference
+    result_ref: str | None = None  # artifact manifest id / path reference
     error: str | None = None
     created_at: float = 0.0
     started_at: float | None = None

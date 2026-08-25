@@ -1,6 +1,7 @@
 """SQLite storage — workspace database for instruments, transactions,
 corporate actions and price bars. Append-only where it matters.
 """
+
 from __future__ import annotations
 
 import os
@@ -65,16 +66,21 @@ class Workspace:
     """The local workspace: one SQLite file under the workspace directory."""
 
     def __init__(self, db_path: str | None = None):
-        self.db_path = db_path or os.environ.get(
-            "LML_DB", "./data/marketlab.db")
+        self.db_path = db_path or os.environ.get("LML_DB", "./data/marketlab.db")
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
 
     # ---------- instruments ----------
-    def ensure_instrument(self, symbol: str, name: str = "", asset_class: str = "etf",
-                          currency: str = "EUR", isin: str | None = None) -> None:
+    def ensure_instrument(
+        self,
+        symbol: str,
+        name: str = "",
+        asset_class: str = "etf",
+        currency: str = "EUR",
+        isin: str | None = None,
+    ) -> None:
         self.conn.execute(
             """INSERT INTO instruments(symbol,name,asset_class,currency,isin)
                VALUES(?,?,?,?,?)
@@ -84,9 +90,12 @@ class Workspace:
         self.conn.commit()
 
     def has_instrument(self, symbol: str) -> bool:
-        return self.conn.execute(
-            "SELECT 1 FROM instruments WHERE symbol=?", (symbol.upper(),)
-        ).fetchone() is not None
+        return (
+            self.conn.execute(
+                "SELECT 1 FROM instruments WHERE symbol=?", (symbol.upper(),)
+            ).fetchone()
+            is not None
+        )
 
     def instrument_currency(self, symbol: str) -> str:
         row = self.conn.execute(
@@ -121,8 +130,10 @@ class Workspace:
         ).fetchall()
 
     def portfolios(self):
-        return [r["portfolio"] for r in
-                self.conn.execute("SELECT DISTINCT portfolio FROM transactions")]
+        return [
+            r["portfolio"]
+            for r in self.conn.execute("SELECT DISTINCT portfolio FROM transactions")
+        ]
 
     # ---------- corporate actions ----------
     def add_corporate_action(self, ca: dict) -> int:
@@ -143,13 +154,20 @@ class Workspace:
             ).fetchall()
         else:
             rows = self.conn.execute(
-                "SELECT * FROM corporate_actions ORDER BY date").fetchall()
+                "SELECT * FROM corporate_actions ORDER BY date"
+            ).fetchall()
         return rows
 
     # ---------- prices ----------
-    def upsert_price(self, symbol: str, date_iso: str, close: float,
-                     volume: float | None = None, source: str = "user-csv",
-                     license_note: str = "user data — local only") -> None:
+    def upsert_price(
+        self,
+        symbol: str,
+        date_iso: str,
+        close: float,
+        volume: float | None = None,
+        source: str = "user-csv",
+        license_note: str = "user data — local only",
+    ) -> None:
         self.conn.execute(
             """INSERT INTO prices(symbol,date,close,volume,source_name,license_note)
                VALUES(?,?,?,?,?,?)
@@ -176,6 +194,7 @@ class Workspace:
     # ---------- artifacts ----------
     def save_artifact(self, artifact_id: str, kind: str, manifest: dict) -> None:
         import json
+
         self.conn.execute(
             "INSERT OR REPLACE INTO artifacts(artifact_id,kind,manifest_json) VALUES(?,?,?)",
             (artifact_id, kind, json.dumps(manifest, sort_keys=True)),

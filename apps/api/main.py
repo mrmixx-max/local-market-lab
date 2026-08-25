@@ -9,6 +9,7 @@ Serves:
   - REST: /api/v1/system/info  (runtime metadata)
   - Static:  /            (the Bloomberg-style terminal web UI)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -66,6 +67,7 @@ def _shutdown() -> None:
     _shutdown_done = True
     try:
         from packages.storage.state import _workspace
+
         if _workspace is not None:
             _workspace.conn.close()
             log_json("info", event="shutdown", msg="database connection closed")
@@ -95,18 +97,26 @@ atexit.register(_shutdown)
 # ---------------------------------------------------------------------------
 # CORS: default to localhost only. Set LML_CORS_ORIGINS env var to allow
 # additional origins (comma-separated). "*" allows all — use with caution.
-cors_origins = os.environ.get("LML_CORS_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000")
-app.add_middleware(CORSMiddleware,
-    allow_origins=[o.strip() for o in cors_origins.split(",") if o.strip()] or ["http://localhost:3000"],
+cors_origins = os.environ.get(
+    "LML_CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000",
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in cors_origins.split(",") if o.strip()]
+    or ["http://localhost:3000"],
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID"])
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+)
 app.add_middleware(ExceptionHandlerMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 
 # ---------- health ----------
-@app.get("/api/v1/health", response_model=HealthResponse, summary="Service health check")
+@app.get(
+    "/api/v1/health", response_model=HealthResponse, summary="Service health check"
+)
 async def health(ws=Depends(get_workspace)):
     """Return service status, DB connectivity, instrument count, uptime, and upstream status."""
     db_ok = True
@@ -114,19 +124,27 @@ async def health(ws=Depends(get_workspace)):
         ws.conn.execute("SELECT 1")
     except Exception:
         db_ok = False
-    n = ws.conn.execute("SELECT COUNT(*) c FROM instruments").fetchone()["c"] if db_ok else 0
+    n = (
+        ws.conn.execute("SELECT COUNT(*) c FROM instruments").fetchone()["c"]
+        if db_ok
+        else 0
+    )
     uptime_seconds = round(time.monotonic() - _start_time, 1)
 
     # Check Ollama availability
     ollama_available = False
     ollama_error = None
     try:
-        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip(
+            "/"
+        )
         if not ollama_host.startswith("http"):
             ollama_host = f"http://{ollama_host}"
         if ":" not in ollama_host.split("://", 1)[-1]:
             ollama_host = f"{ollama_host}:11434"
-        req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/0.9.1"})
+        req = urllib.request.Request(
+            f"{ollama_host}/api/tags", headers={"User-Agent": "LocalMarketLab/0.9.1"}
+        )
         with urllib.request.urlopen(req, timeout=3) as r:
             json.load(r)
         ollama_available = True
@@ -138,7 +156,12 @@ async def health(ws=Depends(get_workspace)):
     yahoo_error = None
     try:
         yahoo_url = "https://query1.finance.yahoo.com/v8/finance/chart/^GDAXI?range=1d&interval=1d"
-        req = urllib.request.Request(yahoo_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+        req = urllib.request.Request(
+            yahoo_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+        )
         with urllib.request.urlopen(req, timeout=5) as r:
             json.load(r)
         yahoo_available = True
@@ -163,6 +186,7 @@ async def health(ws=Depends(get_workspace)):
 async def system_info(ws=Depends(get_workspace)):
     """Return version, uptime, DB path, and DB file size."""
     from packages.storage.state import get_ws
+
     ws = get_ws()
     db_path = ws.db_path
     try:
@@ -179,7 +203,11 @@ async def system_info(ws=Depends(get_workspace)):
 
 
 # ---------- market data ----------
-@app.get("/api/v1/market/symbols", response_model=list[SymbolSchema], summary="List all tradeable instruments")
+@app.get(
+    "/api/v1/market/symbols",
+    response_model=list[SymbolSchema],
+    summary="List all tradeable instruments",
+)
 async def symbols(ws=Depends(get_workspace)):
     """Return all instruments sorted by symbol."""
     rows = ws.conn.execute(
@@ -188,14 +216,19 @@ async def symbols(ws=Depends(get_workspace)):
     return [SymbolSchema(**dict(r)) for r in rows]
 
 
-@app.get("/api/v1/market/prices/{symbol}", response_model=PriceSeriesResponse, summary="Get price history for a symbol")
+@app.get(
+    "/api/v1/market/prices/{symbol}",
+    response_model=PriceSeriesResponse,
+    summary="Get price history for a symbol",
+)
 async def prices(symbol: str, limit: int | None = None, ws=Depends(get_workspace)):
     """Return historical close prices for a given instrument."""
     # Validate symbol to prevent injection
     import re
+
     if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
         raise HTTPException(400, f"invalid symbol format: {symbol!r}")
-    
+
     q = "SELECT date, close, volume FROM prices WHERE symbol=? ORDER BY date"
     params: list = [symbol.upper()]
     if limit:
@@ -215,9 +248,10 @@ async def yahoo_fallback(symbol: str):
     """
     # Validate symbol to prevent URL injection
     import re
+
     if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
         raise HTTPException(400, f"invalid symbol format: {symbol!r}")
-    
+
     timeout = int(os.environ.get("LML_YAHOO_TIMEOUT", "10"))
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     endpoints = [
@@ -227,7 +261,9 @@ async def yahoo_fallback(symbol: str):
     last_err: str | None = None
     for url in endpoints:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "application/json"})
+            req = urllib.request.Request(
+                url, headers={"User-Agent": ua, "Accept": "application/json"}
+            )
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.load(r)
             result = data.get("chart", {}).get("result", [])
@@ -251,29 +287,48 @@ async def yahoo_fallback(symbol: str):
 
 
 # ---------- technical indicators ----------
-@app.post("/api/v1/market/indicators/{symbol}", summary="Compute technical indicators for a symbol")
+@app.post(
+    "/api/v1/market/indicators/{symbol}",
+    summary="Compute technical indicators for a symbol",
+)
 async def indicators(symbol: str, payload: dict, ws=Depends(get_workspace)):
     """Compute SMA, EMA, RSI, MACD, or Bollinger indicators for a symbol."""
     # Validate symbol to prevent injection
     import re
+
     if not symbol or not re.match(r"^[A-Za-z0-9.\-^=]{1,20}$", symbol):
         raise HTTPException(400, f"invalid symbol format: {symbol!r}")
-    
+
     from packages.marketdata.indicators import bollinger, ema, macd, rsi, sma
 
     ind = payload.get("indicator", "sma").lower()
-    period = int(payload.get("period", 20 if ind == "bollinger" else 14 if ind == "rsi" else 12))
-    rows = ws.conn.execute("SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)).fetchall()
+    period = int(
+        payload.get("period", 20 if ind == "bollinger" else 14 if ind == "rsi" else 12)
+    )
+    rows = ws.conn.execute(
+        "SELECT close FROM prices WHERE symbol=? ORDER BY date", (symbol.upper(),)
+    ).fetchall()
     if not rows:
         raise HTTPException(404, f"no prices for {symbol.upper()}")
     data = [r["close"] for r in rows]
     try:
-        if ind == "sma": return sma(data, period)
-        elif ind == "ema": return ema(data, period)
-        elif ind == "rsi": return rsi(data, payload.get("period", 14))
-        elif ind == "macd": return macd(data, fast=int(payload.get("fast", 12)), slow=int(payload.get("slow", 26)), signal=int(payload.get("signal", 9)))
-        elif ind == "bollinger": return bollinger(data, period, float(payload.get("std", 2.0)))
-        else: raise ValueError(f"unknown indicator: {ind}")
+        if ind == "sma":
+            return sma(data, period)
+        elif ind == "ema":
+            return ema(data, period)
+        elif ind == "rsi":
+            return rsi(data, payload.get("period", 14))
+        elif ind == "macd":
+            return macd(
+                data,
+                fast=int(payload.get("fast", 12)),
+                slow=int(payload.get("slow", 26)),
+                signal=int(payload.get("signal", 9)),
+            )
+        elif ind == "bollinger":
+            return bollinger(data, period, float(payload.get("std", 2.0)))
+        else:
+            raise ValueError(f"unknown indicator: {ind}")
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
@@ -292,15 +347,23 @@ async def ws_market(ws: WebSocket):
         rng = random.Random(17)
         lasts: dict[str, float] = {}
         for sym in subbed:
-            row = get_workspace().conn.execute(
-                "SELECT close FROM prices WHERE symbol=? ORDER BY date DESC LIMIT 1", (sym,),
-            ).fetchone()
+            row = (
+                get_workspace()
+                .conn.execute(
+                    "SELECT close FROM prices WHERE symbol=? ORDER BY date DESC LIMIT 1",
+                    (sym,),
+                )
+                .fetchone()
+            )
             lasts[sym] = row["close"] if row else 100.0
         while True:
             out = {}
             for sym in subbed:
                 lasts[sym] *= 1 + rng.gauss(0, 0.0008)
-                out[sym] = {"close": round(lasts[sym], 4), "ts": datetime.now(timezone.utc).isoformat()}
+                out[sym] = {
+                    "close": round(lasts[sym], 4),
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                }
             await ws.send_text(json.dumps(out))
             await asyncio.sleep(1)
     except WebSocketDisconnect:
@@ -315,11 +378,20 @@ async def ws_market(ws: WebSocket):
     response_model=PortfolioValuation,
     summary="Value a portfolio at latest close",
 )
-async def portfolio(name: str, benchmark: str | None = None,
-                    include_analytics: bool = True,
-                    ws=Depends(get_workspace)):
+async def portfolio(
+    name: str,
+    benchmark: str | None = None,
+    include_analytics: bool = True,
+    ws=Depends(get_workspace),
+):
     """Value a portfolio. Optional: benchmark symbol, allocation + risk analytics."""
-    from packages.portfolio.engine import (allocation_breakdown, benchmark_comparison, portfolio_returns, risk_contribution, value_portfolio)
+    from packages.portfolio.engine import (
+        allocation_breakdown,
+        benchmark_comparison,
+        portfolio_returns,
+        risk_contribution,
+        value_portfolio,
+    )
     from packages.marketdata.fx import FxPolicy
 
     fx = FxPolicy()
@@ -348,7 +420,12 @@ async def portfolio(name: str, benchmark: str | None = None,
 )
 async def backtest(payload: dict, ws=Depends(get_workspace)):
     """Run a backtest with the given symbols, strategy, and assumptions."""
-    from packages.backtest.engine import (Assumptions, BuyAndHold, PeriodicRebalance, run_backtest)
+    from packages.backtest.engine import (
+        Assumptions,
+        BuyAndHold,
+        PeriodicRebalance,
+        run_backtest,
+    )
     from packages.marketdata.series import aligned_closes
 
     strat_name = payload.get("strategy", "buy-and-hold")
@@ -360,7 +437,7 @@ async def backtest(payload: dict, ws=Depends(get_workspace)):
         strat = BuyAndHold()
     else:
         strat = PeriodicRebalance(63)
-    
+
     # Einzelnes Symbol: Yahoo-Fallback verwenden
     symbol = payload.get("symbol")
     if symbol:
@@ -371,11 +448,15 @@ async def backtest(payload: dict, ws=Depends(get_workspace)):
     else:
         symbols = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
         _, prices = aligned_closes(ws, symbols)
-    
-    result = run_backtest(prices, strat, Assumptions(
-        fees_bps=payload.get("fees_bps", 10) + payload.get("spread_bps", 0),
-        slippage_bps=payload.get("slippage_bps", 5)
-    ))
+
+    result = run_backtest(
+        prices,
+        strat,
+        Assumptions(
+            fees_bps=payload.get("fees_bps", 10) + payload.get("spread_bps", 0),
+            slippage_bps=payload.get("slippage_bps", 5),
+        ),
+    )
     return BacktestResult(**result)
 
 
@@ -405,14 +486,24 @@ async def scenario(payload: dict, ws=Depends(get_workspace)):
 async def metrics_advanced(payload: dict, ws=Depends(get_workspace)):
     """VaR, CVaR, correlation matrix, rolling Sharpe, drawdown, performance attribution."""
     from packages.marketdata.series import aligned_closes
-    from packages.metrics.risk import (correlation_matrix, drawdown_series, performance_attribution, rolling_sharpe, var_cvar, returns)
+    from packages.metrics.risk import (
+        correlation_matrix,
+        drawdown_series,
+        performance_attribution,
+        rolling_sharpe,
+        var_cvar,
+        returns,
+    )
 
     syms = payload.get("symbols", ["IWDA", "EIMI", "AGGH"])
     conf = float(payload.get("confidence", 0.95))
     win = int(payload.get("window", 63))
     _, prices = aligned_closes(ws, syms)
     rets = {s: returns(p) for s, p in prices.items()}
-    port = [sum(rets[s][i] for s in rets) / len(rets) for i in range(min(len(r) for r in rets.values()))]
+    port = [
+        sum(rets[s][i] for s in rets) / len(rets)
+        for i in range(min(len(r) for r in rets.values()))
+    ]
     eq = [1.0]
     for r in port:
         eq.append(eq[-1] * (1 + r))
@@ -427,8 +518,11 @@ async def metrics_advanced(payload: dict, ws=Depends(get_workspace)):
 
 
 # ---------- stress test ----------
-@app.post("/api/v1/scenario/stress", response_model=StressOut,
-          summary="Run a stress-test scenario")
+@app.post(
+    "/api/v1/scenario/stress",
+    response_model=StressOut,
+    summary="Run a stress-test scenario",
+)
 async def stress_test(payload: StressRequest):
     """Apply a historical or hypothetical stress scenario to a portfolio.
 
@@ -436,8 +530,10 @@ async def stress_test(payload: StressRequest):
     timeline, and data_hash. Sensitivity exploration, not a forecast.
     """
     from packages.scenarios.stress import (
-        HISTORICAL_CRISES, HYPOTHETICAL_SCENARIOS,
-        run_historical_stress, run_hypothetical_stress,
+        HISTORICAL_CRISES,
+        HYPOTHETICAL_SCENARIOS,
+        run_historical_stress,
+        run_hypothetical_stress,
     )
 
     # Default positions: 100% des Symbols, wenn nicht angegeben
@@ -455,16 +551,20 @@ async def stress_test(payload: StressRequest):
 
     if scenario_type == "historical":
         if payload.scenario not in HISTORICAL_CRISES:
-            raise HTTPException(404, f"unknown crisis: {payload.scenario}. "
-                                     f"available: {list(HISTORICAL_CRISES)}")
-        res = run_historical_stress(payload.scenario, positions,
-                                     payload.seed)
+            raise HTTPException(
+                404,
+                f"unknown crisis: {payload.scenario}. "
+                f"available: {list(HISTORICAL_CRISES)}",
+            )
+        res = run_historical_stress(payload.scenario, positions, payload.seed)
     else:
         if payload.scenario not in HYPOTHETICAL_SCENARIOS:
-            raise HTTPException(404, f"unknown scenario: {payload.scenario}. "
-                                     f"available: {list(HYPOTHETICAL_SCENARIOS)}")
-        res = run_hypothetical_stress(payload.scenario, positions,
-                                       payload.seed)
+            raise HTTPException(
+                404,
+                f"unknown scenario: {payload.scenario}. "
+                f"available: {list(HYPOTHETICAL_SCENARIOS)}",
+            )
+        res = run_hypothetical_stress(payload.scenario, positions, payload.seed)
     return StressOut(
         run_id=res.run_id,
         scenario=res.scenario,
@@ -481,7 +581,11 @@ async def stress_test(payload: StressRequest):
 @app.post("/api/v1/scenario/crisis", summary="Run a crisis scenario analysis")
 async def crisis_scenario(payload: CrisisRequest):
     """Analyze correlation break, liquidity crunch, or sector rotation."""
-    from packages.scenarios.crisis import correlation_break, liquidity_crunch, sector_rotation
+    from packages.scenarios.crisis import (
+        correlation_break,
+        liquidity_crunch,
+        sector_rotation,
+    )
 
     if not payload.positions:
         payload.positions = {"AAPL": 1.0}
@@ -506,8 +610,10 @@ async def crisis_scenario(payload: CrisisRequest):
 
 
 # ---------- rebalancing assistant ----------
-@app.get("/api/v1/portfolio/{name}/rebalancing",
-         summary="Get rebalancing analysis for a portfolio")
+@app.get(
+    "/api/v1/portfolio/{name}/rebalancing",
+    summary="Get rebalancing analysis for a portfolio",
+)
 async def rebalancing_analysis(
     name: str,
     threshold: float = 0.05,
@@ -544,10 +650,13 @@ async def rebalancing_analysis(
     }
 
 
-@app.post("/api/v1/portfolio/{name}/rebalance/orders",
-           summary="Generate realistic order suggestions (min sizes, fees, cash)")
-async def rebalance_orders(name: str, payload: RebalanceRequest,
-                           ws=Depends(get_workspace)):
+@app.post(
+    "/api/v1/portfolio/{name}/rebalance/orders",
+    summary="Generate realistic order suggestions (min sizes, fees, cash)",
+)
+async def rebalance_orders(
+    name: str, payload: RebalanceRequest, ws=Depends(get_workspace)
+):
     """Generate executable-in-principle order suggestions respecting minimum
     order sizes, fees, and available cash.
 
@@ -557,7 +666,8 @@ async def rebalance_orders(name: str, payload: RebalanceRequest,
     """
     from packages.portfolio.engine import value_portfolio
     from packages.portfolio.rebalancing import (
-        rebalance_orders_from_valuation, suggest_rebalance_orders,
+        rebalance_orders_from_valuation,
+        suggest_rebalance_orders,
     )
     from packages.marketdata.fx import FxPolicy
 
@@ -582,11 +692,13 @@ async def rebalance_orders(name: str, payload: RebalanceRequest,
 
     try:
         result = rebalance_orders_from_valuation(
-            valued, payload.target_weights,
+            valued,
+            payload.target_weights,
             threshold=payload.threshold,
             fee_bps=payload.transaction_cost_bps,
             holding_period_days=payload.holding_period_days,
-            **kwargs)
+            **kwargs,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -605,8 +717,10 @@ async def rebalance_orders(name: str, payload: RebalanceRequest,
     }
 
 
-@app.post("/api/v1/rebalance/orders",
-          summary="Generate order suggestions from explicit positions")
+@app.post(
+    "/api/v1/rebalance/orders",
+    summary="Generate order suggestions from explicit positions",
+)
 async def rebalance_orders_explicit(payload: dict):
     """Stateless variant: pass positions + targets + cash directly.
 
@@ -620,7 +734,8 @@ async def rebalance_orders_explicit(payload: dict):
         raise HTTPException(400, "positions and target_weights required")
     try:
         result = suggest_rebalance_orders(
-            positions, targets,
+            positions,
+            targets,
             cash=float(payload.get("cash", 0.0)),
             threshold=payload.get("threshold"),
             default_min_order_value=payload.get("default_min_order_value"),
@@ -634,8 +749,10 @@ async def rebalance_orders_explicit(payload: dict):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {
-        "run_id": result.run_id, "data_hash": result.data_hash,
-        "cash_before": result.cash_before, "cash_after": result.cash_after,
+        "run_id": result.run_id,
+        "data_hash": result.data_hash,
+        "cash_before": result.cash_before,
+        "cash_after": result.cash_after,
         "total_fees_estimate": result.total_fees_estimate,
         "orders_skipped_below_minimum": result.orders_skipped_below_minimum,
         "cost_benefit_status": result.cost_benefit_status,
@@ -661,7 +778,9 @@ async def rebalance_orders_explicit(payload: dict):
             fx.set_rate(k[8:], float(v))
     valued = value_portfolio(ws, name, fx)
     result = rebalance_from_valuation(
-        valued, payload.target_weights, payload.threshold,
+        valued,
+        payload.target_weights,
+        payload.threshold,
         payload.transaction_cost_bps,
     )
     return {
@@ -676,7 +795,9 @@ async def rebalance_orders_explicit(payload: dict):
 
 
 # ---------- routers ----------
-@app.post("/api/v1/scenario/forecast/{symbol}", summary="Generate ML forecast for a symbol")
+@app.post(
+    "/api/v1/scenario/forecast/{symbol}", summary="Generate ML forecast for a symbol"
+)
 async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
     """Generate a pure-Python forecast (linear + Holt + ARIMA-like + ensemble)."""
     from packages.scenarios.predict import ensemble_forecast
@@ -699,7 +820,7 @@ async def forecast(symbol: str, payload: dict, ws=Depends(get_workspace)):
 # ---------- validation ----------
 def _default_strategy(train_data, test_data, **kwargs):
     """Default mean-reversion strategy for validation endpoints.
-    
+
     Optional kwargs:
         lookback: int — window for mean calculation (default: len(train_data))
         threshold: float — signal threshold (default: 0.0)
@@ -711,7 +832,9 @@ def _default_strategy(train_data, test_data, **kwargs):
     window = train_data[-lookback:] if lookback <= len(train_data) else train_data
     returns = [b / a - 1 for a, b in zip(window, window[1:])]
     avg_return = sum(returns) / len(returns)
-    signal = 1.0 if avg_return > threshold else (-1.0 if avg_return < -threshold else 0.0)
+    signal = (
+        1.0 if avg_return > threshold else (-1.0 if avg_return < -threshold else 0.0)
+    )
     return [signal] * len(test_data)
 
 
@@ -727,6 +850,7 @@ def _fetch_prices(ws, symbol: str, payload: dict) -> list[float]:
     if source == "yahoo":
         try:
             from packages.marketdata.yahoo_adapter import YahooAdapter
+
             adapter = YahooAdapter()
             series = adapter.fetch(symbol, years=2)
             if series and series.bars:
@@ -736,7 +860,11 @@ def _fetch_prices(ws, symbol: str, payload: dict) -> list[float]:
     raise HTTPException(404, f"no prices for {symbol.upper()}")
 
 
-@app.post("/api/v1/validation/walk-forward", response_model=WalkForwardResponse, summary="Walk-forward backtest")
+@app.post(
+    "/api/v1/validation/walk-forward",
+    response_model=WalkForwardResponse,
+    summary="Walk-forward backtest",
+)
 async def validation_walk_forward(payload: dict, ws=Depends(get_workspace)):
     """Run walk-forward validation on a price series."""
     from packages.validation.walk_forward import walk_forward_backtest
@@ -754,7 +882,11 @@ async def validation_walk_forward(payload: dict, ws=Depends(get_workspace)):
     return WalkForwardResponse(**result.summary())
 
 
-@app.post("/api/v1/validation/cv", response_model=CVResponse, summary="Time-series cross-validation")
+@app.post(
+    "/api/v1/validation/cv",
+    response_model=CVResponse,
+    summary="Time-series cross-validation",
+)
 async def validation_cv(payload: dict, ws=Depends(get_workspace)):
     """Run purged K-Fold cross-validation on a price series."""
     from packages.validation.cv import time_series_cv
@@ -772,7 +904,11 @@ async def validation_cv(payload: dict, ws=Depends(get_workspace)):
     return CVResponse(**result.summary())
 
 
-@app.post("/api/v1/validation/hyperparameter", response_model=HyperparameterResponse, summary="Hyperparameter tuning")
+@app.post(
+    "/api/v1/validation/hyperparameter",
+    response_model=HyperparameterResponse,
+    summary="Hyperparameter tuning",
+)
 async def validation_hyperparameter(payload: dict, ws=Depends(get_workspace)):
     """Run hyperparameter tuning on a price series."""
     from packages.validation.hyperparameter import hyperparameter_tune

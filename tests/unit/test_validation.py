@@ -1,4 +1,5 @@
 """Tests for validation package: walk-forward, CV, hyperparameter tuning."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -8,10 +9,10 @@ from packages.validation.walk_forward import walk_forward_backtest, WalkForwardR
 from packages.validation.cv import time_series_cv, CVResult, _purged_kfold_indices
 from packages.validation.hyperparameter import hyperparameter_tune, TuneResult
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def price_data():
@@ -42,6 +43,7 @@ def simple_strategy(train_data, test_data, **kwargs):
 # Walk-Forward Tests
 # ===========================================================================
 
+
 class TestWalkForward:
     def test_basic_run(self, price_data):
         result = walk_forward_backtest(price_data, simple_strategy)
@@ -53,8 +55,11 @@ class TestWalkForward:
 
     def test_custom_windows(self, price_data):
         result = walk_forward_backtest(
-            price_data, simple_strategy,
-            train_window=100, test_window=50, step=25,
+            price_data,
+            simple_strategy,
+            train_window=100,
+            test_window=50,
+            step=25,
         )
         assert result.train_window == 100
         assert result.test_window == 50
@@ -80,6 +85,7 @@ class TestWalkForward:
     def test_wrong_signal_length(self, price_data):
         def bad_strategy(train, test):
             return [1.0] * (len(test) + 5)
+
         with pytest.raises(ValueError):
             walk_forward_backtest(price_data, bad_strategy)
 
@@ -93,6 +99,7 @@ class TestWalkForward:
 # ===========================================================================
 # Time-Series CV Tests
 # ===========================================================================
+
 
 class TestTimeSeriesCV:
     def test_basic_run(self, price_data):
@@ -143,6 +150,7 @@ class TestTimeSeriesCV:
     def test_wrong_prediction_length(self, price_data):
         def bad_model(train, test):
             return [1.0] * (len(test) + 3)
+
         with pytest.raises(ValueError):
             time_series_cv(bad_model, price_data)
 
@@ -156,11 +164,15 @@ class TestTimeSeriesCV:
 # Hyperparameter Tuning Tests
 # ===========================================================================
 
+
 class TestHyperparameterTune:
     def test_basic_run(self, price_data):
         param_grid = {"lookback": [10, 20], "threshold": [0.01, 0.02]}
         result = hyperparameter_tune(
-            simple_strategy, price_data, param_grid, n_trials=4,
+            simple_strategy,
+            price_data,
+            param_grid,
+            n_trials=4,
         )
         assert isinstance(result, TuneResult)
         assert result.n_trials == 4
@@ -170,7 +182,10 @@ class TestHyperparameterTune:
     def test_grid_method(self, price_data):
         param_grid = {"a": [1, 2], "b": [3, 4]}
         result = hyperparameter_tune(
-            simple_strategy, price_data, param_grid, method="grid",
+            simple_strategy,
+            price_data,
+            param_grid,
+            method="grid",
         )
         assert result.method == "grid"
         assert result.n_trials == 4  # 2x2 grid
@@ -202,13 +217,19 @@ class TestHyperparameterTune:
     def test_unknown_method(self, price_data):
         with pytest.raises(ValueError):
             hyperparameter_tune(
-                simple_strategy, price_data, {"a": [1]}, method="bayesian",
+                simple_strategy,
+                price_data,
+                {"a": [1]},
+                method="bayesian",
             )
 
     def test_trials_ranked(self, price_data):
         param_grid = {"a": list(range(10))}
         result = hyperparameter_tune(
-            simple_strategy, price_data, param_grid, n_trials=10,
+            simple_strategy,
+            price_data,
+            param_grid,
+            n_trials=10,
         )
         for i, trial in enumerate(result.trials):
             assert trial.rank == i + 1

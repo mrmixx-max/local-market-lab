@@ -1,4 +1,5 @@
 """Tests for cache behavior: hits, misses, stale data, provider errors."""
+
 from __future__ import annotations
 
 import time
@@ -8,10 +9,10 @@ import pytest
 
 from packages.marketdata.cache import MarketDataCache
 
-
 # ---------------------------------------------------------------------------
 # Cache hits and misses
 # ---------------------------------------------------------------------------
+
 
 class TestCacheHitMiss:
     def test_hit_returns_data(self, tmp_path):
@@ -47,6 +48,7 @@ class TestCacheHitMiss:
 # TTL and stale data
 # ---------------------------------------------------------------------------
 
+
 class TestCacheTTL:
     def test_fresh_data_returned(self, tmp_path):
         cache = MarketDataCache(tmp_path / "test.db", ttl=3600)
@@ -77,6 +79,7 @@ class TestCacheTTL:
 # ---------------------------------------------------------------------------
 # Cache invalidation
 # ---------------------------------------------------------------------------
+
 
 class TestCacheInvalidation:
     def test_invalidate_specific_symbol(self, tmp_path):
@@ -111,6 +114,7 @@ class TestCacheInvalidation:
 # Provider error simulation
 # ---------------------------------------------------------------------------
 
+
 class TestProviderErrors:
     def test_cache_survives_corrupted_data(self, tmp_path):
         """If stored data is corrupted JSON, cache returns None gracefully."""
@@ -118,6 +122,7 @@ class TestProviderErrors:
         cache.put("AAPL", "1d", "yahoo", [{"date": "d1", "close": 1.0}])
         # Manually corrupt the data in DB
         import sqlite3
+
         conn = sqlite3.connect(str(tmp_path / "test.db"))
         conn.execute("UPDATE cache SET data='not-json' WHERE key LIKE '%AAPL%'")
         conn.commit()
@@ -140,6 +145,7 @@ class TestProviderErrors:
 # ---------------------------------------------------------------------------
 # Cache stats
 # ---------------------------------------------------------------------------
+
 
 class TestCacheStats:
     def test_empty_stats(self, tmp_path):

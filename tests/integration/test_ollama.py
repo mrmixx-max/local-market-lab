@@ -1,4 +1,5 @@
 """Integration tests for OllamaClient with mocked urllib.request.urlopen."""
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -20,8 +21,11 @@ class TestOllamaModels:
     def test_models_returns_list_on_success(self):
         payload = {
             "models": [
-                {"model": "llama3.1:8b", "size": 4700000000,
-                 "details": {"parameter_size": "8.0B"}},
+                {
+                    "model": "llama3.1:8b",
+                    "size": 4700000000,
+                    "details": {"parameter_size": "8.0B"},
+                },
             ]
         }
         with patch("urllib.request.urlopen", return_value=_mock_response(payload)):
@@ -32,7 +36,9 @@ class TestOllamaModels:
         assert models[0].size == 4700000000
 
     def test_models_empty_on_error(self):
-        with patch("urllib.request.urlopen", side_effect=Exception("connection refused")):
+        with patch(
+            "urllib.request.urlopen", side_effect=Exception("connection refused")
+        ):
             client = OllamaClient("http://localhost:11434")
             assert client.models() == []
 
@@ -55,10 +61,15 @@ class TestOllamaChat:
 
     def test_chat_with_system_prompt(self):
         payload = {"message": {"role": "assistant", "content": "Sure!"}}
-        with patch("urllib.request.urlopen", return_value=_mock_response(payload)) as mock_urlopen:
+        with patch(
+            "urllib.request.urlopen", return_value=_mock_response(payload)
+        ) as mock_urlopen:
             client = OllamaClient("http://localhost:11434")
-            client.chat("llama3.1", [{"role": "user", "content": "Hi"}],
-                        system="You are helpful.")
+            client.chat(
+                "llama3.1",
+                [{"role": "user", "content": "Hi"}],
+                system="You are helpful.",
+            )
         # verify the request was made with system message
         call_args = mock_urlopen.call_args
         req = call_args[0][0]
@@ -84,18 +95,22 @@ class TestOllamaChatStream:
         mock = MagicMock()
         mock.__enter__ = MagicMock(return_value=mock)
         mock.__exit__ = MagicMock(return_value=False)
-        mock.__iter__ = MagicMock(return_value=iter(
-            [f"data: {line}\n".encode() for line in lines]
-        ))
+        mock.__iter__ = MagicMock(
+            return_value=iter([f"data: {line}\n".encode() for line in lines])
+        )
         with patch("urllib.request.urlopen", return_value=mock):
             client = OllamaClient("http://localhost:11434")
-            tokens = list(client.chat_stream("llama3.1", [{"role": "user", "content": "Hi"}]))
+            tokens = list(
+                client.chat_stream("llama3.1", [{"role": "user", "content": "Hi"}])
+            )
         assert tokens == ["Hello", " world"]
 
     def test_chat_stream_handles_connection_error(self):
         with patch("urllib.request.urlopen", side_effect=Exception("refused")):
             client = OllamaClient("http://localhost:11434")
-            tokens = list(client.chat_stream("llama3.1", [{"role": "user", "content": "Hi"}]))
+            tokens = list(
+                client.chat_stream("llama3.1", [{"role": "user", "content": "Hi"}])
+            )
         assert len(tokens) == 1
         assert "Ollama error" in tokens[0]
 

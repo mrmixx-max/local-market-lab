@@ -3,6 +3,7 @@
 Each function takes a list of floats and returns a dict with 'values'
 plus metadata about the indicator and its parameters.
 """
+
 from __future__ import annotations
 
 import math
@@ -11,7 +12,9 @@ import math
 def _validate_series(data: list[float], min_len: int, name: str) -> None:
     if not isinstance(data, list) or len(data) < min_len:
         raise ValueError(f"{name}: need list with >= {min_len} elements")
-    if any(not isinstance(x, (int, float)) or math.isnan(x) or math.isinf(x) for x in data):
+    if any(
+        not isinstance(x, (int, float)) or math.isnan(x) or math.isinf(x) for x in data
+    ):
         raise ValueError(f"{name}: all elements must be finite numbers")
     if min_len < 1:
         raise ValueError(f"{name}: min_len must be >= 1")
@@ -91,7 +94,9 @@ def macd(data: list[float], fast: int = 12, slow: int = 26, signal: int = 9) -> 
             macd_line.append(f - s)
     valid = [v for v in macd_line if v is not None]
     sig = ema(valid, signal)["values"]
-    macd_padded = macd_line[: len(macd_line) - len(valid)] + [v for v in macd_line if v is not None]
+    macd_padded = macd_line[: len(macd_line) - len(valid)] + [
+        v for v in macd_line if v is not None
+    ]
     sig_padded: list[float | None] = [None] * (len(macd_padded) - len(sig)) + sig
     hist: list[float | None] = [
         m - s if m is not None and s is not None else None
@@ -120,7 +125,7 @@ def bollinger(data: list[float], period: int = 20, std_dev: float = 2.0) -> dict
             upper.append(None)
             lower.append(None)
         else:
-            window = data[i - period + 1: i + 1]
+            window = data[i - period + 1 : i + 1]
             variance = sum((x - m) ** 2 for x in window) / period
             sd = math.sqrt(variance) * std_dev
             upper.append(m + sd)

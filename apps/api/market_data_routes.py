@@ -5,6 +5,7 @@
 GET /api/v1/market/data/{symbol}?source=yahoo|alphavantage
 GET /api/v1/quality/report/{symbol}
 """
+
 from __future__ import annotations
 
 import re
@@ -34,7 +35,9 @@ def _validate_symbol(symbol: str) -> str:
     return symbol.upper()
 
 
-def _build_response(series: PriceSeries, source: str, interval: str, run_id: str) -> dict:
+def _build_response(
+    series: PriceSeries, source: str, interval: str, run_id: str
+) -> dict:
     """Build unified response with embedded QualityReport."""
     report = run_quality_check(series, source=source)
     if report.status == "invalid":
@@ -55,7 +58,9 @@ def _build_response(series: PriceSeries, source: str, interval: str, run_id: str
     }
 
 
-@market_data_router.get("/data/{symbol}", summary="Fetch market data from external source")
+@market_data_router.get(
+    "/data/{symbol}", summary="Fetch market data from external source"
+)
 async def market_data(
     symbol: str,
     source: str = Query("yahoo", pattern="^(yahoo|alphavantage)$"),
@@ -74,13 +79,15 @@ async def market_data(
     """
     # Validate symbol to prevent URL/path injection
     symbol = _validate_symbol(symbol)
-    
+
     run_id = str(uuid.uuid4())[:8]
     cache = MarketDataCache(DEFAULT_CACHE)
     try:
         if source == "yahoo":
             adapter = YahooAdapter(cache=cache)
-            series = adapter.fetch(symbol, interval=interval, years=years, offline=offline)
+            series = adapter.fetch(
+                symbol, interval=interval, years=years, offline=offline
+            )
         elif source == "alphavantage":
             if interval != "1d":
                 raise HTTPException(400, "alphavantage only supports daily interval")
@@ -97,7 +104,10 @@ async def market_data(
     return _build_response(series, source, interval, run_id)
 
 
-@market_data_router.get("/quality/report/{symbol}", summary="Run data quality checks on cached or fetched data")
+@market_data_router.get(
+    "/quality/report/{symbol}",
+    summary="Run data quality checks on cached or fetched data",
+)
 async def quality_report(
     symbol: str,
     source: str = Query("yahoo", pattern="^(yahoo|alphavantage)$"),
@@ -111,7 +121,7 @@ async def quality_report(
     """
     # Validate symbol to prevent URL/path injection
     symbol = _validate_symbol(symbol)
-    
+
     run_id = str(uuid.uuid4())[:8]
     cache = MarketDataCache(DEFAULT_CACHE)
     try:
@@ -127,7 +137,11 @@ async def quality_report(
         raise HTTPException(400, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
-    ccy = expected_ccy or series.currency or ("USD" if source == "alphavantage" else "USD")
+    ccy = (
+        expected_ccy
+        or series.currency
+        or ("USD" if source == "alphavantage" else "USD")
+    )
     report = run_quality_check(series, expected_ccy=ccy, source=source)
     return {"run_id": run_id, "symbol": symbol.upper(), **report.to_dict()}
 

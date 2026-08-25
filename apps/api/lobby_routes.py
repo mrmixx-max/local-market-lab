@@ -3,6 +3,7 @@
 Prefix: /api/v1/lobby
 WebSocket: /ws/lobby/{room_id}
 """
+
 import asyncio
 import json
 
@@ -46,7 +47,11 @@ async def create_room(payload: dict):
 
 @lobby_router.get("/rooms/{room_id}")
 async def room_info(room_id: str):
-    rooms = [r for r in get_lobby().list_rooms(include_private=True) if r["room_id"] == room_id]
+    rooms = [
+        r
+        for r in get_lobby().list_rooms(include_private=True)
+        if r["room_id"] == room_id
+    ]
     if rooms:
         return rooms[0]
     raise HTTPException(404, "room not found")
@@ -84,9 +89,13 @@ async def lobby_ws(ws: WebSocket, room_id: str):
         password = msg.get("password")
         room = lobby.join_room(room_id, player, ws, role=role, password=password)
         if room is None:
-            await ws.close(code=4002, reason="room not found, already started, or wrong password")
+            await ws.close(
+                code=4002, reason="room not found, already started, or wrong password"
+            )
             return
-        await ws.send_json({"type": "joined", "room": room_id, "player": player, "role": role})
+        await ws.send_json(
+            {"type": "joined", "room": room_id, "player": player, "role": role}
+        )
         await lobby.broadcast_state(room_id, "player_joined", player=player, role=role)
 
         # message loop
@@ -101,10 +110,15 @@ async def lobby_ws(ws: WebSocket, room_id: str):
 
             elif action == "order":
                 result = await lobby.place_order(
-                    player, msg.get("symbol", ""), msg.get("side", "buy"),
-                    float(msg.get("quantity", 0)))
+                    player,
+                    msg.get("symbol", ""),
+                    msg.get("side", "buy"),
+                    float(msg.get("quantity", 0)),
+                )
                 if result:
-                    await lobby.broadcast_state(room_id, "order_filled", player=player, data=result)
+                    await lobby.broadcast_state(
+                        room_id, "order_filled", player=player, data=result
+                    )
 
             elif action == "tick":
                 await lobby.tick_room(room_id)

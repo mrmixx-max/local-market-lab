@@ -3,6 +3,7 @@
 Instrument, Transaction, CorporateAction, PriceSeries.
 Money is Decimal-based (packages.core.money); float is forbidden for amounts.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -30,7 +31,7 @@ class TxnType(str, Enum):
 
 @dataclass(frozen=True)
 class Instrument:
-    symbol: str                      # canonical short id, e.g. 'IWDA'
+    symbol: str  # canonical short id, e.g. 'IWDA'
     name: str = ""
     asset_class: AssetClass = AssetClass.ETF
     currency: str = "EUR"
@@ -44,13 +45,14 @@ class Instrument:
 @dataclass(frozen=True)
 class Transaction:
     """Append-only ledger entry. Corrections create new rows, never mutations."""
-    txn_id: str | None               # assigned by storage
+
+    txn_id: str | None  # assigned by storage
     portfolio: str
     symbol: str
     txn_type: TxnType
-    date: str                        # ISO yyyy-mm-dd
-    quantity: float                  # signed by type semantics (buy:+ sell:- handled in engine)
-    price: float                     # per unit, transaction currency
+    date: str  # ISO yyyy-mm-dd
+    quantity: float  # signed by type semantics (buy:+ sell:- handled in engine)
+    price: float  # per unit, transaction currency
     fees: float = 0.0
     currency: str = "EUR"
     note: str = ""
@@ -63,12 +65,13 @@ class Transaction:
 @dataclass(frozen=True)
 class CorporateAction:
     """Split / reverse split / cash dividend with effective date."""
+
     symbol: str
-    action: str                      # 'split' | 'cash_dividend'
+    action: str  # 'split' | 'cash_dividend'
     date: str
     # split: new shares per old share (2.0 = 2:1 split; 0.5 = reverse 1:2)
     ratio: float | None = None
-    amount_per_share: float | None = None   # dividend
+    amount_per_share: float | None = None  # dividend
     currency: str = "EUR"
 
     def __post_init__(self):
@@ -108,8 +111,9 @@ class PriceSeries:
     bars: list[PriceBar] = field(default_factory=list)
 
     def sorted(self) -> "PriceSeries":
-        return PriceSeries(self.symbol, self.currency,
-                           sorted(self.bars, key=lambda b: b.date))
+        return PriceSeries(
+            self.symbol, self.currency, sorted(self.bars, key=lambda b: b.date)
+        )
 
     def closes(self) -> list[float]:
         return [b.close for b in sorted(self.bars, key=lambda b: b.date)]
@@ -122,6 +126,7 @@ class PriceSeries:
 @dataclass
 class ExportQuality:
     """Data quality report for exports."""
+
     n_observations: int
     missing_pct: float
     source: str
@@ -143,6 +148,7 @@ class ExportQuality:
 @dataclass
 class ExportResult:
     """Result of an export operation."""
+
     run_id: str
     format: str  # pdf | excel | csv
     data_quality: ExportQuality
@@ -168,6 +174,7 @@ class ExportResult:
 @dataclass
 class FeatureImportanceItem:
     """Single feature importance entry."""
+
     feature: str
     importance: float
     std: float = 0.0
@@ -176,6 +183,7 @@ class FeatureImportanceItem:
 @dataclass
 class ExplainabilityResult:
     """Result of a feature importance analysis."""
+
     run_id: str
     model: str
     feature_importance: list[FeatureImportanceItem]
@@ -202,6 +210,7 @@ class ExplainabilityResult:
 @dataclass
 class ModelComparison:
     """Result of comparing two or more models."""
+
     run_id: str
     models: list[str]
     walk_forward_results: list[dict]
@@ -225,8 +234,9 @@ class ModelComparison:
 @dataclass
 class QualityReport:
     """Unified data quality report embedded in every market data response."""
+
     symbol: str
-    status: str = "valid"          # valid | warning | invalid
+    status: str = "valid"  # valid | warning | invalid
     missing_values: int = 0
     duplicate_timestamps: int = 0
     stale_data: bool = False
@@ -254,9 +264,11 @@ class QualityReport:
 
 # ---------- Stress & Rebalancing domain entities ----------
 
+
 @dataclass
 class StressTestResult:
     """Result of a stress-test scenario run."""
+
     run_id: str = ""
     scenario: str = ""
     seed: int = 42
@@ -270,6 +282,7 @@ class StressTestResult:
 @dataclass
 class CrisisScenario:
     """A crisis scenario definition."""
+
     name: str = ""
     description: str = ""
     scenario_type: str = ""  # correlation_break, liquidity_crunch, sector_rotation
@@ -280,6 +293,7 @@ class CrisisScenario:
 @dataclass
 class RebalancingProposal:
     """A single rebalancing suggestion — NEVER executes trades."""
+
     symbol: str = ""
     current_weight: float = 0.0
     target_weight: float = 0.0
@@ -293,9 +307,11 @@ class RebalancingProposal:
 # Validation domain models — unified result format for all validation runs
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DataQuality:
     """Data quality report for validation inputs."""
+
     status: str = "valid"
     missing: int = 0
     duplicates: int = 0
@@ -306,6 +322,7 @@ class DataQuality:
 @dataclass
 class SplitDoc:
     """Documentation of a single train/test split."""
+
     fold: int
     train_start: int
     train_end: int
@@ -318,6 +335,7 @@ class SplitDoc:
 @dataclass
 class ValidationResult:
     """Unified result format for all validation runs."""
+
     run_id: str = ""
     seed: int = 42
     timestamp: str = ""
@@ -344,8 +362,16 @@ class ValidationResult:
             "splits": [
                 {
                     "fold": s.fold,
-                    "train": {"start": s.train_start, "end": s.train_end, "size": s.train_size},
-                    "test": {"start": s.test_start, "end": s.test_end, "size": s.test_size},
+                    "train": {
+                        "start": s.train_start,
+                        "end": s.train_end,
+                        "size": s.train_size,
+                    },
+                    "test": {
+                        "start": s.test_start,
+                        "end": s.test_end,
+                        "size": s.test_size,
+                    },
                 }
                 for s in self.splits
             ],
@@ -356,6 +382,7 @@ class ValidationResult:
 @dataclass
 class WalkForwardResult:
     """Walk-forward validation result with unified format."""
+
     validation: ValidationResult = field(default_factory=ValidationResult)
     n_folds: int = 0
     train_window: int = 252
@@ -369,22 +396,25 @@ class WalkForwardResult:
     def summary(self) -> dict:
         """Return summary dictionary."""
         base = self.validation.to_dict()
-        base.update({
-            "n_folds": self.n_folds,
-            "train_window": self.train_window,
-            "test_window": self.test_window,
-            "step": self.step,
-            "avg_sharpe": round(self.avg_sharpe, 4),
-            "avg_return": round(self.avg_return, 4),
-            "oos_sharpe": round(self.oos_sharpe, 4),
-            "folds": self.folds,
-        })
+        base.update(
+            {
+                "n_folds": self.n_folds,
+                "train_window": self.train_window,
+                "test_window": self.test_window,
+                "step": self.step,
+                "avg_sharpe": round(self.avg_sharpe, 4),
+                "avg_return": round(self.avg_return, 4),
+                "oos_sharpe": round(self.oos_sharpe, 4),
+                "folds": self.folds,
+            }
+        )
         return base
 
 
 @dataclass
 class CVResult:
     """Time-series cross-validation result with unified format."""
+
     validation: ValidationResult = field(default_factory=ValidationResult)
     n_splits: int = 5
     gap: int = 21
@@ -396,20 +426,23 @@ class CVResult:
     def summary(self) -> dict:
         """Return summary dictionary."""
         base = self.validation.to_dict()
-        base.update({
-            "n_splits": self.n_splits,
-            "gap": self.gap,
-            "metric": self.metric_name,
-            "avg": round(self.avg_metric, 4),
-            "std": round(self.std_metric, 4),
-            "folds": self.folds,
-        })
+        base.update(
+            {
+                "n_splits": self.n_splits,
+                "gap": self.gap,
+                "metric": self.metric_name,
+                "avg": round(self.avg_metric, 4),
+                "std": round(self.std_metric, 4),
+                "folds": self.folds,
+            }
+        )
         return base
 
 
 @dataclass
 class HyperparameterResult:
     """Hyperparameter tuning result with unified format."""
+
     validation: ValidationResult = field(default_factory=ValidationResult)
     best_params: dict = field(default_factory=dict)
     best_metric: float = 0.0
@@ -422,12 +455,14 @@ class HyperparameterResult:
     def summary(self) -> dict:
         """Return summary dictionary."""
         base = self.validation.to_dict()
-        base.update({
-            "method": self.method,
-            "metric": self.metric,
-            "n_trials": self.n_trials,
-            "best_params": self.best_params,
-            "best_metric": round(self.best_metric, 4),
-            "top_trials": self.top_trials,
-        })
+        base.update(
+            {
+                "method": self.method,
+                "metric": self.metric,
+                "n_trials": self.n_trials,
+                "best_params": self.best_params,
+                "best_metric": round(self.best_metric, 4),
+                "top_trials": self.top_trials,
+            }
+        )
         return base

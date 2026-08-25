@@ -6,6 +6,7 @@ Verifies that:
 - Purged CV gaps prevent leakage
 - No test data leaks into training signals
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -14,10 +15,10 @@ import pytest
 from packages.validation.walk_forward import walk_forward_backtest
 from packages.validation.cv import time_series_cv, _purged_kfold_indices
 
-
 # ---------------------------------------------------------------------------
 # Walk-Forward: no future data in training
 # ---------------------------------------------------------------------------
+
 
 class TestNoLookAheadWalkForward:
     def test_train_data_never_includes_test(self):
@@ -28,10 +29,13 @@ class TestNoLookAheadWalkForward:
         def strategy(train, test):
             return [1.0] * len(test)
 
-        result = walk_forward_backtest(data, strategy, train_window=100, test_window=50, step=25)
+        result = walk_forward_backtest(
+            data, strategy, train_window=100, test_window=50, step=25
+        )
         for fold in result.folds:
-            assert fold.train_end <= fold.test_start, \
-                f"Fold {fold.fold}: train_end={fold.train_end} > test_start={fold.test_start}"
+            assert (
+                fold.train_end <= fold.test_start
+            ), f"Fold {fold.fold}: train_end={fold.train_end} > test_start={fold.test_start}"
 
     def test_expanding_window_grows(self):
         """Training window should expand (or stay same) across folds."""
@@ -41,7 +45,9 @@ class TestNoLookAheadWalkForward:
         def strategy(train, test):
             return [1.0] * len(test)
 
-        result = walk_forward_backtest(data, strategy, train_window=100, test_window=50, step=25)
+        result = walk_forward_backtest(
+            data, strategy, train_window=100, test_window=50, step=25
+        )
         train_ends = [f.train_end for f in result.folds]
         # Each subsequent fold has training data at least as large
         for i in range(1, len(train_ends)):
@@ -55,12 +61,15 @@ class TestNoLookAheadWalkForward:
         def strategy(train, test):
             return [1.0] * len(test)
 
-        result = walk_forward_backtest(data, strategy, train_window=100, test_window=50, step=25)
+        result = walk_forward_backtest(
+            data, strategy, train_window=100, test_window=50, step=25
+        )
         for fold in result.folds:
             train_set = set(range(fold.train_start, fold.train_end))
             test_set = set(range(fold.test_start, fold.test_end))
-            assert train_set.isdisjoint(test_set), \
-                f"Fold {fold.fold}: train and test overlap"
+            assert train_set.isdisjoint(
+                test_set
+            ), f"Fold {fold.fold}: train and test overlap"
 
     def test_strategy_only_sees_train_data(self):
         """Verify strategy_fn receives only training data (no future leakage)."""
@@ -73,7 +82,9 @@ class TestNoLookAheadWalkForward:
             observed_train_lens.append(len(train))
             return [1.0] * len(test)
 
-        result = walk_forward_backtest(data, strategy, train_window=100, test_window=50, step=25)
+        result = walk_forward_backtest(
+            data, strategy, train_window=100, test_window=50, step=25
+        )
         # Each fold's training length should be <= total data - test_window
         for i, fold in enumerate(result.folds):
             assert observed_train_lens[i] == fold.train_end - fold.train_start
@@ -83,6 +94,7 @@ class TestNoLookAheadWalkForward:
 # ---------------------------------------------------------------------------
 # Purged CV: gap prevents leakage
 # ---------------------------------------------------------------------------
+
 
 class TestPurgedCVNoLeakage:
     def test_gap_between_train_and_test(self):
@@ -133,6 +145,7 @@ class TestPurgedCVNoLeakage:
 # Feature engineering: fit only on training data
 # ---------------------------------------------------------------------------
 
+
 class TestFeatureEngineeringNoLeakage:
     def test_scaling_only_on_train(self):
         """Scaling parameters (mean, std) must be derived from training data only."""
@@ -144,7 +157,9 @@ class TestFeatureEngineeringNoLeakage:
         test = data[252:315]
 
         train_mean = sum(train) / len(train)
-        train_std = (sum((x - train_mean) ** 2 for x in train) / (len(train) - 1)) ** 0.5
+        train_std = (
+            sum((x - train_mean) ** 2 for x in train) / (len(train) - 1)
+        ) ** 0.5
 
         # Scale test using train parameters
         test_scaled = [(x - train_mean) / train_std for x in test]

@@ -1,8 +1,13 @@
 """Report builders — artifact-driven, methodology and limitations mandatory."""
+
 from __future__ import annotations
 
 from packages.artifacts.manifest import load_json
-from packages.compliance.guard import RESEARCH_DISCLAIMER, SCENARIO_DISCLAIMER, assert_clean
+from packages.compliance.guard import (
+    RESEARCH_DISCLAIMER,
+    SCENARIO_DISCLAIMER,
+    assert_clean,
+)
 
 
 def portfolio_report(ws, valuation: dict) -> str:
@@ -23,18 +28,26 @@ def portfolio_report(ws, valuation: dict) -> str:
     for p in valuation["positions"]:
         lines.append(
             f"| {p['symbol']} | {p['quantity']} | {p['avg_cost']} | {p['last_price']} "
-            f"| {p['value']:,.2f} | {p['pl']:+,.2f} | {p['pl_pct']}% | {p['currency']} |")
+            f"| {p['value']:,.2f} | {p['pl']:+,.2f} | {p['pl_pct']}% | {p['currency']} |"
+        )
     if valuation["incomplete_fx"]:
-        lines += ["", f"> ⚠ INCOMPLETE: missing FX rates for "
-                  f"{[x['symbol'] for x in valuation['incomplete_fx']]} — excluded from totals."]
+        lines += [
+            "",
+            f"> ⚠ INCOMPLETE: missing FX rates for "
+            f"{[x['symbol'] for x in valuation['incomplete_fx']]} — excluded from totals.",
+        ]
     if valuation["missing_prices"]:
-        lines += ["", f"> ⚠ MISSING PRICES for {valuation['missing_prices']} — excluded."]
+        lines += [
+            "",
+            f"> ⚠ MISSING PRICES for {valuation['missing_prices']} — excluded.",
+        ]
     lines += ["", "---", "", RESEARCH_DISCLAIMER, ""]
     return assert_clean("\n".join(lines))
 
 
 def backtest_report(result: dict, manifest: dict) -> str:
-    m = result["metrics"]; b = result["benchmark_metrics"]
+    m = result["metrics"]
+    b = result["benchmark_metrics"]
     a = result["assumptions"]
     lines = [
         f"# Backtest Report — {result['strategy']}",
@@ -78,40 +91,52 @@ def backtest_report(result: dict, manifest: dict) -> str:
         "",
         f"```json\n{load_json(manifest['data_snapshot'])}\n```",
         "",
-        "---", "", RESEARCH_DISCLAIMER, "",
+        "---",
+        "",
+        RESEARCH_DISCLAIMER,
+        "",
     ]
     return assert_clean("\n".join(lines))
 
 
 def scenario_report(result_summary: dict, manifest: dict) -> str:
     s = result_summary
-    lines = [
-        f"# Scenario Report — {s['method']}",
-        "",
-        f"- Artifact: `{manifest['artifact_id']}` · seed: `{manifest['seed']}`",
-        f"- Runs: **{s['runs']}** · Horizon: **{s['horizon_days']} trading days (~1y)**",
-        "",
-        "## Distribution of terminal values (start = 1.00)",
-        "",
-        "| Percentile | Terminal value |",
-        "|---|---|",
-        f"| P05 | {s['p05']} |",
-        f"| P25 | {s['p25']} |",
-        f"| Median | {s['median']} |",
-        f"| P75 | {s['p75']} |",
-        f"| P95 | {s['p95']} |",
-        "",
-        f"- Probability of loss (end < start): **{s['prob_loss_pct']}%**",
-        "",
-        "## Methodology",
-        "",
-        "- Resampling from the historical daily-return distribution of the input series.",
-        "- Seeded RNG — the run is reproducible given identical inputs.",
-        "",
-        "## Limitations",
-        "",
-    ] + [f"- {lim}" for lim in s.get("limitations", [])] + [
-        "", "---", "", SCENARIO_DISCLAIMER,
-        "", RESEARCH_DISCLAIMER, "",
-    ]
+    lines = (
+        [
+            f"# Scenario Report — {s['method']}",
+            "",
+            f"- Artifact: `{manifest['artifact_id']}` · seed: `{manifest['seed']}`",
+            f"- Runs: **{s['runs']}** · Horizon: **{s['horizon_days']} trading days (~1y)**",
+            "",
+            "## Distribution of terminal values (start = 1.00)",
+            "",
+            "| Percentile | Terminal value |",
+            "|---|---|",
+            f"| P05 | {s['p05']} |",
+            f"| P25 | {s['p25']} |",
+            f"| Median | {s['median']} |",
+            f"| P75 | {s['p75']} |",
+            f"| P95 | {s['p95']} |",
+            "",
+            f"- Probability of loss (end < start): **{s['prob_loss_pct']}%**",
+            "",
+            "## Methodology",
+            "",
+            "- Resampling from the historical daily-return distribution of the input series.",
+            "- Seeded RNG — the run is reproducible given identical inputs.",
+            "",
+            "## Limitations",
+            "",
+        ]
+        + [f"- {lim}" for lim in s.get("limitations", [])]
+        + [
+            "",
+            "---",
+            "",
+            SCENARIO_DISCLAIMER,
+            "",
+            RESEARCH_DISCLAIMER,
+            "",
+        ]
+    )
     return assert_clean("\n".join(lines))

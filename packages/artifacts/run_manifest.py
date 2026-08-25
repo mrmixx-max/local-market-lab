@@ -10,6 +10,7 @@ Reproducibility-relevant fields (fed into result_hash):
 Non-reproducibility-relevant (excluded from result_hash): created_at, run_id,
 manifest_id, stored paths.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -27,9 +28,18 @@ MANIFEST_SCHEMA_VERSION = 1
 DISCLAIMER = "Keine Finanzberatung. Keine Kauf- oder Verkaufsempfehlung."
 
 # keys that must NOT influence the business result_hash
-_NON_RESULT_KEYS = ("manifest_id", "run_id", "created_at", "stored_at",
-                    "manifest_digest", "artifacts", "warnings", "limitations",
-                    "disclaimer", "reproducibility_status")
+_NON_RESULT_KEYS = (
+    "manifest_id",
+    "run_id",
+    "created_at",
+    "stored_at",
+    "manifest_digest",
+    "artifacts",
+    "warnings",
+    "limitations",
+    "disclaimer",
+    "reproducibility_status",
+)
 
 
 def _system_version() -> str:
@@ -42,9 +52,14 @@ def _system_version() -> str:
 def _git_commit() -> str:
     try:
         import subprocess
-        out = subprocess.run(["git", "rev-parse", "HEAD"],
-                             capture_output=True, text=True, cwd=os.getcwd(),
-                             timeout=5)
+
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd(),
+            timeout=5,
+        )
         if out.returncode == 0:
             return out.stdout.strip()[:12]
     except Exception:
@@ -60,13 +75,13 @@ def _env_hash() -> tuple[str, list[str]]:
     deps = []
     try:
         import importlib.metadata as md
+
         for dist in sorted(md.distributions(), key=lambda d: d.name):
             deps.append(f"{dist.name}=={dist.version}")
     except Exception:
         pass
     lock_hash = stable_hash(deps)
-    env = {"python_version": py, "platform": plat,
-           "package_lock_hash": lock_hash}
+    env = {"python_version": py, "platform": plat, "package_lock_hash": lock_hash}
     return stable_hash(env), deps
 
 
@@ -92,20 +107,21 @@ def build_run_manifest(
     data_list = []
     if data:
         for d in data:
-            data_list.append({
-                "source": d.get("source", "unknown"),
-                "provider_version": d.get("provider_version", "unknown"),
-                "symbol": d.get("symbol", "unknown"),
-                "currency": d.get("currency", "unknown"),
-                "timezone": d.get("timezone", "unknown"),
-                "interval": d.get("interval", "unknown"),
-                "start_date": d.get("start_date", "unknown"),
-                "end_date": d.get("end_date", "unknown"),
-                "data_hash": d.get("data_hash", "incomplete"),
-                "cache_schema_version": d.get("cache_schema_version",
-                                              "unknown"),
-                "adjusted_prices": d.get("adjusted_prices", "unknown"),
-            })
+            data_list.append(
+                {
+                    "source": d.get("source", "unknown"),
+                    "provider_version": d.get("provider_version", "unknown"),
+                    "symbol": d.get("symbol", "unknown"),
+                    "currency": d.get("currency", "unknown"),
+                    "timezone": d.get("timezone", "unknown"),
+                    "interval": d.get("interval", "unknown"),
+                    "start_date": d.get("start_date", "unknown"),
+                    "end_date": d.get("end_date", "unknown"),
+                    "data_hash": d.get("data_hash", "incomplete"),
+                    "cache_schema_version": d.get("cache_schema_version", "unknown"),
+                    "adjusted_prices": d.get("adjusted_prices", "unknown"),
+                }
+            )
 
     model_block = None
     if model:
@@ -113,16 +129,15 @@ def build_run_manifest(
             "name": model.get("name", "unknown"),
             "version": model.get("version", "unknown"),
             "parameters": redact_secrets(model.get("parameters", {})),
-            "implementation_hash": model.get("implementation_hash",
-                                              "not_available"),
+            "implementation_hash": model.get("implementation_hash", "not_available"),
         }
     feat_block = None
     if features:
         feat_block = {
-            "feature_set_version": features.get("feature_set_version",
-                                                 "unknown"),
+            "feature_set_version": features.get("feature_set_version", "unknown"),
             "feature_parameters": redact_secrets(
-                features.get("feature_parameters", {})),
+                features.get("feature_parameters", {})
+            ),
             "feature_hash": features.get("feature_hash", "not_available"),
         }
 
@@ -173,6 +188,5 @@ def manifest_result_hash(manifest: dict) -> str:
 
     Excludes created_at/run_id/manifest_id so they cannot break reproducibility.
     """
-    relevant = {k: v for k, v in manifest.items()
-                if k not in _NON_RESULT_KEYS}
+    relevant = {k: v for k, v in manifest.items() if k not in _NON_RESULT_KEYS}
     return stable_hash(relevant)

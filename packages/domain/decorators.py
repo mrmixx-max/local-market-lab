@@ -1,4 +1,5 @@
 """Shared decorators for Local Market Lab domain packages."""
+
 from __future__ import annotations
 
 
