@@ -5,6 +5,8 @@
 
 **Portfolio-Analytics, Backtesting und Szenario-Simulation — standardmäßig lokal, ohne Investment-Signale. Optionale Datenadapter (Yahoo Finance, Alpha Vantage) benötigen Netzwerkzugriff.**
 
+> **Git für Portfolio-Research.** Versionierte Eingaben, klare Parameter, reproduzierbare Ergebnisse — und keine undurchsichtige Cloud. Jeder Lauf ist ein signiertes Run-Manifest.
+
 > Research tool. Not financial advice. No buy/sell signals. No forecasts disguised as math.
 
 Local Market Lab (`lml`) is a local-first workbench for portfolio analysis, backtesting and

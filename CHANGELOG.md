@@ -138,6 +138,20 @@ Keine öffentlichen API-/CLI-Änderungen. Intern: `MarketDataCache` hat neue
 
 ## [Unreleased]
 
+### Planning — v1.1 (Fokus: "Git für Portfolio-Research")
+
+Nächste evolutionäre Version. Scope festgelegt in `docs/v1.1-scope.md`.
+Kernpositionierung: versionierte Eingaben, klare Parameter, reproduzierbare
+Ergebnisse, keine undurchsichtige Cloud. Gegen freie Libs via Bedienbarkeit,
+gegen Cloud-Plattformen via Datenschutz/Kontrolle/Nachvollziehbarkeit.
+
+Enthalten: sauberer CSV-/Yahoo-Import, ETF/Aktienportfolios, Gebühren/Steuern/
+Dividenden, Rebalancing mit Min-Volumen, Drawdown/VaR/CVaR-Berichte, reproduzierbare
+Manifeste, HTML/PDF/CSV-Export, verständliche Fehler, sehr gute Onboarding-Demo.
+Neue Module: `packages/portfolio/tax.py` (Steuern), HTML-Export in
+`packages/reports/builders.py`. Keine Cloud/Broker/Order-Pfade.
+
+
 ### Added — v1.0 P1.4 (Manifest & Reproducibility) — siehe oben
 
 

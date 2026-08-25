@@ -8,7 +8,9 @@
 
 ## Executive Summary
 
-**Local Market Lab** (LML) is a locally-running, privacy-focused workbench for portfolio analytics, backtesting, scenario simulation, and AI-powered market prediction — all on your own machine, no cloud, no data sharing.
+**Local Market Lab** (LML) is a locally-running, privacy-focused workbench for portfolio analytics, backtesting, and scenario simulation — all on your own machine, no cloud, no data sharing.
+
+**Git for Portfolio Research:** versioned inputs, clear parameters, reproducible results — and no opaque cloud. Every run is a signed run-manifest.
 
 ### The Three Promises
 

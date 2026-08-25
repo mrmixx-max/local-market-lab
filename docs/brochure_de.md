@@ -8,7 +8,9 @@
 
 ## Executive Summary
 
-**Local Market Lab** (LML) ist eine lokal arbeitende, datenschutzorientierte Workbench für Portfolioanalyse, Backtesting, Szenariosimulation und KI-gestützte Marktvorhersage — alles auf deinem eigenen Rechner, ohne Cloud, ohne Datenweitergabe.
+**Local Market Lab** (LML) ist eine lokal arbeitende, datenschutzorientierte Workbench für Portfolioanalyse, Backtesting und Szenariosimulation — alles auf deinem eigenen Rechner, ohne Cloud, ohne Datenweitergabe.
+
+**Git für Portfolio-Research:** Versionierte Eingaben, klare Parameter, reproduzierbare Ergebnisse — und keine undurchsichtige Cloud. Jeder Lauf ist ein signiertes Run-Manifest.
 
 ### Die drei Versprechen
 
