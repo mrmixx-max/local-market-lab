@@ -16,7 +16,10 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not qt_available, reason="PyQt6 not available")
 
-from windows.src.main_window import MainWindow  # noqa: E402
+try:
+    from windows.src.main_window import MainWindow  # noqa: E402
+except ModuleNotFoundError:
+    pytestmark = pytest.mark.skip(reason="windows package not available on this platform")
 
 
 class _FakeApi:
